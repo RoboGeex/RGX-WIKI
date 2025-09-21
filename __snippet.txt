@@ -1,0 +1,71 @@
+﻿      <div className="mx-auto max-w-5xl px-6 py-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h1 className="font-semibold text-lg">Lesson Editor</h1>
+          <div className="flex gap-2">
+            <button
+              className="px-3 py-1.5 rounded-md border hover:bg-gray-100 text-sm"
+              onClick={() => setJson(JSON.stringify(editor?.getJSON(), null, 2))}
+            >
+              Export JSON
+            </button>
+            <button
+              className="px-3 py-1.5 rounded-md bg-primary text-white text-sm hover:opacity-90"
+              onClick={() => navigator.clipboard.writeText(JSON.stringify(editor?.getJSON() || {}, null, 2))}
+            >
+              Copy JSON
+            </button>
+            <button
+              className="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm hover:opacity-90"
+              onClick={publish}
+            >
+              Publish to Wiki
+            </button>
+          </div>
+        </div>
+
+        {/* Meta form */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 p-6 grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">ID</label>
+            <input className="w-full border rounded px-2 py-1" value={meta.id} onChange={(e) => setMeta({ ...meta, id: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Slug</label>
+            <input className="w-full border rounded px-2 py-1" value={meta.slug} onChange={(e) => setMeta({ ...meta, slug: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Module</label>
+            <select className="w-full border rounded px-2 py-1" value={meta.moduleId} onChange={(e) => setMeta({ ...meta, moduleId: e.target.value })}>
+              {modules.map((m) => (
+                <option key={m.id} value={m.id}>{m.title_en}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Order</label>
+            <input type="number" className="w-full border rounded px-2 py-1" value={meta.order} onChange={(e) => setMeta({ ...meta, order: Number(e.target.value) })} />
+          </div>
+          <div className="sm:col-span-2 grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Title (EN)</label>
+              <input className="w-full border rounded px-2 py-1" value={meta.title_en} onChange={(e) => setMeta({ ...meta, title_en: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Title (AR)</label>
+              <input className="w-full border rounded px-2 py-1" value={meta.title_ar} onChange={(e) => setMeta({ ...meta, title_ar: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Duration (min)</label>
+            <input type="number" className="w-full border rounded px-2 py-1" value={meta.duration_min} onChange={(e) => setMeta({ ...meta, duration_min: Number(e.target.value) })} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Difficulty</label>
+            <input className="w-full border rounded px-2 py-1" value={meta.difficulty} onChange={(e) => setMeta({ ...meta, difficulty: e.target.value })} />
+          </div>
+          {status && <div className="sm:col-span-2 text-sm text-gray-600">{status}</div>}
+        </div>
+
+        
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">

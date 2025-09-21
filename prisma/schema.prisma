@@ -1,0 +1,39 @@
+// Prisma schema for SiteGround MySQL (or MariaDB)
+// Set DATABASE_URL in env to: mysql://user:pass@host:port/db
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Lesson {
+  id              String  @id @db.VarChar(191)
+  order           Int
+  slug            String  @unique @db.VarChar(191)
+  wikiSlug        String  @db.VarChar(191)
+  title_en        String
+  title_ar        String
+  duration_min    Int
+  difficulty      String
+  prerequisites_en Json
+  prerequisites_ar Json
+  materials       Json
+  body            Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Asset {
+  id        Int      @id @default(autoincrement())
+  filename  String
+  mimeType  String
+  size      Int
+  // Optional binary storage (only if STORE_MEDIA_IN_DB=true)
+  data      Bytes?
+  createdAt DateTime @default(now())
+}
+

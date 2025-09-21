@@ -1,0 +1,11 @@
+﻿[
+  {
+    "slug": "student-kit",
+    "displayName": "Arduino Student Kit",
+    "domains": ["student-kit.localhost", "localhost", "127.0.0.1"],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources"
+  }
+]
+

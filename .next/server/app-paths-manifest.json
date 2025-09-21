@@ -1,0 +1,9 @@
+{
+  "/editor/dashboard/[wiki]/page": "app/editor/dashboard/[wiki]/page.js",
+  "/editor/properties/page": "app/editor/properties/page.js",
+  "/editor/dashboard/page": "app/editor/dashboard/page.js",
+  "/not-found": "app/not-found.js",
+  "/editor/page": "app/editor/page.js",
+  "/[locale]/[kit]/lesson/[slug]/page": "app/[locale]/[kit]/lesson/[slug]/page.js",
+  "/[locale]/[kit]/page": "app/[locale]/[kit]/page.js"
+}

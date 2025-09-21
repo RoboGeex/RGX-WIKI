@@ -1,0 +1,179 @@
+import { notFound } from 'next/navigation'
+import {
+  getLesson, getModules,
+  getNextLesson, getPrevLesson
+} from '@/lib/data'
+import { getLessonBySlug } from '@/lib/server-data'
+import type { Locale } from '@/lib/i18n'
+import { headers } from 'next/headers'
+import Breadcrumbs from '@/components/breadcrumbs'
+import { getKitForWiki, requireWikiFromRequest } from '@/lib/wiki'
+import Callout from '@/components/callout'
+import CodeTabs from '@/components/code-tabs'
+import PrevNextNav from '@/components/prev-next-nav'
+import Step from '@/components/step'
+import LessonToc from '@/components/lesson-toc'
+
+export const dynamic = 'force-dynamic'
+
+export default async function LessonPage(
+  { params }: { params: { locale: Locale; kit: string; slug: string } }
+) {
+  const { locale, kit, slug } = params
+  const wiki = requireWikiFromRequest()
+  let lesson = process.env.USE_DB === 'true' ? await getLessonBySlug(slug) : undefined
+  if (lesson && (lesson as any).wikiSlug && (lesson as any).wikiSlug !== wiki.slug) lesson = undefined
+  if (!lesson) lesson = getLesson(kit, slug)
+  if (!lesson) {
+    try {
+      const h = headers()
+      const host = h.get('host') || 'localhost:3000'
+      const proto = h.get('x-forwarded-proto') || 'http'
+      const res = await fetch(`${proto}://${host}/api/lessons?kit=${kit}&wiki=${wiki.slug}`, { cache: 'no-store' })
+      if (res.ok) {
+        const list = await res.json()
+        lesson = (list || []).find((l: any) => l.slug === slug)
+      }
+    } catch {}
+  }
+  const kitData = getKitForWiki(kit, wiki)
+  if (!kitData || !lesson) notFound()
+  
+  const lessonDisplayTitle = locale === 'ar' ? lesson.title_ar : lesson.title_en
+  const headingCounts = new Map<string, number>()
+  const slugify = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^\p{L}\p{N}\s-]/gu, '')
+      .trim()
+      .replace(/\s+/g, '-') || 'section'
+
+  const tocEntries: { id: string; text: string; level: number }[] = []
+  let stepIndex = 0
+  let skippedTitleHeading = false
+
+  const renderBlock = (block: any, index: number) => {
+    if (block.type === 'paragraph') {
+      return (
+        <p key={index} className="text-base leading-7 text-gray-700">
+          {locale === 'ar' ? block.ar : block.en}
+        </p>
+      )
+    }
+
+    if (block.type === 'heading') {
+      const text = (locale === 'ar' ? block.ar : block.en) || ''
+      if (!text) return null
+      const base = slugify(text)
+      const count = headingCounts.get(base) ?? 0
+      headingCounts.set(base, count + 1)
+      const id = count === 0 ? base : `${base}-${count}`
+      const originalLevel = block.level
+      const level = block.level && block.level >= 2 && block.level <= 6 ? block.level : 2
+      const tagLevel = Math.min(level + 1, 4)
+      const Tag = (`h${tagLevel}` as keyof JSX.IntrinsicElements)
+      const sizeClass = tagLevel === 3 ? 'text-2xl' : 'text-xl'
+      const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
+      const isTitleHeading = originalLevel === 1 && !skippedTitleHeading && text.trim() === lessonDisplayTitle.trim()
+      
+      
+      if (isTitleHeading) {
+        skippedTitleHeading = true
+        return null // Don't render the title heading since it's already shown in the header
+      } else {
+        tocEntries.push({ id, text, level })
+      }
+      return (
+        <Tag
+          key={index}
+          id={id}
+          data-toc={isTitleHeading ? undefined : true}
+          data-level={level}
+          data-toc-text={text}
+          className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4 ${paddingClass}`}
+        >
+          {text}
+        </Tag>
+      )
+    }
+
+    if (block.type === 'image' && block.image) {
+      const caption = locale === 'ar' ? (block.caption_ar || block.title_ar) : (block.caption_en || block.title_en)
+      return (
+        <figure key={index} className="space-y-3">
+          <img
+            src={block.image}
+            alt={caption || ''}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 object-contain"
+          />
+          {caption ? (
+            <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>
+          ) : null}
+        </figure>
+      )
+    }
+
+    if (block.type === 'step') {
+      stepIndex++
+      return <Step key={index} step={block} stepNumber={stepIndex} locale={locale} />
+    }
+
+    if (block.type === 'callout') {
+      return <Callout key={index} callout={block} locale={locale} />
+    }
+
+    if (block.type === 'codeTabs') {
+      return <CodeTabs key={index} codeItem={block} locale={locale} />
+    }
+
+    return null
+  }
+
+  const renderedBlocks = Array.isArray(lesson.body)
+    ? lesson.body.map((block, index) => renderBlock(block, index))
+    : []
+
+  const clientTocEntries = tocEntries.map((entry) => ({ ...entry }))
+
+  return (
+    <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 py-10">
+      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+        <aside className="lg:w-64 lg:flex-shrink-0">
+          <div className="sticky top-28 space-y-4">
+            <LessonToc entries={clientTocEntries} lessonTitle={lessonDisplayTitle} />
+
+          </div>
+        </aside>
+
+        <div className="flex-1 space-y-6">
+          <div className="bg-white border border-gray-200 rounded-3xl shadow-md p-6 md:p-10 xl:p-12 space-y-10">
+            <Breadcrumbs locale={locale} kit={kitData} lesson={lesson} />
+            <header className="space-y-4 border-b border-gray-200 pb-6">
+              <div className="flex items-center gap-3 text-sm text-gray-500">
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-primary font-medium uppercase tracking-wide text-xs">
+                  Lesson
+                </span>
+                <span>{kitData.title_en}</span>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {locale === 'ar' ? lesson.title_ar : lesson.title_en}
+              </h1>
+            </header>
+
+            <article className="prose prose-lg max-w-none space-y-6">
+              {renderedBlocks}
+            </article>
+
+            <PrevNextNav
+              prevLesson={getPrevLesson(kit, slug)}
+              nextLesson={getNextLesson(kit, slug)}
+              locale={locale}
+              kitSlug={kit}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

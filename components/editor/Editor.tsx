@@ -333,7 +333,7 @@ export default function WikiEditor() {
       
       if (raw) {
         const parsed = JSON.parse(raw)
-        setMeta((m) => ({
+        setMeta((m: typeof meta) => ({
           ...m,
           ...parsed,
           wikiSlug: parsed.wikiSlug || m.wikiSlug || 'student-kit',
@@ -352,7 +352,7 @@ export default function WikiEditor() {
       if (syncingEnRef.current) return
       const h1 = getFirstHeadingText(editorEn)
       if (h1) {
-        setMeta((m) => {
+        setMeta((m: typeof meta) => {
           const next = { ...m, title_en: h1 }
           try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch {}
           return next
@@ -376,7 +376,7 @@ export default function WikiEditor() {
       forceArabicDirtyRender((prev) => !prev)
       const h1 = getFirstHeadingText(editorAr)
       if (h1) {
-        setMeta((m) => {
+        setMeta((m: typeof meta) => {
           const next = { ...m, title_ar: h1 }
           try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch {}
           return next

@@ -117,7 +117,7 @@ const LessonPage = () => {
                         {headings.length === 0 ? (
                             <div className="text-xs text-gray-400 italic">No headings found</div>
                         ) : (
-                            headings.map((h) => (
+                            headings.map((h: { id: string; text: string; level: number }) => (
                                 <button
                                     key={h.id}
                                     className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:bg-primary/10 hover:text-primary"

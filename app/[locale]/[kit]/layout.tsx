@@ -1,5 +1,6 @@
 import KitNavbar from '@/components/kit-navbar'
 import { getKit, getLessons, getWiki } from '@/lib/data'
+import { redirect } from 'next/navigation'
 import type { Locale } from '@/lib/i18n'
 
 export default function KitLayout(
@@ -8,7 +9,11 @@ export default function KitLayout(
   const { locale, kit } = params
   const kitData = getKit(kit)
   const wiki = kitData ? getWiki(kitData.wikiSlug) : undefined
-  if (!kitData) return <div className="p-6">Kit not found</div>
+  
+  // If kit not found, redirect to default kit
+  if (!kitData) {
+    redirect(`/${locale}/student-kit`)
+  }
 
   return (
     <div className="min-h-screen bg-[#eef2f1]">

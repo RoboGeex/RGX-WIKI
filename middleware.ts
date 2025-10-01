@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
+  // Temporarily disable middleware for Vercel deployment testing
+  return NextResponse.next()
+  
+  /* Commented out for Vercel deployment
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
+  
+  // Skip Vercel deployment URLs completely
+  if (hostname.includes('.vercel.app')) {
+    return NextResponse.next()
+  }
   
   // Extract subdomain from hostname (remove port if present)
   const hostnameWithoutPort = hostname.split(':')[0]
@@ -11,12 +20,6 @@ export function middleware(request: NextRequest) {
   
   // Skip if it's localhost, www, or already has a locale
   if (subdomain === 'localhost' || subdomain === 'www' || subdomain === '127' || subdomain === '0') {
-    return NextResponse.next()
-  }
-  
-  // Skip Vercel deployment URLs (they contain generated IDs)
-  if (hostname.includes('.vercel.app') || subdomain.includes('-')) {
-    // For Vercel deployments, don't use subdomain routing
     return NextResponse.next()
   }
   
@@ -30,6 +33,7 @@ export function middleware(request: NextRequest) {
   const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`
   const newUrl = new URL(`/en/${subdomain}`, baseUrl)
   return NextResponse.redirect(newUrl)
+  */
 }
 
 export const config = {
@@ -40,6 +44,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - Vercel deployment URLs
      */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],

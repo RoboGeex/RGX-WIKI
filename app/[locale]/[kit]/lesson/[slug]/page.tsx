@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import {
   getLesson,
   getNextLesson, getPrevLesson,
@@ -24,9 +24,13 @@ export default async function LessonPage(
   
   // Get the wiki from the kit instead of from the host
   const kitData = getKit(kit)
-  if (!kitData) notFound()
+  if (!kitData) {
+    redirect(`/${locale}/student-kit`)
+  }
   const wiki = getWiki(kitData.wikiSlug)
-  if (!wiki) notFound()
+  if (!wiki) {
+    redirect(`/${locale}/student-kit`)
+  }
   
   let lesson = process.env.USE_DB === 'true' ? await getLessonBySlug(slug) : undefined
   if (lesson && (lesson as any).wikiSlug && (lesson as any).wikiSlug !== wiki.slug) lesson = undefined

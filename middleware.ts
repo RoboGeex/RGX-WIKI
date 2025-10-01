@@ -14,6 +14,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
+  // Skip Vercel deployment URLs (they contain generated IDs)
+  if (hostname.includes('.vercel.app') || subdomain.includes('-')) {
+    // For Vercel deployments, don't use subdomain routing
+    return NextResponse.next()
+  }
+  
   // Skip if it's already a locale-based route
   if (url.pathname.startsWith('/en/') || url.pathname.startsWith('/ar/')) {
     return NextResponse.next()

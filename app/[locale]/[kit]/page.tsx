@@ -19,9 +19,16 @@ function mergeLessons(fileLessons: any[], dbLessons: any[], wikiSlug: string) {
 export default async function KitPage({ params }: { params: { locale: Locale; kit: string } }) {
   const { locale, kit } = params
   const kitData = getKit(kit)
-  if (!kitData) notFound()
+  
+  // If kit doesn't exist, redirect to student-kit instead of showing 404
+  if (!kitData) {
+    redirect(`/${locale}/student-kit`)
+  }
+  
   const wiki = getWiki(kitData.wikiSlug)
-  if (!wiki) notFound()
+  if (!wiki) {
+    redirect(`/${locale}/student-kit`)
+  }
 
   const lessonsFromFile = getLessons(kit)
 

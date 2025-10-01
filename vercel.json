@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "app/**/*.tsx": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/en/student-kit",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
+}

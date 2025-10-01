@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       const ordered: typeof existing = []
       
       // Always put getting-started first if it exists
-      const gettingStarted = existing.find((item) => item.slug === 'getting-started')
+      const gettingStarted = existing.find((item: { slug: string }) => item.slug === 'getting-started')
       if (gettingStarted) {
         ordered.push(gettingStarted)
         seen.add('getting-started')
@@ -80,13 +80,13 @@ export async function POST(req: Request) {
       // Add other lessons in the sequence order
       for (const slug of sequence) {
         if (seen.has(slug) || slug === 'getting-started') continue
-        const lesson = existing.find((item) => item.slug === slug)
+        const lesson = existing.find((item: { slug: string }) => item.slug === slug)
         if (lesson) {
           ordered.push(lesson)
           seen.add(slug)
         }
       }
-      const remainder = existing.filter((lesson) => !seen.has(lesson.slug))
+      const remainder = existing.filter((lesson: { slug: string }) => !seen.has(lesson.slug))
       const finalOrder = [...ordered, ...remainder]
       
       console.log('Database reorder - final order:', finalOrder.map((l, i) => ({ slug: l.slug, order: i + 1 })))

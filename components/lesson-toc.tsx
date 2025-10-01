@@ -24,7 +24,8 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
   useEffect(() => {
     const headingNodes = Array.from(document.querySelectorAll('[data-toc]')) as HTMLElement[]
 
-    if (headingNodes.length) {
+    // Only use DOM scanning if no entries were passed as props
+    if (headingNodes.length && entries.length === 0) {
       const domEntries = headingNodes.map((node) => ({
         id: node.id,
         text: node.getAttribute('data-toc-text') || node.innerText || node.id,
@@ -62,7 +63,7 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
 
     headingNodes.forEach((node) => observer.observe(node))
     return () => observer.disconnect()
-  }, [entries, activeId])
+  }, [activeId])
 
   const handleScroll = (id: string) => {
     const el = document.getElementById(id)

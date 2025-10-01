@@ -1,0 +1,39 @@
+[
+  {
+    "id": "getting-started",
+    "wikiSlug": "ios",
+    "order": 1,
+    "slug": "getting-started",
+    "title_en": "Getting Started",
+    "title_ar": "البداية",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "Welcome to iOS Learning Kit",
+        "level": 1,
+        "ar": "مرحباً بك في مجموعة تعلم iOS"
+      },
+      {
+        "type": "paragraph",
+        "en": "This is your first lesson in the iOS learning series. Here you'll learn the basics and get familiar with iOS development.",
+        "ar": "هذا هو الدرس الأول في سلسلة تعلم iOS. هنا ستتعلم الأساسيات وتتعرف على تطوير iOS."
+      },
+      {
+        "type": "heading",
+        "en": "What You'll Learn",
+        "level": 2,
+        "ar": "ما ستتعلمه"
+      },
+      {
+        "type": "paragraph",
+        "en": "In this course, you will learn fundamental iOS development concepts and skills that will help you build amazing apps.",
+        "ar": "في هذه الدورة، ستتعلم مفاهيم ومهارات تطوير iOS الأساسية التي ستساعدك في بناء تطبيقات رائعة."
+      }
+    ]
+  }
+]

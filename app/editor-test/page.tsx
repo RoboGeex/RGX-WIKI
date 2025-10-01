@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react'
 import RichTextEditor from '@/components/rich-text-editor'
 

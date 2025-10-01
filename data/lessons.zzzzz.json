@@ -1,0 +1,45 @@
+[
+  {
+    "id": "getting-started",
+    "wikiSlug": "zzzzz",
+    "order": 0,
+    "slug": "getting-started",
+    "title_en": "Getting Started",
+    "title_ar": "البداية",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "Getting Started",
+        "level": 1,
+        "ar": "البداية"
+      },
+      {
+        "type": "heading",
+        "en": "Welcome to zzzzz Learning",
+        "level": 2,
+        "ar": "مرحباً بك في تعلم zzzzz"
+      },
+      {
+        "type": "paragraph",
+        "en": "Welcome to the zzzzz learning kit! This is your starting point for learning about zzzzz concepts.",
+        "ar": "مرحباً بك في مجموعة تعلم zzzzz! هذه نقطة البداية لتعلم مفاهيم zzzzz."
+      },
+      {
+        "type": "heading",
+        "en": "What You'll Learn",
+        "level": 2,
+        "ar": "ما سوف تتعلمه"
+      },
+      {
+        "type": "paragraph",
+        "en": "In this kit, you will learn the fundamentals of zzzzz and how to apply them in practical projects.",
+        "ar": "في هذه المجموعة، سوف تتعلم أساسيات zzzzz وكيفية تطبيقها في المشاريع العملية."
+      }
+    ]
+  }
+]

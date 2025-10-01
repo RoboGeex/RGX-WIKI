@@ -2,11 +2,16 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
+import { t } from '@/lib/i18n'
+import type { Module } from '@/lib/data'
 
 interface Props {
   locale: Locale
+  kitSlug: string
   isOpen: boolean
   onClose: () => void
+  modules?: Module[]
+  lessons?: any[]
 }
 
 interface TocItem {
@@ -22,28 +27,30 @@ type LessonSummary = {
   duration_min: number
 }
 
-type ModuleSummary = {
-  id: string
-  title_en: string
-  title_ar: string
-  lessons: LessonSummary[]
-}
 
-export default function Sidebar({ locale, isOpen, onClose }: Props) {
-  const [modules, setModules] = useState<ModuleSummary[]>([])
+export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: propModules, lessons }: Props) {
+  // Ensure locale is valid, fallback to 'en'
+  const safeLocale: Locale = locale && (locale === 'en' || locale === 'ar') ? locale : 'en'
+  const [modules, setModules] = useState<Module[]>([])
   const [toc, setToc] = useState<TocItem[]>([])
   const [activeHeading, setActiveHeading] = useState<string>('')
 
   useEffect(() => {
-    const summaryElement = document.getElementById('lesson-summary-data')
-    if (!summaryElement) return
-    try {
-      const parsed = JSON.parse(summaryElement.getAttribute('data-summary') || '[]') as ModuleSummary[]
-      setModules(parsed)
-    } catch (error) {
-      console.error('Failed to parse lesson summary', error)
+    if (propModules) {
+      setModules(propModules)
+    } else if (lessons) {
+      // Create a simple module structure from lessons if modules aren't provided
+      const simpleModule: Module = {
+        id: 'lessons',
+        order: 1,
+        title_en: 'Lessons',
+        title_ar: 'الدروس',
+        summary_en: 'All lessons',
+        summary_ar: 'جميع الدروس'
+      }
+      setModules([simpleModule])
     }
-  }, [])
+  }, [propModules, lessons])
 
   useEffect(() => {
     const headingNodes = Array.from(document.querySelectorAll('[data-toc]')) as HTMLElement[]
@@ -92,35 +99,32 @@ export default function Sidebar({ locale, isOpen, onClose }: Props) {
 
         <div className="p-5 space-y-6">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Lessons</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">{t('lessons', safeLocale)}</div>
             <div className="space-y-3">
-              {modules.map((module) => (
-                <div key={module.id} className="space-y-2">
-                  <div className="text-sm font-semibold text-gray-700">
-                    {locale === 'ar' ? module.title_ar : module.title_en}
-                  </div>
-                  <div className="space-y-1">
-                    {module.lessons.map((lesson) => (
-                      <a
-                        key={lesson.slug}
-                        href={`/${locale}/${lesson.slug.includes('/lesson/') ? lesson.slug : `${lesson.slug}`}`}
-                        className="block rounded-md px-3 py-2 text-sm hover:bg-primary/10 hover:text-primary transition"
-                      >
-                        <div className="font-medium">{locale === 'ar' ? lesson.title_ar : lesson.title_en}</div>
-                        <div className="text-[11px] text-gray-500">{lesson.duration_min}m</div>
-                      </a>
-                    ))}
-                  </div>
+              {lessons && lessons.length > 0 ? (
+                <div className="space-y-1">
+                  {lessons.map((lesson) => (
+                    <a
+                      key={lesson.slug}
+                      href={`/${locale}/${kitSlug}/lesson/${lesson.slug}`}
+                      className="block rounded-md px-3 py-2 text-sm hover:bg-primary/10 hover:text-primary transition"
+                    >
+                      <div className="font-medium">{locale === 'ar' ? lesson.title_ar : lesson.title_en}</div>
+                      <div className="text-[11px] text-gray-500">{lesson.duration_min}m</div>
+                    </a>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="text-xs text-gray-400">{t('noLessonsYet', safeLocale)}</div>
+              )}
             </div>
           </div>
 
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">On this page</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">{t('onThisPage', safeLocale)}</div>
             <nav className="space-y-1">
               {toc.length === 0 && (
-                <div className="text-xs text-gray-400">No headings yet.</div>
+                <div className="text-xs text-gray-400">{t('noHeadingsYet', safeLocale)}</div>
               )}
               {toc.map((item) => (
                 <button

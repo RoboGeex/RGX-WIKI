@@ -1,7 +1,6 @@
 import { redirect, notFound } from "next/navigation"
-import { getLessons, getKit } from "@/lib/data"
+import { getLessons, getKit, getWiki } from "@/lib/data"
 import { getLessonsFromDb } from "@/lib/server-data"
-import { getKitForWiki, requireWikiFromRequest } from "@/lib/wiki"
 import type { Locale } from "@/lib/i18n"
 
 export const dynamic = "force-dynamic"
@@ -19,9 +18,10 @@ function mergeLessons(fileLessons: any[], dbLessons: any[], wikiSlug: string) {
 
 export default async function KitPage({ params }: { params: { locale: Locale; kit: string } }) {
   const { locale, kit } = params
-  const wiki = requireWikiFromRequest()
-  const kitData = getKitForWiki(kit, wiki)
+  const kitData = getKit(kit)
   if (!kitData) notFound()
+  const wiki = getWiki(kitData.wikiSlug)
+  if (!wiki) notFound()
 
   const lessonsFromFile = getLessons(kit)
 

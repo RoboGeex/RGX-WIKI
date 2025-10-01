@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 import {
-  getLesson, getModules,
-  getNextLesson, getPrevLesson
+  getLesson,
+  getNextLesson, getPrevLesson,
+  getKit, getWiki
 } from '@/lib/data'
 import { getLessonBySlug } from '@/lib/server-data'
 import type { Locale } from '@/lib/i18n'
@@ -20,7 +21,13 @@ export default async function LessonPage(
   { params }: { params: { locale: Locale; kit: string; slug: string } }
 ) {
   const { locale, kit, slug } = params
-  const wiki = requireWikiFromRequest()
+  
+  // Get the wiki from the kit instead of from the host
+  const kitData = getKit(kit)
+  if (!kitData) notFound()
+  const wiki = getWiki(kitData.wikiSlug)
+  if (!wiki) notFound()
+  
   let lesson = process.env.USE_DB === 'true' ? await getLessonBySlug(slug) : undefined
   if (lesson && (lesson as any).wikiSlug && (lesson as any).wikiSlug !== wiki.slug) lesson = undefined
   if (!lesson) lesson = getLesson(kit, slug)
@@ -36,10 +43,9 @@ export default async function LessonPage(
       }
     } catch {}
   }
-  const kitData = getKitForWiki(kit, wiki)
-  if (!kitData || !lesson) notFound()
+  if (!lesson) notFound()
   
-  const lessonDisplayTitle = locale === 'ar' ? lesson.title_ar : lesson.title_en
+  const lessonDisplayTitle = locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')
   const headingCounts = new Map<string, number>()
   const slugify = (value: string) =>
     value
@@ -54,17 +60,20 @@ export default async function LessonPage(
   let skippedTitleHeading = false
 
   const renderBlock = (block: any, index: number) => {
+    if (!block || !block.type) return null
+    
     if (block.type === 'paragraph') {
       return (
         <p key={index} className="text-base leading-7 text-gray-700">
-          {locale === 'ar' ? block.ar : block.en}
+          {locale === 'ar' ? (block.ar || '') : (block.en || '')}
         </p>
       )
     }
 
     if (block.type === 'heading') {
-      const text = (locale === 'ar' ? block.ar : block.en) || ''
+      const text = (locale === 'ar' ? (block.ar || '') : (block.en || '')) || ''
       if (!text) return null
+      
       const base = slugify(text)
       const count = headingCounts.get(base) ?? 0
       headingCounts.set(base, count + 1)
@@ -77,18 +86,18 @@ export default async function LessonPage(
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
       const isTitleHeading = originalLevel === 1 && !skippedTitleHeading && text.trim() === lessonDisplayTitle.trim()
       
-      
       if (isTitleHeading) {
         skippedTitleHeading = true
         return null // Don't render the title heading since it's already shown in the header
       } else {
         tocEntries.push({ id, text, level })
       }
+      
       return (
         <Tag
           key={index}
           id={id}
-          data-toc={isTitleHeading ? undefined : true}
+          data-toc={true}
           data-level={level}
           data-toc-text={text}
           className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4 ${paddingClass}`}
@@ -99,7 +108,7 @@ export default async function LessonPage(
     }
 
     if (block.type === 'image' && block.image) {
-      const caption = locale === 'ar' ? (block.caption_ar || block.title_ar) : (block.caption_en || block.title_en)
+      const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (
         <figure key={index} className="space-y-3">
           <img
@@ -131,16 +140,16 @@ export default async function LessonPage(
   }
 
   const renderedBlocks = Array.isArray(lesson.body)
-    ? lesson.body.map((block, index) => renderBlock(block, index))
+    ? lesson.body.map((block, index) => renderBlock(block, index)).filter(Boolean)
     : []
 
   const clientTocEntries = tocEntries.map((entry) => ({ ...entry }))
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 py-10">
+    <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
         <aside className="lg:w-64 lg:flex-shrink-0">
-          <div className="sticky top-28 space-y-4">
+          <div className="sticky top-20 space-y-4">
             <LessonToc entries={clientTocEntries} lessonTitle={lessonDisplayTitle} />
 
           </div>
@@ -152,12 +161,12 @@ export default async function LessonPage(
             <header className="space-y-4 border-b border-gray-200 pb-6">
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-primary font-medium uppercase tracking-wide text-xs">
-                  Lesson
+                  {locale === 'ar' ? 'الدرس' : 'Lesson'}
                 </span>
                 <span>{kitData.title_en}</span>
               </div>
               <h1 className="text-3xl font-bold text-gray-900">
-                {locale === 'ar' ? lesson.title_ar : lesson.title_en}
+                {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
               </h1>
             </header>
 

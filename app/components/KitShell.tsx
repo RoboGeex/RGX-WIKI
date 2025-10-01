@@ -39,7 +39,6 @@ export default function KitShell({ locale, kitSlug, modules, lessons, defaultLes
           locale={locale}
           kitSlug={kitSlug}
           lessons={lessons}
-          modules={modules}
           defaultLessonSlug={defaultLessonSlug}
           resourcesUrl={resourcesUrl}
           onLocaleChange={handleLocaleChange}
@@ -48,10 +47,13 @@ export default function KitShell({ locale, kitSlug, modules, lessons, defaultLes
         <div className="flex max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 gap-8">
           <Sidebar
             locale={locale}
+            kitSlug={kitSlug}
             isOpen={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
+            modules={modules}
+            lessons={lessons}
           />
-          <main className="flex-1 min-w-0 py-8">{children}</main>
+          <main className="flex-1 min-w-0 pt-2 pb-8">{children}</main>
         </div>
       </div>
     </div>

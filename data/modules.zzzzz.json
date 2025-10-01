@@ -1,0 +1,18 @@
+[
+  {
+    "id": "intro",
+    "order": 1,
+    "title_en": "Introduction",
+    "title_ar": "مقدمة",
+    "summary_en": "Setup and first steps for zzzzz learning.",
+    "summary_ar": "الإعداد والخطوات الأولى لتعلم zzzzz."
+  },
+  {
+    "id": "basics",
+    "order": 2,
+    "title_en": "zzzzz Basics",
+    "title_ar": "أساسيات zzzzz",
+    "summary_en": "Learn the fundamental concepts of zzzzz.",
+    "summary_ar": "تعلم المفاهيم الأساسية لـ zzzzz."
+  }
+]

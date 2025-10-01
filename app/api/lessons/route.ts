@@ -4,6 +4,7 @@ import { promises as fs } from 'fs'
 import { getWiki } from '@/lib/data'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 type LessonBodyItem = {
   type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image'

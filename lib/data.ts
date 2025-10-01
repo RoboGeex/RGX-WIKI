@@ -24,6 +24,14 @@ export interface Kit {
   overview_ar: string
 }
 export interface Material { qty: number; name_en: string; name_ar: string; sku?: string }
+export interface Module {
+  id: string
+  order: number
+  title_en: string
+  title_ar: string
+  summary_en?: string
+  summary_ar?: string
+}
 export interface LessonBodyItem {
   type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image'
   en?: string; ar?: string
@@ -87,6 +95,15 @@ export function getLessons(kitSlug: string): Lesson[] {
     const p = path.join(process.cwd(), 'data', `lessons.${wikiSlug}.json`)
     const raw = readFileSync ? readFileSync(p, 'utf-8') : '[]'
     return JSON.parse(raw) as Lesson[]
+  } catch {}
+  return []
+}
+
+export function getModules(wikiSlug: string): any[] {
+  try {
+    const p = path.join(process.cwd(), 'data', `modules.${wikiSlug}.json`)
+    const raw = readFileSync ? readFileSync(p, 'utf-8') : '[]'
+    return JSON.parse(raw)
   } catch {}
   return []
 }

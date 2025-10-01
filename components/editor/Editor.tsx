@@ -21,7 +21,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import BubbleMenuExt from '@tiptap/extension-bubble-menu'
 import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 function slugify(value: string) {
   return value
@@ -35,6 +35,9 @@ const bubbleIdEn = 'table-bubble-menu-en'
 const textBubbleIdEn = 'text-bubble-menu-en'
 
 export default function WikiEditor() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [meta, setMeta] = useState(() => {
     const base = {
       id: '',
@@ -46,6 +49,34 @@ export default function WikiEditor() {
       duration_min: 30,
       difficulty: 'Beginner',
     }
+    
+    // Check for URL parameters first
+    if (typeof window !== 'undefined' && searchParams) {
+      const urlWiki = searchParams.get('wiki')?.trim()
+      const urlKit = searchParams.get('kit')?.trim()
+      const urlSlug = searchParams.get('slug')?.trim()
+      const urlId = searchParams.get('id')?.trim()
+      const urlTitle = searchParams.get('title')?.trim()
+      
+      if (urlWiki || urlKit || urlSlug || urlId || urlTitle) {
+        const urlMeta = {
+          ...base,
+          wikiSlug: urlWiki || urlKit || base.wikiSlug,
+          slug: urlSlug || (urlId ? slugify(urlId) : ''),
+          id: urlId || (urlSlug ? slugify(urlSlug) : ''),
+          title_en: urlTitle || '',
+        }
+        
+        // Store in sessionStorage so it persists
+        try {
+          sessionStorage.setItem('lessonMeta', JSON.stringify(urlMeta))
+        } catch {}
+        
+        return urlMeta
+      }
+    }
+    
+    // Fallback to sessionStorage
     if (typeof window !== 'undefined') {
       try {
         const raw = sessionStorage.getItem('lessonMeta')
@@ -70,8 +101,6 @@ export default function WikiEditor() {
   }, [meta.title_en, meta.title_ar, meta.slug, meta.id])
 
   const isGettingStarted = meta.slug === 'getting-started' || meta.id === 'getting-started'
-
-  const router = useRouter()
 
   const bubbleElementEnRef = useRef<HTMLElement | null>(null)
   const textBubbleElementEnRef = useRef<HTMLElement | null>(null)
@@ -285,22 +314,37 @@ export default function WikiEditor() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    
+    // Check if we have URL parameters that can create lesson metadata
+    const hasUrlParams = searchParams && (
+      searchParams.get('wiki') || 
+      searchParams.get('kit') || 
+      searchParams.get('slug') || 
+      searchParams.get('id') || 
+      searchParams.get('title')
+    )
+    
     try {
       const raw = sessionStorage.getItem('lessonMeta')
-      if (!raw) {
+      if (!raw && !hasUrlParams) {
         router.replace('/editor/properties')
         return
       }
-      const parsed = JSON.parse(raw)
-      setMeta((m) => ({
-        ...m,
-        ...parsed,
-        wikiSlug: parsed.wikiSlug || m.wikiSlug || 'student-kit',
-      }))
+      
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        setMeta((m) => ({
+          ...m,
+          ...parsed,
+          wikiSlug: parsed.wikiSlug || m.wikiSlug || 'student-kit',
+        }))
+      }
     } catch {
-      router.replace('/editor/properties')
+      if (!hasUrlParams) {
+        router.replace('/editor/properties')
+      }
     }
-  }, [router])
+  }, [router, searchParams])
 
   useEffect(() => {
     if (!editorEn) return

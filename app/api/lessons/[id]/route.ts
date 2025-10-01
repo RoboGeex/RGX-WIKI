@@ -3,6 +3,7 @@ import path from 'path'
 import { promises as fs } from 'fs'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 function lessonsFilePath(wikiSlug: string) {
   return path.join(process.cwd(), 'data', 'lessons.' + wikiSlug + '.json')

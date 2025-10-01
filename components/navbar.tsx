@@ -29,6 +29,8 @@ export default function Navbar({
   onLocaleChange,
   onMenuClick,
 }: Props) {
+  // Ensure locale is valid, fallback to 'en'
+  const safeLocale: Locale = locale && (locale === 'en' || locale === 'ar') ? locale : 'en'
   const pathname = usePathname()
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -36,7 +38,7 @@ export default function Navbar({
   const dropdownRef = useRef<HTMLDivElement | null>(null)
 
   const changeLocale = () => {
-    const next = locale === 'en' ? 'ar' : 'en'
+    const next = safeLocale === 'en' ? 'ar' : 'en'
     setStoredLocale(next)
     onLocaleChange(next)
   }
@@ -52,12 +54,14 @@ export default function Navbar({
   }, [])
 
   const sortedLessons = useMemo(() => {
-    return lessons.slice().sort((a, b) => a.order - b.order)
+    return lessons
+      .filter(lesson => lesson.slug !== 'getting-started') // Exclude getting-started from dropdown
+      .sort((a, b) => a.order - b.order)
   }, [lessons])
 
-  const gettingStartedHref = `/${locale}/${kitSlug}/lesson/getting-started`
+  const gettingStartedHref = `/${safeLocale}/${kitSlug}/lesson/getting-started`
 
-  const resourcesHref = resourcesUrl || `/${locale}/${kitSlug}/resources`
+  const resourcesHref = resourcesUrl || `/${safeLocale}/${kitSlug}/resources`
   const isLessonsPage = pathname?.includes(`/${kitSlug}/lesson/`) && pathname !== gettingStartedHref
 
   return (
@@ -71,13 +75,13 @@ export default function Navbar({
           >
             <Menu size={18} />
           </button>
-          <Link href={`/${locale}/${kitSlug}`} className="flex items-center gap-2">
+          <Link href={`/${safeLocale}/${kitSlug}`} className="flex items-center gap-2">
             <Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} priority />
             <span className="sr-only">RoboGeex Academy</span>
           </Link>
         </div>
 
-        <div className="hidden md:flex items-center gap-6 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="hidden md:flex items-center gap-6 flex-1 justify-center">
           <Link
             href={gettingStartedHref}
             className={
@@ -86,7 +90,7 @@ export default function Navbar({
                 : 'text-white/80 hover:text-primary pb-1 transition-colors'
             }
           >
-            Getting Started
+            {t('gettingStarted', safeLocale)}
           </Link>
 
           <div className="relative" ref={dropdownRef}>
@@ -98,23 +102,23 @@ export default function Navbar({
                   : 'flex items-center gap-1 text-white/80 hover:text-primary pb-1 transition-colors'
               }
             >
-              Lessons <ChevronDown size={14} />
+              {t('lessons', safeLocale)} <ChevronDown size={14} />
             </button>
             {lessonsOpen && (
               <div className="absolute left-0 top-full mt-2 w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg z-50">
-                <div className="p-3 text-xs uppercase tracking-wider text-gray-500">Lessons</div>
+                <div className="p-3 text-xs uppercase tracking-wider text-gray-500">{t('lessons', safeLocale)}</div>
                 <div className="divide-y divide-gray-100">
                   {sortedLessons.length === 0 && (
-                    <div className="p-3 text-xs text-gray-400">No lessons yet.</div>
+                    <div className="p-3 text-xs text-gray-400">{t('noLessonsYet', safeLocale)}</div>
                   )}
                   {sortedLessons.map((lesson) => (
                     <Link
                       key={lesson.id}
-                      href={`/${locale}/${kitSlug}/lesson/${lesson.slug}`}
+                      href={`/${safeLocale}/${kitSlug}/lesson/${lesson.slug}`}
                       className="block px-3 py-2 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition"
                       onClick={() => setLessonsOpen(false)}
                     >
-                      <div className="font-medium">{locale === 'ar' ? lesson.title_ar : lesson.title_en}</div>
+                      <div className="font-medium">{safeLocale === 'ar' ? lesson.title_ar : lesson.title_en}</div>
                       <div className="text-[10px] text-gray-400">{lesson.duration_min}m آ· {lesson.difficulty}</div>
                     </Link>
                   ))}
@@ -131,11 +135,11 @@ export default function Navbar({
                 : 'text-white/80 hover:text-primary pb-1 transition-colors'
             }
           >
-            Resources
+            {t('resources', safeLocale)}
           </Link>
         </div>
 
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <div className="relative hidden sm:block w-56">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
             <input
@@ -145,14 +149,14 @@ export default function Navbar({
                 setSearchOpen(e.target.value.length > 0)
               }}
               onFocus={() => setSearchOpen(query.length > 0)}
-              placeholder={t('search', locale)}
+              placeholder={t('search', safeLocale)}
               className="w-full pl-10 pr-3 py-2 rounded-xl border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             />
             {searchOpen && (
               <SearchPanel
                 query={query}
                 lessons={lessons}
-                locale={locale}
+                locale={safeLocale}
                 kitSlug={kitSlug}
                 onClose={() => setSearchOpen(false)}
               />
@@ -162,8 +166,10 @@ export default function Navbar({
           <button
             onClick={changeLocale}
             className="px-3 py-2 rounded-md border border-white/30 text-white text-sm flex items-center gap-2 transition hover:bg-white/10"
+            dir={safeLocale === 'ar' ? 'rtl' : 'ltr'}
           >
-            <Globe size={14} /> {locale.toUpperCase()}
+            <Globe size={14} />
+            <span>{safeLocale.toUpperCase()}</span>
           </button>
         </div>
       </div>
@@ -173,7 +179,7 @@ export default function Navbar({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" size={16} />
           <input
             type="text"
-            placeholder={t('search', locale)}
+            placeholder={t('search', safeLocale)}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)
@@ -188,7 +194,7 @@ export default function Navbar({
             <SearchPanel
               query={query}
               lessons={lessons}
-              locale={locale}
+              locale={safeLocale}
               kitSlug={kitSlug}
               onClose={() => setSearchOpen(false)}
             />

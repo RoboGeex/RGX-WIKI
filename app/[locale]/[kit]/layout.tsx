@@ -19,7 +19,7 @@ export default function KitLayout(
         defaultLessonSlug={wiki?.defaultLessonSlug}
         resourcesUrl={wiki?.resourcesUrl}
       />
-      <div className="mx-auto w-full max-w-[1920px] px-6 sm:px-10 lg:px-16 pt-24 pb-12 lg:pt-28">
+      <div className="mx-auto w-full max-w-[1920px] px-6 sm:px-10 lg:px-16 pt-16 pb-12 lg:pt-20">
         {children}
       </div>
     </div>

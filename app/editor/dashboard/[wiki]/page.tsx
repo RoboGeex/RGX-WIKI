@@ -66,7 +66,7 @@ export default async function EditorWikiDashboardPage({
             <h2 className="text-lg font-semibold text-gray-900">{kit.title}</h2>
             <div className="flex items-center gap-3">
               <Link
-                href={`/editor?kit=${kit.slug}&wiki=${wiki.slug}`}
+                href={`/editor/properties?kit=${kit.slug}&wiki=${wiki.slug}&new=true`}
                 className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

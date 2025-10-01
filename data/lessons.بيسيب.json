@@ -1,0 +1,39 @@
+[
+  {
+    "id": "getting-started",
+    "wikiSlug": "بيسيب",
+    "order": 1,
+    "slug": "getting-started",
+    "title_en": "Getting Started",
+    "title_ar": "البداية",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "Welcome to بيسيب Learning Kit",
+        "level": 1,
+        "ar": "مرحباً بك في مجموعة تعلم بيسيب"
+      },
+      {
+        "type": "paragraph",
+        "en": "This is your first lesson in the بيسيب learning series. Here you'll learn the basics and get familiar with the content.",
+        "ar": "هذا هو الدرس الأول في سلسلة تعلم بيسيب. هنا ستتعلم الأساسيات وتتعرف على المحتوى."
+      },
+      {
+        "type": "heading",
+        "en": "What You'll Learn",
+        "level": 2,
+        "ar": "ما ستتعلمه"
+      },
+      {
+        "type": "paragraph",
+        "en": "In this course, you will learn fundamental concepts and skills that will help you in your learning journey.",
+        "ar": "في هذه الدورة، ستتعلم المفاهيم والمهارات الأساسية التي ستساعدك في رحلة التعلم الخاصة بك."
+      }
+    ]
+  }
+]

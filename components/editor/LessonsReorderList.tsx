@@ -214,7 +214,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
       dragImage.style.transition = 'none'
       
       document.body.appendChild(dragImage)
-      dragImageRef.current = dragImage
+      dragImageRef.current = dragImage as HTMLDivElement
       event.dataTransfer.setDragImage(dragImage, dragOffset.x, dragOffset.y)
     } catch {}
   }
@@ -239,7 +239,8 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
       position = "after"
     } else {
       // In the middle zone, keep current position or default to before
-      position = indicator?.slug === slug ? indicator.position : "before"
+      const indicatorPosition = indicator?.slug === slug ? indicator.position : "before"
+      position = indicatorPosition === "end" ? "before" : indicatorPosition
     }
     
     // Prevent dropping on position 0 if getting-started exists

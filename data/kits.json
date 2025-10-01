@@ -1,12 +1,119 @@
-﻿[
+[
   {
     "slug": "student-kit",
     "wikiSlug": "student-kit",
     "title_en": "Arduino Student Kit",
-    "title_ar": "???????????? ???????????? Arduino",
+    "title_ar": "Arduino Student Kit",
     "heroImage": "/images/student-kit-hero.jpg",
     "overview_en": "Learn electronics and programming with hands-on projects using Arduino UNO.",
-    "overview_ar": "???????? ???????????????????????? ???????????????? ???? ???????? ???????????? ?????????? ???????????????? Arduino UNO."
+    "overview_ar": "Learn electronics and programming with hands-on projects using Arduino UNO."
+  },
+  {
+    "slug": "osama-kanan",
+    "wikiSlug": "osama-kanan",
+    "title_en": "Osama Kanan Learning Kit",
+    "title_ar": "Osama Kanan Learning Kit",
+    "heroImage": "/uploads/wikis/1758458940724-photo_2025-09-20_23-44-49.jpg",
+    "overview_en": "Elementary level learning content for Osama Kanan.",
+    "overview_ar": "Elementary level learning content for Osama Kanan."
+  },
+  {
+    "slug": "ios",
+    "wikiSlug": "ios",
+    "title_en": "iOS Learning Kit",
+    "title_ar": "iOS Learning Kit",
+    "heroImage": "/uploads/wikis/1758459017591-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
+    "overview_en": "Middle School level iOS development learning content.",
+    "overview_ar": "Middle School level iOS development learning content."
+  },
+  {
+    "slug": "osama-kanan-1",
+    "wikiSlug": "osama-kanan-1",
+    "title_en": "Osama Kanan Learning Kit 1",
+    "title_ar": "Osama Kanan Learning Kit 1",
+    "heroImage": "/uploads/wikis/1758519858746-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
+    "overview_en": "Middle School level learning content for Osama Kanan 1.",
+    "overview_ar": "Middle School level learning content for Osama Kanan 1."
+  },
+  {
+    "slug": "new-wiki",
+    "wikiSlug": "new-wiki",
+    "title_en": "New Wiki Learning Kit",
+    "title_ar": "New Wiki Learning Kit",
+    "heroImage": "/uploads/wikis/1758531542279-photo_2025-09-20_23-44-49.jpg",
+    "overview_en": "High School level learning content for New Wiki.",
+    "overview_ar": "High School level learning content for New Wiki."
+  },
+  {
+    "slug": "biseb",
+    "wikiSlug": "بيسيب",
+    "title_en": "Biseb Learning Kit",
+    "title_ar": "بيسيب",
+    "heroImage": "/uploads/wikis/1758458958508-Group_60.png",
+    "overview_en": "Middle School level learning content for Biseb.",
+    "overview_ar": "محتوى تعليمي للمرحلة المتوسطة لبيسيب."
+  },
+  {
+    "slug": "bisebig",
+    "wikiSlug": "بيسيبig",
+    "title_en": "Bisebig Learning Kit",
+    "title_ar": "بيسيبig",
+    "heroImage": "/uploads/wikis/1758519872461-Group_60.png",
+    "overview_en": "Middle School level learning content for Bisebig.",
+    "overview_ar": "محتوى تعليمي للمرحلة المتوسطة لبيسيبig."
+  },
+  {
+    "slug": "cadsoijasdoii",
+    "wikiSlug": "cadsoijasdoii",
+    "title_en": "Cadsoijasdoii Learning Kit",
+    "title_ar": "Cadsoijasdoii Learning Kit",
+    "heroImage": "/uploads/wikis/1758790905882-robogeex-logo_.png",
+    "overview_en": "Adult level learning content for Cadsoijasdoii.",
+    "overview_ar": "محتوى تعليمي للبالغين لـ Cadsoijasdoii."
+  },
+  {
+    "slug": "abbb",
+    "wikiSlug": "abbb",
+    "title_en": "ABBB Learning Kit",
+    "title_ar": "ABBB Learning Kit",
+    "heroImage": "/uploads/wikis/1758951674764-1c022b80-5ff0-45bb-b66c-43e103003eaa.png",
+    "overview_en": "Middle School level learning content for ABBB.",
+    "overview_ar": "محتوى تعليمي للمرحلة المتوسطة لـ ABBB."
+  },
+  {
+    "slug": "point",
+    "wikiSlug": "point",
+    "title_en": "Point Learning Kit",
+    "title_ar": "Point Learning Kit",
+    "heroImage": "/uploads/wikis/1758952392566-robogeex-logo.png",
+    "overview_en": "Elementary level learning content for Point.",
+    "overview_ar": "محتوى تعليمي للمرحلة الابتدائية لـ Point."
+  },
+  {
+    "slug": "osama-fd",
+    "wikiSlug": "osama-fd",
+    "title_en": "Osama fd Learning Kit",
+    "title_ar": "Osama fd Learning Kit",
+    "heroImage": "/uploads/wikis/1758954776521-f53bbb5e-7527-4dc6-99ab-9f51911cf4db.png",
+    "overview_en": "Elementary level learning content for Osama fd.",
+    "overview_ar": "محتوى تعليمي للمرحلة الابتدائية لـ Osama fd."
+  },
+  {
+    "slug": "zzzzz",
+    "wikiSlug": "zzzzz",
+    "title_en": "zzzzz Learning Kit",
+    "title_ar": "zzzzz Learning Kit",
+    "heroImage": "/uploads/wikis/1758955019522-utilities.jpg",
+    "overview_en": "Middle School level learning content for zzzzz.",
+    "overview_ar": "محتوى تعليمي للمرحلة المتوسطة لـ zzzzz."
+  },
+  {
+    "slug": "ytttytyu",
+    "wikiSlug": "ytttytyu",
+    "title_en": "ytttytyu Learning Kit",
+    "title_ar": "ytttytyu Learning Kit",
+    "heroImage": "/uploads/wikis/1758956912904-Konica-Minolta-Bizhub-C454e-DF-701-OT-506-PC-210-Left-Price-Offers-520x520.jpg",
+    "overview_en": "Elementary (K-5) level learning content for ytttytyu.",
+    "overview_ar": "محتوى تعليمي لـ Elementary (K-5) لـ ytttytyu."
   }
 ]
-

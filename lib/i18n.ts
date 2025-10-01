@@ -29,6 +29,11 @@ export const translations = {
     modules: 'Modules',
     previous: 'Previous',
     next: 'Next',
+    gettingStarted: 'Getting Started',
+    resources: 'Resources',
+    noLessonsYet: 'No lessons yet.',
+    onThisPage: 'On this page',
+    noHeadingsYet: 'No headings yet.',
     
     // Unlock
     unlock: 'Unlock',
@@ -72,6 +77,11 @@ export const translations = {
     modules: 'الوحدات',
     previous: 'السابق',
     next: 'التالي',
+    gettingStarted: 'البداية',
+    resources: 'الموارد',
+    noLessonsYet: 'لا توجد دروس بعد.',
+    onThisPage: 'في هذه الصفحة',
+    noHeadingsYet: 'لا توجد عناوين بعد.',
     
     // Unlock
     unlock: 'إلغاء القفل',
@@ -94,5 +104,11 @@ export const translations = {
 } as const
 
 export function t(key: keyof typeof translations.en, locale: Locale): string {
-  return (translations as any)[locale][key] || translations.en[key]
+  // Handle undefined or invalid locale
+  if (!locale || !translations[locale]) {
+    console.warn(`Invalid locale: ${locale}, falling back to English`)
+    return translations.en[key] || key
+  }
+  
+  return (translations as any)[locale][key] || translations.en[key] || key
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import fallbackLessons from '@/data/lessons.student-kit.json'
+// Removed static import - will use dynamic loading instead
 
 type WikiOption = {
   slug: string
@@ -126,10 +126,16 @@ export default function PropertiesForm() {
 
   const fallbackLessonMap = useMemo(() => {
     const map = new Map<string, FallbackLesson>()
-    ;(fallbackLessons as FallbackLesson[]).forEach((lesson) => {
-      map.set(lesson.slug, lesson)
-      map.set(lesson.id, lesson)
-    })
+    // Load fallback lessons dynamically
+    try {
+      const fallbackLessons = require('@/data/lessons.student-kit.json')
+      ;(fallbackLessons as FallbackLesson[]).forEach((lesson) => {
+        map.set(lesson.slug, lesson)
+        map.set(lesson.id, lesson)
+      })
+    } catch (error) {
+      console.warn('Could not load fallback lessons:', error)
+    }
     return map
   }, [])
 
@@ -212,20 +218,37 @@ export default function PropertiesForm() {
 
   const handleOpenEditor = () => {
     const nextMeta: LessonMeta = { ...meta }
-    if (!nextMeta.id) nextMeta.id = slugify(nextMeta.slug || nextMeta.title_en || nextMeta.title_ar)
-    if (!nextMeta.slug) nextMeta.slug = slugify(nextMeta.id || nextMeta.title_en || nextMeta.title_ar)
-    if (!nextMeta.id || !nextMeta.slug) {
-      setError('Please provide an ID or title to generate identifiers.')
-      return
-    }
+    
+    // Check if we have at least one title
     if (!nextMeta.title_en && !nextMeta.title_ar) {
       setError('Please provide at least one title')
       return
     }
+    
+    // Generate ID and slug automatically from title
+    const titleSource = nextMeta.title_en || nextMeta.title_ar || 'untitled'
+    const generatedId = slugify(titleSource)
+    const generatedSlug = slugify(titleSource)
+    
+    // Use generated values if not already set
+    nextMeta.id = nextMeta.id || generatedId
+    nextMeta.slug = nextMeta.slug || generatedSlug
+    
+    // Ensure we have valid identifiers
+    if (!nextMeta.id || nextMeta.id.trim() === '') {
+      nextMeta.id = generatedId
+    }
+    if (!nextMeta.slug || nextMeta.slug.trim() === '') {
+      nextMeta.slug = generatedSlug
+    }
+    
     try {
       sessionStorage.setItem('lessonMeta', JSON.stringify(nextMeta))
     } catch {}
-    router.push('/editor')
+    
+    // Navigate to the editor with lesson parameters
+    const editorUrl = `/editor/lesson?wiki=${encodeURIComponent(nextMeta.wikiSlug)}&kit=${encodeURIComponent(kitSlug)}&slug=${encodeURIComponent(nextMeta.slug)}&id=${encodeURIComponent(nextMeta.id)}&title=${encodeURIComponent(nextMeta.title_en || nextMeta.title_ar || '')}`
+    router.push(editorUrl)
   }
 
   return (
@@ -290,6 +313,19 @@ export default function PropertiesForm() {
               value={meta.difficulty}
               onChange={(e) => updateMeta({ difficulty: e.target.value })}
             />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Generated Identifiers</label>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-gray-50 border rounded px-2 py-1">
+                <div className="text-gray-500">ID:</div>
+                <div className="font-mono text-gray-700">{meta.id || 'Will be generated from title'}</div>
+              </div>
+              <div className="bg-gray-50 border rounded px-2 py-1">
+                <div className="text-gray-500">Slug:</div>
+                <div className="font-mono text-gray-700">{meta.slug || 'Will be generated from title'}</div>
+              </div>
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs text-gray-500 mb-1">Load existing lesson</label>

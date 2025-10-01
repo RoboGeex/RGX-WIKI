@@ -1,0 +1,108 @@
+[
+  {
+    "id": "getting-started",
+    "wikiSlug": "new-wiki",
+    "order": 1,
+    "slug": "getting-started",
+    "title_en": "Getting Started",
+    "title_ar": "البداية",
+    "duration_min": 15,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "Welcome to New Wiki Learning Kit!",
+        "level": 1,
+        "ar": "مرحباً بك في مجموعة تعلم ويكي الجديد!"
+      },
+      {
+        "type": "paragraph",
+        "en": "This is your first lesson. Here you'll learn the fundamentals and get ready for more advanced topics.",
+        "ar": "هذا هو درسك الأول. هنا ستتعلم الأساسيات وتستعد للمواضيع المتقدمة."
+      },
+      {
+        "type": "heading",
+        "en": "What You'll Learn",
+        "level": 2,
+        "ar": "ما ستتعلمه"
+      },
+      {
+        "type": "paragraph",
+        "en": "In this course, you will learn fundamental concepts and skills that will help you in your learning journey.",
+        "ar": "في هذه الدورة، ستتعلم المفاهيم والمهارات الأساسية التي ستساعدك في رحلة التعلم الخاصة بك."
+      }
+    ]
+  },
+  {
+    "id": "d",
+    "wikiSlug": "new-wiki",
+    "order": 2,
+    "slug": "dada",
+    "title_en": "dada",
+    "title_ar": "يشسيشس",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "dada",
+        "level": 1,
+        "ar": "dada"
+      },
+      {
+        "type": "heading",
+        "en": "Introduction",
+        "level": 2,
+        "ar": "Introduction"
+      },
+      {
+        "type": "paragraph",
+        "en": "Welcome to this lesson. Here we will learn about the basics.",
+        "ar": "Welcome to this lesson. Here we will learn about the basics."
+      },
+      {
+        "type": "heading",
+        "en": "Getting Started",
+        "level": 2,
+        "ar": "Getting Started"
+      },
+      {
+        "type": "paragraph",
+        "en": "First, make sure you have all the required materials.",
+        "ar": "First, make sure you have all the required materials."
+      },
+      {
+        "type": "heading",
+        "en": "Required Materials",
+        "level": 3,
+        "ar": "Required Materials"
+      },
+      {
+        "type": "paragraph",
+        "en": "You will need: Arduino board, LED lights, resistors, and jumper wires.",
+        "ar": "You will need: Arduino board, LED lights, resistors, and jumper wires."
+      },
+      {
+        "type": "heading",
+        "en": "Building the Circuit",
+        "level": 2,
+        "ar": "Building the Circuit"
+      },
+      {
+        "type": "paragraph",
+        "en": "Now let's start building our first circuit.",
+        "ar": "Now let's start building our first circuit."
+      },
+      {
+        "type": "image",
+        "image": "/uploads/1758697068114-robogeex-logo_.png"
+      }
+    ]
+  }
+]

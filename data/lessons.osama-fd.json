@@ -1,0 +1,45 @@
+[
+  {
+    "id": "getting-started",
+    "wikiSlug": "osama-fd",
+    "order": 0,
+    "slug": "getting-started",
+    "title_en": "Getting Started",
+    "title_ar": "البداية",
+    "duration_min": 5,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "Getting Started",
+        "level": 1,
+        "ar": "البداية"
+      },
+      {
+        "type": "heading",
+        "en": "Welcome to Osama fd Learning",
+        "level": 2,
+        "ar": "مرحباً بك في تعلم Osama fd"
+      },
+      {
+        "type": "paragraph",
+        "en": "Welcome to the Osama fd learning kit! This is your starting point for learning about Osama fd concepts.",
+        "ar": "مرحباً بك في مجموعة تعلم Osama fd! هذه نقطة البداية لتعلم مفاهيم Osama fd."
+      },
+      {
+        "type": "heading",
+        "en": "What You'll Learn",
+        "level": 2,
+        "ar": "ما سوف تتعلمه"
+      },
+      {
+        "type": "paragraph",
+        "en": "In this kit, you will learn the fundamentals of Osama fd and how to apply them in practical projects.",
+        "ar": "في هذه المجموعة، سوف تتعلم أساسيات Osama fd وكيفية تطبيقها في المشاريع العملية."
+      }
+    ]
+  }
+]

@@ -13,31 +13,28 @@ function createGettingStartedLesson(wikiSlug: string): Lesson {
     slug: 'getting-started',
     title_en: 'Getting Started',
     title_ar: 'البداية',
-    body: {
-      type: 'doc',
-      content: [
-        {
-          type: 'heading',
-          attrs: { level: 1 },
-          content: [{ type: 'text', text: 'Getting Started' }]
-        },
-        {
-          type: 'paragraph',
-          content: [
-            { type: 'text', text: 'Welcome to your wiki! This is your Getting Started lesson where you can introduce users to your content.' }
-          ]
-        },
-        {
-          type: 'paragraph',
-          content: [
-            { type: 'text', text: 'You can edit this lesson content, but the title and deletion are protected.' }
-          ]
-        }
-      ]
-    },
+    body: [
+      {
+        type: 'heading',
+        en: 'Getting Started',
+        ar: 'البداية',
+        level: 1
+      },
+      {
+        type: 'paragraph',
+        en: 'Welcome to your wiki! This is your Getting Started lesson where you can introduce users to your content.'
+      },
+      {
+        type: 'paragraph',
+        en: 'You can edit this lesson content, but the title and deletion are protected.'
+      }
+    ],
     duration_min: 5,
     difficulty: 'Beginner',
     order: -1, // Always first
+    prerequisites_en: [],
+    prerequisites_ar: [],
+    materials: [],
     wikiSlug,
     isGettingStarted: true, // Special flag to identify this lesson
     createdAt: new Date().toISOString(),

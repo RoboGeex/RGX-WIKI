@@ -1,0 +1,110 @@
+[
+  {
+    "id": "getting-started",
+    "wikiSlug": "ytttytyu",
+    "order": 0,
+    "slug": "getting-started",
+    "title_en": "Getting Started",
+    "title_ar": "البداية",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "Getting Started",
+        "level": 1,
+        "ar": "البداية"
+      },
+      {
+        "type": "heading",
+        "en": "Welcome to ytttytyu Learning",
+        "level": 2,
+        "ar": "مرحباً بك في تعلم ytttytyu"
+      },
+      {
+        "type": "paragraph",
+        "en": "Welcome to the ytttytyu learning kit! This is your starting point for learning about ytttytyu concepts.",
+        "ar": "مرحباً بك في مجموعة تعلم ytttytyu! هذه نقطة البداية لتعلم مفاهيم ytttytyu."
+      },
+      {
+        "type": "heading",
+        "en": "What You'll Learn",
+        "level": 2,
+        "ar": "ما سوف تتعلمه"
+      },
+      {
+        "type": "paragraph",
+        "en": "In this kit, you will learn the fundamentals of ytttytyu and how to apply them in practical projects.",
+        "ar": "في هذه المجموعة، سوف تتعلم أساسيات ytttytyu وكيفية تطبيقها في المشاريع العملية."
+      }
+    ]
+  },
+  {
+    "id": "x",
+    "wikiSlug": "ytttytyu",
+    "order": 1,
+    "slug": "xawx",
+    "title_en": "xawx",
+    "title_ar": "xawx",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "xawx",
+        "level": 1,
+        "ar": "xawx"
+      },
+      {
+        "type": "heading",
+        "en": "Introduction",
+        "level": 2,
+        "ar": "Introduction"
+      },
+      {
+        "type": "paragraph",
+        "en": "Welcome to this lesson. Here we will learn about the basics.",
+        "ar": "Welcome to this lesson. Here we will learn about the basics."
+      },
+      {
+        "type": "heading",
+        "en": "Getting Started",
+        "level": 2,
+        "ar": "Getting Started"
+      },
+      {
+        "type": "paragraph",
+        "en": "First, make sure you have all the required materials.",
+        "ar": "First, make sure you have all the required materials."
+      },
+      {
+        "type": "heading",
+        "en": "Required Materials",
+        "level": 3,
+        "ar": "Required Materials"
+      },
+      {
+        "type": "paragraph",
+        "en": "You will need: Arduino board, LED lights, resistors, and jumper wires.",
+        "ar": "You will need: Arduino board, LED lights, resistors, and jumper wires."
+      },
+      {
+        "type": "heading",
+        "en": "Building the Circuit",
+        "level": 2,
+        "ar": "Building the Circuit"
+      },
+      {
+        "type": "paragraph",
+        "en": "Now let's start building our first circuit.",
+        "ar": "Now let's start building our first circuit."
+      }
+    ]
+  }
+]

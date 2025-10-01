@@ -1,11 +1,227 @@
-﻿[
+[
   {
     "slug": "student-kit",
-    "displayName": "Arduino Student Kit",
-    "domains": ["student-kit.localhost", "localhost", "127.0.0.1"],
+    "displayName": "Student Kit",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [
+      "student-kit.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources"
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "slug": "osama-kanan",
+    "displayName": "Osama Kanan",
+    "grade": "Elementary (K-5)",
+    "picture": "/uploads/wikis/1758458940724-photo_2025-09-20_23-44-49.jpg",
+    "domains": [
+      "osama-kanan.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-21T12:49:00.727Z"
+  },
+  {
+    "slug": "بيسيب",
+    "displayName": "بيسيب",
+    "grade": "Middle School (6-8)",
+    "picture": "/uploads/wikis/1758458958508-Group_60.png",
+    "domains": [
+      "بيسيب.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-21T12:49:18.509Z"
+  },
+  {
+    "slug": "ios",
+    "displayName": "ios",
+    "grade": "Middle School (6-8)",
+    "picture": "/uploads/wikis/1758459017591-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
+    "domains": [
+      "ios.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-21T12:50:17.598Z"
+  },
+  {
+    "slug": "osama-kanan-1",
+    "displayName": "Osama Kanan",
+    "grade": "Middle School (6-8)",
+    "picture": "/uploads/wikis/1758519858746-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
+    "domains": [
+      "osama-kanan-1.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-22T05:44:18.752Z"
+  },
+  {
+    "slug": "بيسيبig",
+    "displayName": "بيسيبig",
+    "grade": "Middle School (6-8)",
+    "picture": "/uploads/wikis/1758519872461-Group_60.png",
+    "domains": [
+      "بيسيبig.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-22T05:44:32.463Z"
+  },
+  {
+    "slug": "new-wiki",
+    "displayName": "New wiki",
+    "grade": "High School (9-12)",
+    "picture": "/uploads/wikis/1758531542279-photo_2025-09-20_23-44-49.jpg",
+    "domains": [
+      "new-wiki.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-22T08:59:02.281Z"
+  },
+  {
+    "slug": "cadsoijasdoii",
+    "displayName": "cadsoijasdoii",
+    "grade": "Adult",
+    "picture": "/uploads/wikis/1758790905882-robogeex-logo_.png",
+    "domains": [
+      "cadsoijasdoii.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-25T09:01:45.894Z"
+  },
+  {
+    "slug": "abbb",
+    "displayName": "abbb",
+    "grade": "Middle School (6-8)",
+    "picture": "/uploads/wikis/1758951674764-1c022b80-5ff0-45bb-b66c-43e103003eaa.png",
+    "domains": [
+      "abbb.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-27T05:41:14.770Z"
+  },
+  {
+    "slug": "point",
+    "displayName": "point",
+    "grade": "Elementary (K-5)",
+    "picture": "/uploads/wikis/1758952392566-robogeex-logo.png",
+    "domains": [
+      "point.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-27T05:53:12.569Z"
+  },
+  {
+    "slug": "fefeefefe",
+    "displayName": "fefeefefe",
+    "grade": "High School (9-12)",
+    "picture": "/uploads/wikis/1758954436507-1830867.png",
+    "domains": [
+      "fefeefefe.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-27T06:27:16.509Z"
+  },
+  {
+    "slug": "gttgtgtg",
+    "displayName": "gttgtgtg",
+    "grade": "Middle School (6-8)",
+    "picture": "/uploads/wikis/1758954457737-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
+    "domains": [
+      "gttgtgtg.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-27T06:27:37.745Z"
+  },
+  {
+    "slug": "osama-fd",
+    "displayName": "Osama fd",
+    "grade": "Elementary (K-5)",
+    "picture": "/uploads/wikis/1758954776521-f53bbb5e-7527-4dc6-99ab-9f51911cf4db.png",
+    "domains": [
+      "osama-fd.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-27T06:32:56.523Z"
+  },
+  {
+    "slug": "zzzzz",
+    "displayName": "zzzzz",
+    "grade": "Middle School (6-8)",
+    "picture": "/uploads/wikis/1758955019522-utilities.jpg",
+    "domains": [
+      "zzzzz.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-27T06:36:59.543Z"
+  },
+  {
+    "slug": "ytttytyu",
+    "displayName": "ytttytyu",
+    "grade": "Elementary (K-5)",
+    "picture": "/uploads/wikis/1758956912904-Konica-Minolta-Bizhub-C454e-DF-701-OT-506-PC-210-Left-Price-Offers-520x520.jpg",
+    "domains": [
+      "ytttytyu.localhost",
+      "localhost",
+      "127.0.0.1"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-09-27T07:08:32.907Z"
   }
 ]
-

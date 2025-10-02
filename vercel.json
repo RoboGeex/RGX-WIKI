@@ -1,7 +1,7 @@
 {
   "functions": {
-    "app/**/*.tsx": {
-      "runtime": "@vercel/node"
+    "app/**/*.{ts,tsx}": {
+      "runtime": "nodejs20.x"
     }
   }
 }

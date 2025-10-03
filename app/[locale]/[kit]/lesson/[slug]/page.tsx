@@ -4,11 +4,8 @@ import {
   getNextLesson, getPrevLesson,
   getKit, getWiki
 } from '@/lib/data'
-import { getLessonBySlug } from '@/lib/server-data'
 import type { Locale } from '@/lib/i18n'
-import { headers } from 'next/headers'
 import Breadcrumbs from '@/components/breadcrumbs'
-import { getKitForWiki, requireWikiFromRequest } from '@/lib/wiki'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
 import PrevNextNav from '@/components/prev-next-nav'
@@ -22,32 +19,24 @@ export default async function LessonPage(
 ) {
   const { locale, kit, slug } = params
   
-  // Get the wiki from the kit instead of from the host
   const kitData = getKit(kit)
   if (!kitData) {
     redirect(`/${locale}/student-kit`)
   }
+  
   const wiki = getWiki(kitData.wikiSlug)
   if (!wiki) {
     redirect(`/${locale}/student-kit`)
   }
   
-  let lesson = process.env.USE_DB === 'true' ? await getLessonBySlug(slug) : undefined
-  if (lesson && (lesson as any).wikiSlug && (lesson as any).wikiSlug !== wiki.slug) lesson = undefined
-  if (!lesson) lesson = getLesson(kit, slug)
+  // This is the only data source now. No database calls.
+  const lesson = getLesson(kit, slug)
+  
+  // If the lesson is not found in the local files, show a 404 page.
   if (!lesson) {
-    try {
-      const h = headers()
-      const host = h.get('host') || 'localhost:3000'
-      const proto = h.get('x-forwarded-proto') || 'http'
-      const res = await fetch(`${proto}://${host}/api/lessons?kit=${kit}&wiki=${wiki.slug}`, { cache: 'no-store' })
-      if (res.ok) {
-        const list = await res.json()
-        lesson = (list || []).find((l: any) => l.slug === slug)
-      }
-    } catch {}
+    notFound()
+    return null // Stop rendering immediately
   }
-  if (!lesson) notFound()
   
   const lessonDisplayTitle = locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')
   const headingCounts = new Map<string, number>()
@@ -92,7 +81,7 @@ export default async function LessonPage(
       
       if (isTitleHeading) {
         skippedTitleHeading = true
-        return null // Don't render the title heading since it's already shown in the header
+        return null
       } else {
         tocEntries.push({ id, text, level })
       }

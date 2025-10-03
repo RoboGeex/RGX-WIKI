@@ -25,7 +25,7 @@ export default async function KitPage({ params }: { params: { locale: Locale; ki
     redirect(`/${locale}/student-kit`)
   }
   
-  const wiki = getWiki(kitData.wikiSlug)
+  const wiki = getWiki(kit)
   if (!wiki) {
     redirect(`/${locale}/student-kit`)
   }

@@ -153,7 +153,7 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
             </nav>
           </div>
         </div>
-      </aside
+      </aside>
     </>
   )
 }

@@ -1,6 +1,6 @@
 // Server-only helpers to fetch from DB when USE_DB=true
 import type { Lesson } from '@/lib/data'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export function syncGetLessons(kitSlug: string): Lesson[] {
   throw new Error('syncGetLessons is not usable in sync context. Use API or refactor to async.')

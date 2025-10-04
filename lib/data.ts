@@ -15,10 +15,6 @@ import lessonsZzzzz from '@/data/lessons.zzzzz.json'
 import lessonsArabic1 from '@/data/lessons.بيسيبig.json'
 import lessonsArabic2 from '@/data/lessons.بيسيب.json'
 
-import path from 'path'
-let readFileSync: any
-try { readFileSync = require('fs').readFileSync } catch {}
-
 export interface Wiki {
   slug: string
   displayName: string
@@ -123,11 +119,6 @@ export function getLessons(kitSlug: string): Lesson[] {
 }
 
 export function getModules(wikiSlug: string): any[] {
-    try {
-        const p = path.join(process.cwd(), 'data', `modules.${wikiSlug}.json`)
-        const raw = readFileSync ? readFileSync(p, 'utf-8') : '[]'
-        return JSON.parse(raw)
-    } catch { }
     return []
 }
 export function getLesson(kit: string, lessonSlug: string) {

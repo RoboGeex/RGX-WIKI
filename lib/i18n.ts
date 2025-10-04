@@ -48,6 +48,13 @@ export const translations = {
     unlockDescription: 'Please enter your access code to continue',
     accessCode: 'Access code',
     continue: 'Continue',
+    missingKitOrRedirect: 'Error: URL is missing kit or redirect parameter.',
+    invalidAccessCode: 'Invalid access code.',
+    unlocking: 'Unlocking...',
+    accessCodePlaceholder: 'Enter your code',
+    unlockWiki: 'Unlock Wiki',
+    enterAccessCodeToContinue: 'Enter the access code you received to continue.',
+
     
     // Code
     copy: 'Copy',
@@ -97,6 +104,12 @@ export const translations = {
     unlockDescription: 'يرجى إدخال رمز الوصول للمتابعة',
     accessCode: 'رمز الوصول',
     continue: 'متابعة',
+    missingKitOrRedirect: 'خطأ: الرابط لا يحتوي على معلمة المجموعة أو إعادة التوجيه.',
+    invalidAccessCode: 'رمز الوصول غير صالح.',
+    unlocking: 'جاري إلغاء القفل...',
+    accessCodePlaceholder: 'أدخل الرمز الخاص بك',
+    unlockWiki: 'فتح الموسوعة',
+    enterAccessCodeToContinue: 'أدخل رمز الوصول الذي تلقيته للمتابعة.',
     
     // Code
     copy: 'نسخ',

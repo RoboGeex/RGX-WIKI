@@ -1,6 +1,4 @@
-"use client"
-
-import * as React from 'react'
+'use client'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return <>{children}</>

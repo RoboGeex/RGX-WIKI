@@ -15,74 +15,84 @@ export interface LessonTocProps {
 
 export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
   const [activeId, setActiveId] = useState<string>('')
-  const [tocEntries, setTocEntries] = useState<TocEntry[]>(entries)
+  const [discoveredEntries, setDiscoveredEntries] = useState<TocEntry[]>([])
+
+  const tocEntries = useMemo(() => (entries.length > 0 ? entries : discoveredEntries), [entries, discoveredEntries])
 
   useEffect(() => {
-    setTocEntries(entries)
-  }, [entries])
+    if (entries.length > 0) return
 
-  useEffect(() => {
     const headingNodes = Array.from(document.querySelectorAll('[data-toc]')) as HTMLElement[]
-
-    // Only use DOM scanning if no entries were passed as props
-    if (headingNodes.length && entries.length === 0) {
+    if (headingNodes.length) {
       const domEntries = headingNodes.map((node) => ({
         id: node.id,
         text: node.getAttribute('data-toc-text') || node.innerText || node.id,
         level: Number(node.getAttribute('data-level') || '2'),
       }))
-      setTocEntries(domEntries)
+      setDiscoveredEntries(domEntries)
+    }
+  }, [entries.length])
+
+  useEffect(() => {
+    const headingElements = tocEntries.map(entry => document.getElementById(entry.id)).filter(el => el !== null) as HTMLElement[];
+    if (headingElements.length === 0) return;
+
+    let throttleTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const handleScroll = () => {
+      const activationLine = window.scrollY + 150;
+
+      let currentHeadingId: string | undefined = undefined;
+
+      for (const headingEl of headingElements) {
+        if (headingEl.offsetTop < activationLine) {
+          currentHeadingId = headingEl.id;
+        } else {
+          break;
+        }
+      }
+      
+      if (!currentHeadingId && headingElements.length > 0) {
+          currentHeadingId = headingElements[0].id;
+      }
+      
+      if (currentHeadingId && currentHeadingId !== activeId) {
+        setActiveId(currentHeadingId);
+      }
+    };
+    
+    const throttledScrollHandler = () => {
+      if (throttleTimer) return;
+      throttleTimer = setTimeout(() => {
+        handleScroll();
+        throttleTimer = undefined;
+      }, 100);
     }
 
-    if (!headingNodes.length) return
+    window.addEventListener('scroll', throttledScrollHandler);
+    
+    handleScroll(); 
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => (a.target as HTMLElement).offsetTop - (b.target as HTMLElement).offsetTop)
+    return () => {
+      window.removeEventListener('scroll', throttledScrollHandler);
+      if (throttleTimer) clearTimeout(throttleTimer);
+    };
+  }, [tocEntries, activeId]);
 
-        if (visible.length > 0) {
-          setActiveId(visible[0].target.id)
-          return
-        }
 
-        const sorted = headingNodes.slice().sort((a, b) => a.offsetTop - b.offsetTop)
-        const scrollTop = window.scrollY + window.innerHeight * 0.2
-        const before = sorted.filter((node) => node.offsetTop <= scrollTop)
-        if (before.length > 0) {
-          const candidate = before[before.length - 1]
-          if (candidate.id !== activeId) setActiveId(candidate.id)
-        } else if (sorted.length > 0) {
-          const candidate = sorted[0]
-          if (candidate.id !== activeId) setActiveId(candidate.id)
-        }
-      },
-      { rootMargin: '-60% 0px -30% 0px', threshold: 0 }
-    )
-
-    headingNodes.forEach((node) => observer.observe(node))
-    return () => observer.disconnect()
-  }, [activeId])
-
-  const handleScroll = (id: string) => {
+  const handleLinkClick = (id: string) => {
     const el = document.getElementById(id)
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
       setActiveId(id)
+      window.scrollTo({
+        top: el.offsetTop - 100, 
+        behavior: 'smooth'
+      });
     }
   }
 
-  const renderedToc = useMemo(() => tocEntries, [tocEntries])
-
-  useEffect(() => {
-    if (!activeId && tocEntries.length > 0) {
-      setActiveId(tocEntries[0].id)
-    }
-  }, [activeId, tocEntries])
-
   return (
-    <nav className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+    <nav className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm sticky top-24">
       {lessonTitle && (
         <div className="rounded-2xl bg-primary/15 text-primary px-4 py-3 mb-4 space-y-1">
           <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/70">Lesson</div>
@@ -91,21 +101,21 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
       )}
 
       <div className="text-xs uppercase font-semibold tracking-wide text-gray-500 mb-3">In this lesson</div>
-      {renderedToc.length === 0 && (
+      {tocEntries.length === 0 && (
         <div className="text-xs text-gray-400">Headings will appear here as you add content.</div>
       )}
       <ul className="space-y-1">
-        {renderedToc.map((entry) => (
+        {tocEntries.map((entry) => (
           <li key={entry.id}>
             <button
               type="button"
-              onClick={() => handleScroll(entry.id)}
-              className={`block w-full text-left rounded-md px-3 py-2 text-sm transition ${
-                entry.level >= 4 ? 'pl-6 text-xs' : entry.level === 3 ? 'pl-4' : ''
+              onClick={() => handleLinkClick(entry.id)}
+              className={`block w-full text-left rounded-md px-3 py-2 text-sm transition-colors duration-150 ${
+                entry.level >= 4 ? 'pl-8' : entry.level === 3 ? 'pl-5' : 'pl-3'
               } ${
                 activeId === entry.id
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-gray-700 hover:bg-primary/10 hover:text-primary'
+                  ? 'bg-primary/10 text-primary font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
               }`}
             >
               {entry.text}

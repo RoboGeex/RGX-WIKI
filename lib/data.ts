@@ -1,8 +1,21 @@
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
-// Avoid static import for lessons so runtime changes are visible
+// Statically import all lesson data so it's available on the client
+import lessonsAbbb from '@/data/lessons.abbb.json'
+import lessonsCadsoijasdoii from '@/data/lessons.cadsoijasdoii.json'
+import lessonsIos from '@/data/lessons.ios.json'
+import lessonsNewWiki from '@/data/lessons.new-wiki.json'
+import lessonsOsamaFd from '@/data/lessons.osama-fd.json'
+import lessonsOsamaKanan1 from '@/data/lessons.osama-kanan-1.json'
+import lessonsOsamaKanan from '@/data/lessons.osama-kanan.json'
+import lessonsPoint from '@/data/lessons.point.json'
+import lessonsStudentKit from '@/data/lessons.student-kit.json'
+import lessonsYtttytyu from '@/data/lessons.ytttytyu.json'
+import lessonsZzzzz from '@/data/lessons.zzzzz.json'
+import lessonsArabic1 from '@/data/lessons.بيسيبig.json'
+import lessonsArabic2 from '@/data/lessons.بيسيب.json'
+
 import path from 'path'
-// Use optional import to avoid bundling 'fs' in client; only server files should import functions using fs.
 let readFileSync: any
 try { readFileSync = require('fs').readFileSync } catch {}
 
@@ -64,6 +77,23 @@ export interface Lesson {
 const kits = kitsData as Kit[]
 const wikis = wikisData as Wiki[]
 
+// Create a map of all lessons, keyed by wikiSlug
+const allLessons: Record<string, Lesson[]> = {
+  'abbb': lessonsAbbb as Lesson[],
+  'cadsoijasdoii': lessonsCadsoijasdoii as Lesson[],
+  'ios': lessonsIos as Lesson[],
+  'new-wiki': lessonsNewWiki as Lesson[],
+  'osama-fd': lessonsOsamaFd as Lesson[],
+  'osama-kanan-1': lessonsOsamaKanan1 as Lesson[],
+  'osama-kanan': lessonsOsamaKanan as Lesson[],
+  'point': lessonsPoint as Lesson[],
+  'student-kit': lessonsStudentKit as Lesson[],
+  'ytttytyu': lessonsYtttytyu as Lesson[],
+  'zzzzz': lessonsZzzzz as Lesson[],
+  'بيسيبig': lessonsArabic1 as Lesson[],
+  'بيسيب': lessonsArabic2 as Lesson[],
+}
+
 function wikiSlugForKit(kitSlug: string): string {
   const kit = kits.find(k => k.slug === kitSlug)
   return kit?.wikiSlug || kitSlug
@@ -83,29 +113,20 @@ export function getKits(wikiSlug?: string): Kit[] {
 export function getKit(slug: string, wikiSlug?: string) {
   return kits.find(k => k.slug === slug && (!wikiSlug || k.wikiSlug === wikiSlug))
 }
+
+// Now, getLessons can simply return the lessons from the pre-loaded map
 export function getLessons(kitSlug: string): Lesson[] {
   const wikiSlug = wikiSlugForKit(kitSlug)
-  if (process.env.USE_DB === 'true') {
-    try {
-      const { syncGetLessons } = require('./server-data') as typeof import('./server-data')
-      return syncGetLessons(wikiSlug)
-    } catch {}
-  }
-  try {
-    const p = path.join(process.cwd(), 'data', `lessons.${wikiSlug}.json`)
-    const raw = readFileSync ? readFileSync(p, 'utf-8') : '[]'
-    return JSON.parse(raw) as Lesson[]
-  } catch {}
-  return []
+  return allLessons[wikiSlug] || []
 }
 
 export function getModules(wikiSlug: string): any[] {
-  try {
-    const p = path.join(process.cwd(), 'data', `modules.${wikiSlug}.json`)
-    const raw = readFileSync ? readFileSync(p, 'utf-8') : '[]'
-    return JSON.parse(raw)
-  } catch {}
-  return []
+    try {
+        const p = path.join(process.cwd(), 'data', `modules.${wikiSlug}.json`)
+        const raw = readFileSync ? readFileSync(p, 'utf-8') : '[]'
+        return JSON.parse(raw)
+    } catch { }
+    return []
 }
 export function getLesson(kit: string, lessonSlug: string) {
   return getLessons(kit).find(l => l.slug === lessonSlug)
@@ -113,6 +134,11 @@ export function getLesson(kit: string, lessonSlug: string) {
 
 function sortLessons(list: Lesson[]): Lesson[] {
   return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+export function getFirstLesson(kit: string) {
+    const list = sortLessons(getLessons(kit))
+    return list[0]
 }
 
 export function getNextLesson(kit: string, slug: string) {

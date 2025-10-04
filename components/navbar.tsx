@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -9,6 +9,7 @@ import { Locale, t } from '@/lib/i18n'
 import { setStoredLocale } from '@/lib/unlock'
 import SearchPanel from './search-panel'
 import type { Lesson } from '@/lib/data'
+import { getKits, getLessons } from '@/lib/data'
 
 interface Props {
   locale: Locale
@@ -29,13 +30,26 @@ export default function Navbar({
   onLocaleChange,
   onMenuClick,
 }: Props) {
-  // Ensure locale is valid, fallback to 'en'
   const safeLocale: Locale = locale && (locale === 'en' || locale === 'ar') ? locale : 'en'
   const pathname = usePathname()
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [lessonsOpen, setLessonsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
+
+  const lessonsForWiki = useMemo(() => {
+    const allKits = getKits();
+    const currentKit = allKits.find(k => k.slug === kitSlug);
+    const currentWikiSlug = currentKit?.wikiSlug;
+
+    const kitsForWiki = currentWikiSlug
+        ? allKits.filter(k => k.wikiSlug === currentWikiSlug)
+        : currentKit ? [currentKit] : []; 
+    
+    return kitsForWiki.flatMap(kit =>
+        getLessons(kit.slug).map(lesson => ({ ...lesson, kitSlug: kit.slug }))
+    );
+  }, [kitSlug])
 
   const changeLocale = () => {
     const next = safeLocale === 'en' ? 'ar' : 'en'
@@ -55,12 +69,11 @@ export default function Navbar({
 
   const sortedLessons = useMemo(() => {
     return lessons
-      .filter(lesson => lesson.slug !== 'getting-started') // Exclude getting-started from dropdown
+      .filter(lesson => lesson.slug !== 'getting-started')
       .sort((a, b) => a.order - b.order)
   }, [lessons])
 
   const gettingStartedHref = `/${safeLocale}/${kitSlug}/lesson/getting-started`
-
   const resourcesHref = resourcesUrl || `/${safeLocale}/${kitSlug}/resources`
   const isLessonsPage = pathname?.includes(`/${kitSlug}/lesson/`) && pathname !== gettingStartedHref
 
@@ -84,11 +97,7 @@ export default function Navbar({
         <div className="hidden md:flex items-center gap-6 flex-1 justify-center">
           <Link
             href={gettingStartedHref}
-            className={
-              pathname === gettingStartedHref
-                ? 'text-primary/80 border-b-2 border-primary/80 pb-1'
-                : 'text-white/80 hover:text-primary pb-1 transition-colors'
-            }
+            className={pathname === gettingStartedHref ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'text-white/80 hover:text-primary pb-1 transition-colors'}
           >
             {t('gettingStarted', safeLocale)}
           </Link>
@@ -96,11 +105,7 @@ export default function Navbar({
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setLessonsOpen((prev) => !prev)}
-              className={
-                isLessonsPage
-                  ? 'flex items-center gap-1 text-primary/80 border-b-2 border-primary/80 pb-1'
-                  : 'flex items-center gap-1 text-white/80 hover:text-primary pb-1 transition-colors'
-              }
+              className={isLessonsPage ? 'flex items-center gap-1 text-primary/80 border-b-2 border-primary/80 pb-1' : 'flex items-center gap-1 text-white/80 hover:text-primary pb-1 transition-colors'}
             >
               {t('lessons', safeLocale)} <ChevronDown size={14} />
             </button>
@@ -108,9 +113,6 @@ export default function Navbar({
               <div className="absolute left-0 top-full mt-2 w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg z-50">
                 <div className="p-3 text-xs uppercase tracking-wider text-gray-500">{t('lessons', safeLocale)}</div>
                 <div className="divide-y divide-gray-100">
-                  {sortedLessons.length === 0 && (
-                    <div className="p-3 text-xs text-gray-400">{t('noLessonsYet', safeLocale)}</div>
-                  )}
                   {sortedLessons.map((lesson) => (
                     <Link
                       key={lesson.id}
@@ -129,11 +131,7 @@ export default function Navbar({
 
           <Link
             href={resourcesHref}
-            className={
-              pathname === resourcesHref
-                ? 'text-primary/80 border-b-2 border-primary/80 pb-1'
-                : 'text-white/80 hover:text-primary pb-1 transition-colors'
-            }
+            className={pathname === resourcesHref ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'text-white/80 hover:text-primary pb-1 transition-colors'}
           >
             {t('resources', safeLocale)}
           </Link>
@@ -144,10 +142,7 @@ export default function Navbar({
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
             <input
               value={query}
-              onChange={e => {
-                setQuery(e.target.value)
-                setSearchOpen(e.target.value.length > 0)
-              }}
+              onChange={e => { setQuery(e.target.value); setSearchOpen(e.target.value.length > 0); }}
               onFocus={() => setSearchOpen(query.length > 0)}
               placeholder={t('search', safeLocale)}
               className="w-full pl-10 pr-3 py-2 rounded-xl border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
@@ -155,7 +150,7 @@ export default function Navbar({
             {searchOpen && (
               <SearchPanel
                 query={query}
-                lessons={lessons}
+                lessons={lessonsForWiki} 
                 locale={safeLocale}
                 kitSlug={kitSlug}
                 onClose={() => setSearchOpen(false)}
@@ -181,10 +176,7 @@ export default function Navbar({
             type="text"
             placeholder={t('search', safeLocale)}
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setSearchOpen(e.target.value.length > 0)
-            }}
+            onChange={(e) => { setQuery(e.target.value); setSearchOpen(e.target.value.length > 0); }}
             onFocus={() => setSearchOpen(query.length > 0)}
             className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border border-white/20 bg-white/10 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           />
@@ -193,7 +185,7 @@ export default function Navbar({
           <div className="px-0">
             <SearchPanel
               query={query}
-              lessons={lessons}
+              lessons={lessonsForWiki}
               locale={safeLocale}
               kitSlug={kitSlug}
               onClose={() => setSearchOpen(false)}

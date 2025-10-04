@@ -1,5 +1,6 @@
-"use client"
+'use client'
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
 import { t } from '@/lib/i18n'
@@ -27,9 +28,8 @@ type LessonSummary = {
   duration_min: number
 }
 
-
 export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: propModules, lessons }: Props) {
-  // Ensure locale is valid, fallback to 'en'
+  const pathname = usePathname()
   const safeLocale: Locale = locale && (locale === 'en' || locale === 'ar') ? locale : 'en'
   const [modules, setModules] = useState<Module[]>([])
   const [toc, setToc] = useState<TocItem[]>([])
@@ -39,7 +39,6 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
     if (propModules) {
       setModules(propModules)
     } else if (lessons) {
-      // Create a simple module structure from lessons if modules aren't provided
       const simpleModule: Module = {
         id: 'lessons',
         order: 1,
@@ -72,14 +71,15 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
           setActiveHeading(visible[0].target.id)
         }
       },
-      { rootMargin: '-60% 0px -30% 0px', threshold: 0 }
+      { rootMargin: '-120px 0px -80% 0px' }
     )
 
     headingNodes.forEach((node) => observer.observe(node))
     return () => observer.disconnect()
-  }, [typeof window !== 'undefined' ? window.location.pathname : ''])
+  }, [pathname])
 
   const handleScrollTo = (id: string) => {
+    setActiveHeading(id)
     const el = document.getElementById(id)
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     if (isOpen) onClose()
@@ -103,16 +103,23 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
             <div className="space-y-3">
               {lessons && lessons.length > 0 ? (
                 <div className="space-y-1">
-                  {lessons.map((lesson) => (
-                    <a
-                      key={lesson.slug}
-                      href={`/${locale}/${kitSlug}/lesson/${lesson.slug}`}
-                      className="block rounded-md px-3 py-2 text-sm hover:bg-primary/10 hover:text-primary transition"
-                    >
-                      <div className="font-medium">{locale === 'ar' ? lesson.title_ar : lesson.title_en}</div>
-                      <div className="text-[11px] text-gray-500">{lesson.duration_min}m</div>
-                    </a>
-                  ))}
+                  {lessons.map((lesson) => {
+                    const isActive = pathname?.includes(`/lesson/${lesson.slug}`)
+                    return (
+                      <a
+                        key={lesson.slug}
+                        href={`/${locale}/${kitSlug}/lesson/${lesson.slug}`}
+                        className={`block rounded-md px-3 py-2 text-sm transition ${
+                          isActive
+                            ? 'bg-primary/10 text-primary font-medium'
+                            : 'text-gray-700 hover:bg-primary/10 hover:text-primary'
+                        }`}
+                      >
+                        <div className="font-medium">{locale === 'ar' ? lesson.title_ar : lesson.title_en}</div>
+                        <div className="text-[11px] text-gray-500">{lesson.duration_min}m</div>
+                      </a>
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-xs text-gray-400">{t('noLessonsYet', safeLocale)}</div>

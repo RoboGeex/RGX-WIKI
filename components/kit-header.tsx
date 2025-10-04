@@ -5,9 +5,9 @@ import { getKits, getLessons } from '@/lib/data'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import SearchPanel from './search-panel'
-import * as i18n from '@/lib/i18n'
+import { i18n, t, Locale } from '@/lib/i18n'
 
-export default function KitHeader({ lang, kitSlug, lessonSlug }: { lang: i18n.Locale; kitSlug: string, lessonSlug: string }) {
+export default function KitHeader({ lang, kitSlug, lessonSlug }: { lang: Locale; kitSlug: string, lessonSlug: string }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const lessonsForWiki = useMemo(() => {
@@ -27,7 +27,7 @@ export default function KitHeader({ lang, kitSlug, lessonSlug }: { lang: i18n.Lo
     }
   }, [kitSlug]);
 
-  const otherLocale = i18n.i18n.locales.find((l) => l !== lang);
+  const otherLocale = i18n.locales.find((l) => l !== lang);
 
   return (
     <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
@@ -40,7 +40,7 @@ export default function KitHeader({ lang, kitSlug, lessonSlug }: { lang: i18n.Lo
         <div className="relative">
           <input 
             type="text" 
-            placeholder={i18n.t('search', lang)}
+            placeholder={t('search', lang)}
             className="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

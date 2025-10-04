@@ -1,4 +1,3 @@
-// Force a new build
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 // Statically import all lesson data so it's available on the client

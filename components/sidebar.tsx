@@ -42,17 +42,19 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
       const simpleModule: Module = {
         id: 'lessons',
         order: 1,
-        title_en: t('lessons', safeLocale),
-        title_ar: t('lessons', safeLocale),
-        summary_en: t('allLessons', safeLocale),
-        summary_ar: t('allLessons', safeLocale)
+        title_en: t('lessons', 'en'),
+        title_ar: t('lessons', 'ar'),
+        summary_en: t('allLessons', 'en'),
+        summary_ar: t('allLessons', 'ar')
       }
       setModules([simpleModule])
     }
-  }, [propModules, lessons, safeLocale])
+  }, [propModules, lessons])
 
   useEffect(() => {
+    console.log('Sidebar: pathname changed to:', pathname);
     const headingNodes = Array.from(document.querySelectorAll('[data-toc]')) as HTMLElement[]
+    console.log('Sidebar: Found heading nodes:', headingNodes);
     const mapped = headingNodes.map((node) => ({
       id: node.id,
       text: node.getAttribute('data-toc-text') || node.innerText || node.id,
@@ -64,10 +66,12 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
 
     const observer = new IntersectionObserver(
       (entries) => {
+        console.log('Sidebar: IntersectionObserver entries:', entries);
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => (a.target as HTMLElement).offsetTop - (b.target as HTMLElement).offsetTop)
         if (visible.length > 0) {
+          console.log('Sidebar: Setting active heading from observer:', visible[0].target.id);
           setActiveHeading(visible[0].target.id)
         }
       },
@@ -75,10 +79,14 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
     )
 
     headingNodes.forEach((node) => observer.observe(node))
-    return () => observer.disconnect()
+    return () => {
+      console.log('Sidebar: Disconnecting IntersectionObserver');
+      observer.disconnect()
+    }
   }, [pathname])
 
   const handleScrollTo = (id: string) => {
+    console.log('Sidebar: handleScrollTo called with id:', id);
     setActiveHeading(id)
     const el = document.getElementById(id)
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -145,7 +153,7 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
             </nav>
           </div>
         </div>
-      </aside>
+      </aside
     </>
   )
 }

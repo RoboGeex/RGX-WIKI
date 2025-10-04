@@ -12,7 +12,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-01-01T00:00:00.000Z"
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "isLocked": true,
+    "accessCode": "f47ac10b"
   },
   {
     "slug": "osama-kanan",
@@ -25,7 +27,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-21T12:49:00.727Z"
+    "createdAt": "2025-09-21T12:49:00.727Z",
+    "isLocked": true,
+    "accessCode": "c82a4e9e"
   },
   {
     "slug": "بيسيب",
@@ -38,7 +42,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-21T12:49:18.509Z"
+    "createdAt": "2025-09-21T12:49:18.509Z",
+    "isLocked": true,
+    "accessCode": "a7b3c9d8"
   },
   {
     "slug": "ios",
@@ -51,7 +57,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-21T12:50:17.598Z"
+    "createdAt": "2025-09-21T12:50:17.598Z",
+    "isLocked": true,
+    "accessCode": "e1f2a3b4"
   },
   {
     "slug": "osama-kanan-1",
@@ -64,7 +72,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-22T05:44:18.752Z"
+    "createdAt": "2025-09-22T05:44:18.752Z",
+    "isLocked": true,
+    "accessCode": "d5e6f7a8"
   },
   {
     "slug": "بيسيبig",
@@ -77,7 +87,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-22T05:44:32.463Z"
+    "createdAt": "2025-09-22T05:44:32.463Z",
+    "isLocked": true,
+    "accessCode": "b9c8d7e6"
   },
   {
     "slug": "new-wiki",
@@ -90,7 +102,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-22T08:59:02.281Z"
+    "createdAt": "2025-09-22T08:59:02.281Z",
+    "isLocked": true,
+    "accessCode": "a1b2c3d4"
   },
   {
     "slug": "cadsoijasdoii",
@@ -103,7 +117,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-25T09:01:45.894Z"
+    "createdAt": "2025-09-25T09:01:45.894Z",
+    "isLocked": true,
+    "accessCode": "e5f6a7b8"
   },
   {
     "slug": "abbb",
@@ -116,7 +132,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T05:41:14.770Z"
+    "createdAt": "2025-09-27T05:41:14.770Z",
+    "isLocked": true,
+    "accessCode": "c9d8e7f6"
   },
   {
     "slug": "point",
@@ -129,7 +147,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T05:53:12.569Z"
+    "createdAt": "2025-09-27T05:53:12.569Z",
+    "isLocked": true,
+    "accessCode": "a1b2c3d4"
   },
   {
     "slug": "fefeefefe",
@@ -142,7 +162,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:27:16.509Z"
+    "createdAt": "2025-09-27T06:27:16.509Z",
+    "isLocked": true,
+    "accessCode": "e5f6a7b8"
   },
   {
     "slug": "gttgtgtg",
@@ -155,7 +177,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:27:37.745Z"
+    "createdAt": "2025-09-27T06:27:37.745Z",
+    "isLocked": true,
+    "accessCode": "c9d8e7f6"
   },
   {
     "slug": "osama-fd",
@@ -168,7 +192,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:32:56.523Z"
+    "createdAt": "2025-09-27T06:32:56.523Z",
+    "isLocked": true,
+    "accessCode": "a1b2c3d4"
   },
   {
     "slug": "zzzzz",
@@ -181,7 +207,9 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:36:59.543Z"
+    "createdAt": "2025-09-27T06:36:59.543Z",
+    "isLocked": true,
+    "accessCode": "e5f6a7b8"
   },
   {
     "slug": "ytttytyu",
@@ -194,6 +222,8 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T07:08:32.907Z"
+    "createdAt": "2025-09-27T07:08:32.907Z",
+    "isLocked": true,
+    "accessCode": "c9d8e7f6"
   }
 ]

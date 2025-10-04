@@ -34,6 +34,7 @@ export const translations = {
     noLessonsYet: 'No lessons yet.',
     onThisPage: 'On this page',
     noHeadingsYet: 'No headings yet.',
+    allLessons: 'All lessons',
     
     // Unlock
     unlock: 'Unlock',
@@ -82,6 +83,7 @@ export const translations = {
     noLessonsYet: 'لا توجد دروس بعد.',
     onThisPage: 'في هذه الصفحة',
     noHeadingsYet: 'لا توجد عناوين بعد.',
+    allLessons: 'جميع الدروس',
     
     // Unlock
     unlock: 'إلغاء القفل',

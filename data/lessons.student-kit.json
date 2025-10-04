@@ -80,9 +80,74 @@
     ]
   },
   {
-    "id": "geeee",
+    "id": "f",
     "wikiSlug": "student-kit",
     "order": 2,
+    "slug": "qqqq",
+    "title_en": "qqqq",
+    "title_ar": "qqqqqqq",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [
+      {
+        "type": "heading",
+        "en": "qqqq",
+        "level": 1,
+        "ar": "qqqqqqq"
+      },
+      {
+        "type": "heading",
+        "en": "Introduction",
+        "level": 2,
+        "ar": "Introduction"
+      },
+      {
+        "type": "paragraph",
+        "en": "Welcome to this lesson. Here we will learn about the basics.",
+        "ar": "Welcome to this lesson. Here we will learn about the basics."
+      },
+      {
+        "type": "heading",
+        "en": "Getting Started",
+        "level": 2,
+        "ar": "Getting Started"
+      },
+      {
+        "type": "paragraph",
+        "en": "First, make sure you have all the required materials.",
+        "ar": "First, make sure you have all the required materials."
+      },
+      {
+        "type": "heading",
+        "en": "Required Materials",
+        "level": 3,
+        "ar": "Required Materials"
+      },
+      {
+        "type": "paragraph",
+        "en": "You will need: Arduino board, LED lights, resistors, and jumper wires.",
+        "ar": "You will need: Arduino board, LED lights, resistors, and jumper wires."
+      },
+      {
+        "type": "heading",
+        "en": "Building the Circuit",
+        "level": 2,
+        "ar": "Building the Circuit"
+      },
+      {
+        "type": "paragraph",
+        "en": "Now let's start building our first circuit.",
+        "ar": "Now let's start building our first circuit."
+      }
+    ]
+  },
+  {
+    "id": "geeee",
+    "wikiSlug": "student-kit",
+    "order": 3,
     "slug": "geeee",
     "title_en": "Geeee",
     "title_ar": "Geeee",
@@ -145,71 +210,6 @@
       {
         "type": "image",
         "image": "/uploads/1758378516700-Group_60.png"
-      }
-    ]
-  },
-  {
-    "id": "f",
-    "wikiSlug": "student-kit",
-    "order": 3,
-    "slug": "qqqq",
-    "title_en": "qqqq",
-    "title_ar": "qqqqqqq",
-    "duration_min": 30,
-    "difficulty": "Beginner",
-    "prerequisites_en": [],
-    "prerequisites_ar": [],
-    "materials": [],
-    "body": [
-      {
-        "type": "heading",
-        "en": "qqqq",
-        "level": 1,
-        "ar": "qqqqqqq"
-      },
-      {
-        "type": "heading",
-        "en": "Introduction",
-        "level": 2,
-        "ar": "Introduction"
-      },
-      {
-        "type": "paragraph",
-        "en": "Welcome to this lesson. Here we will learn about the basics.",
-        "ar": "Welcome to this lesson. Here we will learn about the basics."
-      },
-      {
-        "type": "heading",
-        "en": "Getting Started",
-        "level": 2,
-        "ar": "Getting Started"
-      },
-      {
-        "type": "paragraph",
-        "en": "First, make sure you have all the required materials.",
-        "ar": "First, make sure you have all the required materials."
-      },
-      {
-        "type": "heading",
-        "en": "Required Materials",
-        "level": 3,
-        "ar": "Required Materials"
-      },
-      {
-        "type": "paragraph",
-        "en": "You will need: Arduino board, LED lights, resistors, and jumper wires.",
-        "ar": "You will need: Arduino board, LED lights, resistors, and jumper wires."
-      },
-      {
-        "type": "heading",
-        "en": "Building the Circuit",
-        "level": 2,
-        "ar": "Building the Circuit"
-      },
-      {
-        "type": "paragraph",
-        "en": "Now let's start building our first circuit.",
-        "ar": "Now let's start building our first circuit."
       }
     ]
   }

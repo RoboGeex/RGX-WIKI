@@ -26,6 +26,8 @@ export interface Wiki {
   defaultLocale?: string
   defaultLessonSlug?: string
   resourcesUrl?: string
+  accessCode?: string
+  isLocked?: boolean
 }
 export interface Kit {
   slug: string

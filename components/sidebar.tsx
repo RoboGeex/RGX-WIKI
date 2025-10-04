@@ -42,14 +42,14 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
       const simpleModule: Module = {
         id: 'lessons',
         order: 1,
-        title_en: 'Lessons',
-        title_ar: 'الدروس',
-        summary_en: 'All lessons',
-        summary_ar: 'جميع الدروس'
+        title_en: t('lessons', safeLocale),
+        title_ar: t('lessons', safeLocale),
+        summary_en: t('allLessons', safeLocale),
+        summary_ar: t('allLessons', safeLocale)
       }
       setModules([simpleModule])
     }
-  }, [propModules, lessons])
+  }, [propModules, lessons, safeLocale])
 
   useEffect(() => {
     const headingNodes = Array.from(document.querySelectorAll('[data-toc]')) as HTMLElement[]

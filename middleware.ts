@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getWikiByDomain } from '@/lib/data'
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
+  const wiki = getWikiByDomain(hostname)
+
+  // If the wiki is locked and the user is not trying to unlock it, redirect to the unlock page
+  if (wiki && wiki.isLocked && !url.pathname.startsWith('/unlock')) {
+    const hasAccess = request.cookies.get(`wiki-${wiki.slug}-unlocked`)
+    if (!hasAccess) {
+      url.pathname = '/unlock'
+      return NextResponse.redirect(url)
+    }
+  }
 
   // Skip Vercel deployment URLs completely
   if (hostname.includes('.vercel.app')) {

@@ -1,4 +1,4 @@
-﻿import { getLessons, getKits, getWiki } from "@/lib/data"
+import { getLessons, getKits, getWiki } from "@/lib/data"
 import { getLessonsFromDb } from "@/lib/server-data"
 import type { Lesson } from "@/lib/data"
 
@@ -68,7 +68,7 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
   map.set('getting-started', gettingStartedLesson)
   
   const allLessons = Array.from(map.values())
-    .filter((lesson) => (lesson.wikiSlug ? lesson.wikiSlug === wikiSlug : true))
+    .filter((lesson) => !lesson.wikiSlug || lesson.wikiSlug === wikiSlug)
     .sort((a, b) => {
       // Getting Started lesson always comes first
       if (a.slug === 'getting-started') return -1

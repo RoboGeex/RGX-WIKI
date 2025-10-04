@@ -1,7 +1,3 @@
-prisma:warn Prisma failed to detect the libssl/openssl version to use, and may not work as expected. Defaulting to "openssl-1.1.x".
-Please manually install OpenSSL and try installing Prisma again.
-prisma:warn Prisma failed to detect the libssl/openssl version to use, and may not work as expected. Defaulting to "openssl-1.1.x".
-Please manually install OpenSSL and try installing Prisma again.
 -- CreateTable
 CREATE TABLE `Lesson` (
     `id` VARCHAR(191) NOT NULL,
@@ -35,4 +31,3 @@ CREATE TABLE `Asset` (
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-

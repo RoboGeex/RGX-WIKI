@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
@@ -98,7 +99,6 @@ export async function POST(req: Request) {
       if (basis) lesson.id = slugify(basis)
     }
 
-    // Final validation - ensure we have valid non-empty values
     if (!lesson.id || lesson.id.trim() === '') {
       lesson.id = slugify(lesson.title_en || lesson.title_ar || 'untitled')
     }
@@ -106,28 +106,6 @@ export async function POST(req: Request) {
       lesson.slug = slugify(lesson.id || lesson.title_en || lesson.title_ar || 'untitled')
     }
     
-    // Load existing lessons to check for existing lesson
-    const existingLessons = await readLessonsFromFile(lesson.wikiSlug)
-    const existingLessonIndex = existingLessons.findIndex(l => l.id === lesson.id)
-    const isUpdate = existingLessonIndex !== -1
-
-    // Only generate new ID/slug for new lessons
-    if (!isUpdate) {
-      // Generate unique ID and slug if they conflict
-      const originalId = lesson.id
-      const originalSlug = lesson.slug
-      lesson.id = generateUniqueId(lesson.id, existingLessons)
-      lesson.slug = generateUniqueId(lesson.slug, existingLessons)
-      
-      console.log('Creating new lesson with ID/Slug:', {
-        original: { id: originalId, slug: originalSlug },
-        generated: { id: lesson.id, slug: lesson.slug },
-        existingCount: existingLessons.length
-      })
-    } else {
-      console.log('Updating existing lesson:', { id: lesson.id, slug: lesson.slug })
-    }
-
     const missing: string[] = []
     if (!lesson.id || lesson.id.trim() === '') missing.push('id')
     if (!lesson.slug || lesson.slug.trim() === '') missing.push('slug')
@@ -146,104 +124,81 @@ export async function POST(req: Request) {
       try {
         const { prisma } = await import('@/lib/prisma')
         
-        if (!isUpdate) {
-          // For new lessons, check for conflicts
-          const existing = await prisma.lesson.findFirst({ 
-            where: { 
-              OR: [
-                { id: lesson.id },
-                { slug: lesson.slug }
-              ]
-            } 
-          })
-          if (existing) return NextResponse.json({ error: 'ID or slug already exists' }, { status: 409 })
-        }
-
-        const agg = await prisma.lesson.aggregate({ 
-          where: { wikiSlug: lesson.wikiSlug }, 
-          _max: { order: true } 
-        })
-        const maxOrder = agg._max?.order || 0
-        
-        if (!Number.isFinite(lesson.order) || lesson.order < 1) {
-          lesson.order = isUpdate ? existingLessons[existingLessonIndex].order : maxOrder + 1
-        } else {
-          lesson.order = Math.floor(lesson.order)
-        }
-
-        if (isUpdate) {
-          // Update existing lesson
-          await prisma.lesson.update({
+        const existingRecord = await prisma.lesson.findUnique({
             where: { id: lesson.id },
-            data: {
-              order: lesson.order,
-              slug: lesson.slug,
-              title_en: lesson.title_en,
-              title_ar: lesson.title_ar,
-              duration_min: lesson.duration_min,
-              difficulty: lesson.difficulty,
-              prerequisites_en: lesson.prerequisites_en as any,
-              prerequisites_ar: lesson.prerequisites_ar as any,
-              materials: lesson.materials as any,
-              body: lesson.body as any,
-              updatedAt: new Date()
-            },
-          })
-        } else {
-          // Create new lesson
-          await prisma.lesson.create({
-            data: {
-              id: lesson.id,
-              order: lesson.order,
-              slug: lesson.slug,
-              wikiSlug: lesson.wikiSlug,
-              title_en: lesson.title_en,
-              title_ar: lesson.title_ar,
-              duration_min: lesson.duration_min,
-              difficulty: lesson.difficulty,
-              prerequisites_en: lesson.prerequisites_en as any,
-              prerequisites_ar: lesson.prerequisites_ar as any,
-              materials: lesson.materials as any,
-              body: lesson.body as any,
-            },
-          })
+            select: { order: true },
+        });
+        const isUpdate = !!existingRecord;
+
+        if (!Number.isFinite(lesson.order) || lesson.order < 1) {
+            if (existingRecord) {
+                lesson.order = existingRecord.order;
+            } else {
+                const agg = await prisma.lesson.aggregate({
+                    where: { wikiSlug: lesson.wikiSlug },
+                    _max: { order: true },
+                });
+                lesson.order = (agg._max?.order || 0) + 1;
+            }
         }
-        return NextResponse.json({ ok: true, isUpdate })
+
+        const dataForDb = {
+            order: lesson.order,
+            slug: lesson.slug,
+            title_en: lesson.title_en,
+            title_ar: lesson.title_ar,
+            duration_min: lesson.duration_min,
+            difficulty: lesson.difficulty,
+            prerequisites_en: lesson.prerequisites_en as any,
+            prerequisites_ar: lesson.prerequisites_ar as any,
+            materials: lesson.materials as any,
+            body: lesson.body as any,
+        };
+
+        await prisma.lesson.upsert({
+            where: { id: lesson.id },
+            create: {
+                id: lesson.id,
+                wikiSlug: lesson.wikiSlug,
+                ...dataForDb,
+            },
+            update: {
+              ...dataForDb,
+              updatedAt: new Date(),
+            }
+        });
+
+        return NextResponse.json({ ok: true, isUpdate });
       } catch (e: any) {
-        return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })
+        // Prisma code for unique constraint violation
+        if (e?.code === 'P2002') {
+            const target = e.meta?.target || []
+            const fields = Array.isArray(target) ? target.join(', ') : 'unknown field';
+            return NextResponse.json({ error: `A lesson with this ${fields} already exists.` }, { status: 409 });
+        }
+        return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 });
       }
     } else {
-      const list = existingLessons // We already loaded this above
-      
-      if (isUpdate) {
-        // Update existing lesson in the array
-        const existingLesson = list[existingLessonIndex];
-        list[existingLessonIndex] = {
-          ...existingLesson, // Keep all existing fields
-          // Only update the fields that should change
-          title_en: lesson.title_en || existingLesson.title_en,
-          title_ar: lesson.title_ar || existingLesson.title_ar,
-          duration_min: lesson.duration_min || existingLesson.duration_min,
-          difficulty: lesson.difficulty || existingLesson.difficulty,
-          prerequisites_en: lesson.prerequisites_en || existingLesson.prerequisites_en,
-          prerequisites_ar: lesson.prerequisites_ar || existingLesson.prerequisites_ar,
-          materials: lesson.materials || existingLesson.materials,
-          body: lesson.body || existingLesson.body,
-          // Ensure these never change
-          id: existingLesson.id,
-          wikiSlug: existingLesson.wikiSlug,
-          // Update the slug if it was explicitly changed
-          slug: lesson.slug || existingLesson.slug,
-          // Preserve the original order unless explicitly changed
-          order: Number.isFinite(lesson.order) ? lesson.order : existingLesson.order
-        }
+      // Fallback to file-based storage if USE_DB is not 'true'
+      const existingLessons = await readLessonsFromFile(lesson.wikiSlug)
+      const existingLessonIndex = existingLessons.findIndex(l => l.id === lesson.id)
+      const isUpdate = existingLessonIndex !== -1
+
+      if (!isUpdate) {
+        lesson.id = generateUniqueId(lesson.id, existingLessons)
+        lesson.slug = generateUniqueId(lesson.slug, existingLessons)
       } else {
-        // Add new lesson
+        console.log('Updating existing lesson in file:', { id: lesson.id, slug: lesson.slug })
+      }
+
+      const list = existingLessons
+      if (isUpdate) {
+        const existingLesson = list[existingLessonIndex];
+        list[existingLessonIndex] = { ...existingLesson, ...lesson };
+      } else {
         const maxOrder = list.reduce((max, item) => Math.max(max, item.order || 0), 0)
         if (!Number.isFinite(lesson.order) || lesson.order < 1) {
           lesson.order = maxOrder + 1
-        } else {
-          lesson.order = Math.floor(lesson.order)
         }
         list.push(lesson)
       }
@@ -251,35 +206,13 @@ export async function POST(req: Request) {
       try {
         const ordered = sortLessons(list)
         const filePath = lessonsFilePath(lesson.wikiSlug)
-        
-        // Ensure the directory exists
         const dir = path.dirname(filePath)
         await fs.mkdir(dir, { recursive: true })
-        
-        // Write the file with pretty-printed JSON
         await fs.writeFile(filePath, JSON.stringify(ordered, null, 2), 'utf-8')
         
-        // Verify the file was written
-        const fileExists = await fs.access(filePath).then(() => true).catch(() => false)
-        if (!fileExists) {
-          throw new Error('Failed to write lesson file')
-        }
-        
-        // Verify the content was saved correctly
-        const savedContent = await fs.readFile(filePath, 'utf-8')
-        const parsedContent = JSON.parse(savedContent)
-        if (!Array.isArray(parsedContent)) {
-          throw new Error('Invalid content format after save')
-        }
-        
-        return NextResponse.json({ 
-          ok: true, 
-          isUpdate,
-          count: parsedContent.length,
-          savedIds: parsedContent.map((l: NewLesson) => l.id)
-        })
+        return NextResponse.json({ ok: true, isUpdate });
       } catch (error) {
-        console.error('Error saving lessons:', error)
+        console.error('Error saving lessons to file:', error)
         return NextResponse.json({ 
           error: 'Failed to save lessons',
           details: error instanceof Error ? error.message : String(error)

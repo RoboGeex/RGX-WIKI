@@ -139,12 +139,12 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     setError(null)
     const sequence = nextOrder.map((lesson) => lesson.slug)
     
-    console.log('Persisting order:', { wikiSlug, sequence })
+    console.log('Persisting order:', { wikiSlug, kitSlug, sequence })
     
     fetch("/api/lessons/reorder", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ wikiSlug, sequence }),
+      body: JSON.stringify({ wikiSlug, kitSlug, sequence }),
     })
       .then(async (res) => {
         if (!res.ok) {

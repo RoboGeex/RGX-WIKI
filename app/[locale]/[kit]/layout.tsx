@@ -3,7 +3,7 @@ import { getKit, getLessons, getWiki } from '@/lib/data'
 import { redirect } from 'next/navigation'
 import type { Locale } from '@/lib/i18n'
 
-export default function KitLayout(
+export default async function KitLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale; kit: string } }
 ) {
   const { locale, kit } = params
@@ -15,12 +15,14 @@ export default function KitLayout(
     redirect(`/${locale}/student-kit`)
   }
 
+  const lessons = await getLessons(kit)
+
   return (
     <div className="min-h-screen bg-[#eef2f1]">
       <KitNavbar
         locale={locale}
         kitSlug={kit}
-        lessons={getLessons(kit)}
+        lessons={lessons}
         defaultLessonSlug={wiki?.defaultLessonSlug}
         resourcesUrl={wiki?.resourcesUrl}
       />

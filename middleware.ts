@@ -11,6 +11,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // If the path starts with /editor, let it pass through
+  if (url.pathname.startsWith('/editor')) {
+    return NextResponse.next();
+  }
+
   // Extract subdomain from hostname (remove port if present)
   const hostnameWithoutPort = hostname.split(':')[0]
   const subdomain = hostnameWithoutPort.split('.')[0]

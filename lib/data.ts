@@ -1,19 +1,6 @@
 
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
-import lessonsAbbb from '@/data/lessons.abbb.json'
-import lessonsCadsoijasdoii from '@/data/lessons.cadsoijasdoii.json'
-import lessonsIos from '@/data/lessons.ios.json'
-import lessonsNewWiki from '@/data/lessons.new-wiki.json'
-import lessonsOsamaFd from '@/data/lessons.osama-fd.json'
-import lessonsOsamaKanan1 from '@/data/lessons.osama-kanan-1.json'
-import lessonsOsamaKanan from '@/data/lessons.osama-kanan.json'
-import lessonsPoint from '@/data/lessons.point.json'
-import lessonsStudentKit from '@/data/lessons.student-kit.json'
-import lessonsYtttytyu from '@/data/lessons.ytttytyu.json'
-import lessonsZzzzz from '@/data/lessons.zzzzz.json'
-import lessonsArabic1 from '@/data/lessons.بيسيبig.json'
-import lessonsArabic2 from '@/data/lessons.بيسيب.json'
 
 export interface Wiki { slug: string; displayName: string; domains?: string[]; defaultLocale?: string; defaultLessonSlug?: string; resourcesUrl?: string; accessCode?: string; isLocked?: boolean; }
 export interface Kit { slug: string; wikiSlug: string; title_en: string; title_ar: string; heroImage: string; overview_en: string; overview_ar: string; }
@@ -24,22 +11,6 @@ export interface Lesson { id: string; order: number; slug: string; title_en: str
 
 const kits = kitsData as Kit[]
 const wikis = wikisData as Wiki[]
-
-const allLessons: Record<string, Lesson[]> = {
-  'abbb': lessonsAbbb as Lesson[],
-  'cadsoijasdoii': lessonsCadsoijasdoii as Lesson[],
-  'ios': lessonsIos as Lesson[],
-  'new-wiki': lessonsNewWiki as Lesson[],
-  'osama-fd': lessonsOsamaFd as Lesson[],
-  'osama-kanan-1': lessonsOsamaKanan1 as Lesson[],
-  'osama-kanan': lessonsOsamaKanan as Lesson[],
-  'point': lessonsPoint as Lesson[],
-  'student-kit': lessonsStudentKit as Lesson[],
-  'ytttytyu': lessonsYtttytyu as Lesson[],
-  'zzzzz': lessonsZzzzz as Lesson[],
-  'بيسيبig': lessonsArabic1 as Lesson[],
-  'بيسيب': lessonsArabic2 as Lesson[],
-}
 
 function wikiSlugForKit(kitSlug: string): string {
   const kit = kits.find(k => k.slug === kitSlug)
@@ -63,21 +34,17 @@ export function getKit(slug: string, wikiSlug?: string) {
 
 export async function getLessons(kitSlug: string): Promise<Lesson[]> {
   const wikiSlug = wikiSlugForKit(kitSlug)
-  if (process.env.USE_DB === 'true') {
-    try {
-      const { prisma } = await import('@/lib/prisma')
-      if (!prisma) return []
-      const lessons = await prisma.lesson.findMany({
-        where: { wikiSlug },
-        orderBy: { order: 'asc' },
-      })
-      return lessons as unknown as Lesson[]
-    } catch (e) {
-      console.error("Failed to fetch lessons from db", e)
-      return []
-    }
-  } else {
-    return allLessons[wikiSlug] || []
+  try {
+    const { prisma } = await import('@/lib/prisma')
+    if (!prisma) return []
+    const lessons = await prisma.lesson.findMany({
+      where: { wikiSlug },
+      orderBy: { order: 'asc' },
+    })
+    return lessons as unknown as Lesson[]
+  } catch (e) {
+    console.error("Failed to fetch lessons from db", e)
+    return []
   }
 }
 

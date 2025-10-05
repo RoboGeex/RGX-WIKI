@@ -10,6 +10,7 @@ import CodeTabs from '@/components/code-tabs'
 import PrevNextNav from '@/components/prev-next-nav'
 import Step from '@/components/step'
 import LessonToc from '@/components/lesson-toc'
+import Breadcrumbs from '@/components/breadcrumbs'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,13 +29,11 @@ export default async function LessonPage(
     redirect(`/${locale}/student-kit`)
   }
   
-  // This is the only data source now. No database calls.
-  const lesson = getLesson(kit, slug)
+  const lesson = await getLesson(kit, slug)
   
-  // If the lesson is not found in the local files, show a 404 page.
   if (!lesson) {
     notFound()
-    return null // Stop rendering immediately
+    return null
   }
   
   const lessonDisplayTitle = locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')
@@ -137,6 +136,9 @@ export default async function LessonPage(
 
   const clientTocEntries = tocEntries.map((entry) => ({ ...entry }))
 
+  const prevLesson = await getPrevLesson(kit, slug)
+  const nextLesson = await getNextLesson(kit, slug)
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
@@ -149,6 +151,7 @@ export default async function LessonPage(
 
         <div className="flex-1 space-y-6">
           <div className="bg-white border border-gray-200 rounded-3xl shadow-md p-6 md:p-10 xl:p-12 space-y-10">
+            <Breadcrumbs locale={locale} kit={kitData} lesson={lesson} />
             <header className="space-y-4 border-b border-gray-200 pb-6">
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-primary font-medium uppercase tracking-wide text-xs">
@@ -166,8 +169,8 @@ export default async function LessonPage(
             </article>
 
             <PrevNextNav
-              prevLesson={getPrevLesson(kit, slug)}
-              nextLesson={getNextLesson(kit, slug)}
+              prevLesson={prevLesson}
+              nextLesson={nextLesson}
               locale={locale}
               kitSlug={kit}
             />

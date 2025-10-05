@@ -29,7 +29,7 @@ export default async function KitPage(
     redirect(`/${locale}/student-kit`)
   }
 
-  const firstLesson = getFirstLesson(kit)
+  const firstLesson = await getFirstLesson(kit)
   if (!firstLesson) {
     notFound()
   }
@@ -83,7 +83,7 @@ export default async function KitPage(
       
       if (isTitleHeading) {
         skippedTitleHeading = true
-        return null // Don't render the title heading since it's already shown in the header
+        return null
       } else {
         tocEntries.push({ id, text, level })
       }
@@ -140,6 +140,9 @@ export default async function KitPage(
 
   const clientTocEntries = tocEntries.map((entry) => ({ ...entry }))
 
+  const prevLesson = await getPrevLesson(kit, lesson.slug)
+  const nextLesson = await getNextLesson(kit, lesson.slug)
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
@@ -170,8 +173,8 @@ export default async function KitPage(
             </article>
 
             <PrevNextNav
-              prevLesson={getPrevLesson(kit, lesson.slug)}
-              nextLesson={getNextLesson(kit, lesson.slug)}
+              prevLesson={prevLesson}
+              nextLesson={nextLesson}
               locale={locale}
               kitSlug={kit}
             />

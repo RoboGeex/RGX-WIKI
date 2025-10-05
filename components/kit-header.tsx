@@ -1,11 +1,10 @@
 'use client'
 // Force new build
 import { useEffect, useState } from 'react'
-import { getKits, getLessons } from '@/lib/data'
+import { getKits, getLessons, Lesson } from '@/lib/data'
 import Link from 'next/link'
 import SearchPanel from './search-panel'
 import { i18n, t, Locale } from '@/lib/i18n'
-import { Lesson } from '@/lib/types'
 
 export default function KitHeader({ lang, kitSlug, lessonSlug }: { lang: Locale; kitSlug: string, lessonSlug: string }) {
   const [searchQuery, setSearchQuery] = useState('')

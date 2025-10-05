@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { t, type Locale } from '@/lib/i18n'
 import { setStoredLocale } from '@/lib/unlock'
 
@@ -9,7 +9,6 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
   const [accessCode, setAccessCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
   const searchParams = useSearchParams()
 
   const kit = searchParams.get('kit')
@@ -42,7 +41,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
         throw new Error(data.error || t('invalidAccessCode', locale))
       }
 
-      router.push(redirect)
+      window.location.href = redirect
     } catch (err: any) {
       setError(err.message)
     } finally {

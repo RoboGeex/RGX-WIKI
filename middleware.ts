@@ -30,6 +30,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // If the user is trying to unlock the wiki, do not redirect them.
+  if (url.pathname.startsWith('/unlock')) {
+    return NextResponse.next();
+  }
+
   // Skip if the path already includes a language locale
   if (url.pathname.startsWith('/en/') || url.pathname.startsWith('/ar/')) {
     return NextResponse.next()

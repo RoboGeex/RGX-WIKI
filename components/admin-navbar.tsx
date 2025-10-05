@@ -1,5 +1,3 @@
-"use client"
-
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -26,22 +24,12 @@ export default function AdminNavbar({ currentWikiSlug, currentKitSlug }: AdminNa
     } else if (currentWikiSlug) {
       // For client components, we'll use a simple mapping approach
       const wikiToKitMap: Record<string, string> = {
-        'student-kit': 'student-kit',
-        'osama-kanan': 'osama-kanan',
-        'بيسيب': 'biseb',
-        'ios': 'ios',
-        'osama-kanan-1': 'osama-kanan-1',
-        'بيسيبig': 'bisebig',
-        'new-wiki': 'new-wiki',
-        'cadsoijasdoii': 'cadsoijasdoii',
-        'abbb': 'abbb',
-        'point': 'point',
-        'osama-fd': 'osama-fd',
-        'zzzzz': 'zzzzz'
+        'ziggy': 'ziggy',
+        'clicky': 'clicky',
       }
       targetKitSlug = wikiToKitMap[currentWikiSlug] || currentWikiSlug
     } else {
-      targetKitSlug = 'student-kit' // fallback
+      targetKitSlug = 'ziggy' // fallback
     }
     
     // For client components, we'll generate the subdomain URL directly

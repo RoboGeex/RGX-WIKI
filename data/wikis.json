@@ -1,13 +1,11 @@
 [
   {
-    "slug": "student-kit",
-    "displayName": "Student Kit",
+    "slug": "ziggy",
+    "displayName": "Ziggy",
     "grade": "All Levels",
     "picture": "/images/robogeex-logo.png",
     "domains": [
-      "robogeex.com",
-      "www.robogeex.com",
-      "student-kit.robogeex.com"
+      "ziggy.robogeex.com"
     ],
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
@@ -17,213 +15,18 @@
     "accessCode": "f47ac10b"
   },
   {
-    "slug": "osama-kanan",
-    "displayName": "Osama Kanan",
-    "grade": "Elementary (K-5)",
-    "picture": "/uploads/wikis/1758458940724-photo_2025-09-20_23-44-49.jpg",
+    "slug": "clicky",
+    "displayName": "Clicky",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
     "domains": [
-      "osama-kanan.robogeex.com"
+      "clicky.robogeex.com"
     ],
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-09-21T12:49:00.727Z",
+    "createdAt": "2025-01-01T00:00:00.000Z",
     "isLocked": true,
     "accessCode": "c82a4e9e"
-  },
-  {
-    "slug": "بيسيب",
-    "displayName": "بيسيب",
-    "grade": "Middle School (6-8)",
-    "picture": "/uploads/wikis/1758458958508-Group_60.png",
-    "domains": [
-      "بيسيب.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-21T12:49:18.509Z",
-    "isLocked": true,
-    "accessCode": "a7b3c9d8"
-  },
-  {
-    "slug": "ios",
-    "displayName": "ios",
-    "grade": "Middle School (6-8)",
-    "picture": "/uploads/wikis/1758459017591-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
-    "domains": [
-      "ios.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-21T12:50:17.598Z",
-    "isLocked": true,
-    "accessCode": "e1f2a3b4"
-  },
-  {
-    "slug": "osama-kanan-1",
-    "displayName": "Osama Kanan",
-    "grade": "Middle School (6-8)",
-    "picture": "/uploads/wikis/1758519858746-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
-    "domains": [
-      "osama-kanan-1.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-22T05:44:18.752Z",
-    "isLocked": true,
-    "accessCode": "d5e6f7a8"
-  },
-  {
-    "slug": "بيسيبig",
-    "displayName": "بيسيبig",
-    "grade": "Middle School (6-8)",
-    "picture": "/uploads/wikis/1758519872461-Group_60.png",
-    "domains": [
-      "بيسيبig.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-22T05:44:32.463Z",
-    "isLocked": true,
-    "accessCode": "b9c8d7e6"
-  },
-  {
-    "slug": "new-wiki",
-    "displayName": "New wiki",
-    "grade": "High School (9-12)",
-    "picture": "/uploads/wikis/1758531542279-photo_2025-09-20_23-44-49.jpg",
-    "domains": [
-      "new-wiki.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-22T08:59:02.281Z",
-    "isLocked": true,
-    "accessCode": "a1b2c3d4"
-  },
-  {
-    "slug": "cadsoijasdoii",
-    "displayName": "cadsoijasdoii",
-    "grade": "Adult",
-    "picture": "/uploads/wikis/1758790905882-robogeex-logo_.png",
-    "domains": [
-      "cadsoijasdoii.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-25T09:01:45.894Z",
-    "isLocked": true,
-    "accessCode": "e5f6a7b8"
-  },
-  {
-    "slug": "abbb",
-    "displayName": "abbb",
-    "grade": "Middle School (6-8)",
-    "picture": "/uploads/wikis/1758951674764-1c022b80-5ff0-45bb-b66c-43e103003eaa.png",
-    "domains": [
-      "abbb.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T05:41:14.770Z",
-    "isLocked": true,
-    "accessCode": "c9d8e7f6"
-  },
-  {
-    "slug": "point",
-    "displayName": "point",
-    "grade": "Elementary (K-5)",
-    "picture": "/uploads/wikis/1758952392566-robogeex-logo.png",
-    "domains": [
-      "point.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T05:53:12.569Z",
-    "isLocked": true,
-    "accessCode": "a1b2c3d4"
-  },
-  {
-    "slug": "fefeefefe",
-    "displayName": "fefeefefe",
-    "grade": "High School (9-12)",
-    "picture": "/uploads/wikis/1758954436507-1830867.png",
-    "domains": [
-      "fefeefefe.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:27:16.509Z",
-    "isLocked": true,
-    "accessCode": "e5f6a7b8"
-  },
-  {
-    "slug": "gttgtgtg",
-    "displayName": "gttgtgtg",
-    "grade": "Middle School (6-8)",
-    "picture": "/uploads/wikis/1758954457737-amber-d-1938c12fcd42b0c754886904c3465750f249831e.webp",
-    "domains": [
-      "gttgtgtg.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:27:37.745Z",
-    "isLocked": true,
-    "accessCode": "c9d8e7f6"
-  },
-  {
-    "slug": "osama-fd",
-    "displayName": "Osama fd",
-    "grade": "Elementary (K-5)",
-    "picture": "/uploads/wikis/1758954776521-f53bbb5e-7527-4dc6-99ab-9f51911cf4db.png",
-    "domains": [
-      "osama-fd.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:32:56.523Z",
-    "isLocked": true,
-    "accessCode": "a1b2c3d4"
-  },
-  {
-    "slug": "zzzzz",
-    "displayName": "zzzzz",
-    "grade": "Middle School (6-8)",
-    "picture": "/uploads/wikis/1758955019522-utilities.jpg",
-    "domains": [
-      "zzzzz.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T06:36:59.543Z",
-    "isLocked": true,
-    "accessCode": "e5f6a7b8"
-  },
-  {
-    "slug": "ytttytyu",
-    "displayName": "ytttytyu",
-    "grade": "Elementary (K-5)",
-    "picture": "/uploads/wikis/1758956912904-Konica-Minolta-Bizhub-C454e-DF-701-OT-506-PC-210-Left-Price-Offers-520x520.jpg",
-    "domains": [
-      "ytttytyu.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-09-27T07:08:32.907Z",
-    "isLocked": true,
-    "accessCode": "c9d8e7f6"
   }
 ]

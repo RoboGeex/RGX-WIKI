@@ -88,9 +88,9 @@ export default function Navbar({
       .sort((a, b) => a.order - b.order)
   }, [lessons])
 
-  const gettingStartedHref = `/${safeLocale}/${kitSlug}/lesson/getting-started`
+  const gettingStartedHref = `/${safeLocale}/getting-started`
   const resourcesHref = resourcesUrl || `/${safeLocale}/${kitSlug}/resources`
-  const isLessonsPage = pathname?.includes(`/${kitSlug}/lesson/`) && pathname !== gettingStartedHref
+  const isLessonsPage = pathname?.includes(`/lesson/`) && pathname !== gettingStartedHref
 
   return (
     <nav className="bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur">
@@ -131,7 +131,7 @@ export default function Navbar({
                   {sortedLessons.map((lesson) => (
                     <Link
                       key={lesson.id}
-                      href={`/${safeLocale}/${kitSlug}/lesson/${lesson.slug}`}
+                      href={`/${safeLocale}/${lesson.slug}`}
                       className="block px-3 py-2 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition"
                       onClick={() => setLessonsOpen(false)}
                     >

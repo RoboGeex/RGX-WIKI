@@ -1,12 +1,20 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const Navbar: React.FC = () => {
     return (
         <nav className="bg-gray-800 p-4">
             <div className="container mx-auto flex justify-between items-center">
                 <Link href="/" className="text-white text-lg font-bold">
-                    <img src="/logo.png" alt="RoboGeex Academy" className="h-8" />
+                    <Image 
+                        src="/images/robogeex-logo.png" 
+                        alt="RoboGeex Academy" 
+                        width={184} 
+                        height={64} 
+                        priority 
+                        className="h-12 w-auto"
+                    />
                 </Link>
                 <div className="flex items-center">
                     <input

@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import ArduinoStyleHeader from '../../components/ArduinoStyleHeader';
+import KitHeader from '@/components/kit-header';
 
 const LessonPage = () => {
     const params = useParams();
@@ -133,7 +133,7 @@ const LessonPage = () => {
             {/* Main Content */}
             <div className="flex-1 min-w-0">
                 <div className="w-full rounded-3xl border border-gray-200 bg-white p-12 shadow-md">
-                    <ArduinoStyleHeader title={lesson.title_en || lesson.title || ''} />
+                    <KitHeader lang="en" kitSlug="student-kit" lessonSlug={id} />
                     <div ref={contentRef} className="prose mt-6 max-w-none">
                         {renderBody()}
                     </div>

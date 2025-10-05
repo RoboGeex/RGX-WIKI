@@ -1,5 +1,5 @@
 import React from 'react';
-import LessonCard from '../components/LessonCard';
+import LessonMetaCard from '@/components/lesson-meta-card';
 
 const lessons = [
   {
@@ -26,7 +26,7 @@ const LessonsPage = () => {
       <h1 className="text-2xl font-bold mb-4">Lessons</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {lessons.map((lesson) => (
-          <LessonCard
+          <LessonMetaCard
             key={lesson.id}
             id={lesson.id}
             title={lesson.title}

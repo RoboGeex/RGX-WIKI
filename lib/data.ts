@@ -1,6 +1,6 @@
-import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from './types';
-import kitsData from '../data/kits.json'
-import wikisData from '../data/wikis.json'
+import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types';
+import kitsData from '@/data/kits.json'
+import wikisData from '@/data/wikis.json'
 
 const kits = kitsData as Kit[]
 const wikis = wikisData as Wiki[]
@@ -28,7 +28,7 @@ export function getKit(slug: string, wikiSlug?: string) {
 export async function getLessons(kitSlug: string): Promise<Lesson[]> {
   const wikiSlug = wikiSlugForKit(kitSlug)
   try {
-    const { prisma } = await import('../lib/prisma')
+    const { prisma } = await import('@/lib/prisma')
     if (!prisma) return []
     const lessons = await prisma.lesson.findMany({
       where: { wikiSlug },

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
 import { t } from '@/lib/i18n'
-import type { Module } from '../lib/types'
+import type { Module } from '@/lib/types'
 
 interface Props {
   locale: Locale
@@ -28,7 +28,7 @@ type LessonSummary = {
   duration_min: number
 }
 
-export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: propModules, lessons }: Props) {
+export default function Sidebar({ locale, kitSlug, isOpen, onClose, propModules, lessons }: Props) {
   const pathname = usePathname()
   const safeLocale: Locale = locale && (locale === 'en' || locale === 'ar') ? locale : 'en'
   const [modules, setModules] = useState<Module[]>([])

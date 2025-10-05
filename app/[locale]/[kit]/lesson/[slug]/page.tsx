@@ -3,14 +3,14 @@ import {
   getLesson,
   getNextLesson, getPrevLesson,
   getKit, getWiki
-} from '../../../../../lib/data'
-import type { Locale } from '../../../../../lib/i18n'
-import Callout from '../../../../../components/callout'
-import CodeTabs from '../../../../../components/code-tabs'
-import PrevNextNav from '../../../../../components/prev-next-nav'
-import Step from '../../../../../components/step'
-import LessonToc from '../../../../../components/lesson-toc'
-import Breadcrumbs from '../../../../../components/breadcrumbs'
+} from '@/lib/data'
+import type { Locale } from '@/lib/i18n'
+import Callout from '@/components/callout'
+import CodeTabs from '@/components/code-tabs'
+import PrevNextNav from '@/components/prev-next-nav'
+import Step from '@/components/step'
+import LessonToc from '@/components/lesson-toc'
+import Breadcrumbs from '@/components/breadcrumbs'
 
 export const dynamic = 'force-dynamic'
 

@@ -26,15 +26,24 @@ export function middleware(request: NextRequest) {
 
   // Handle admin subdomain
   if (host === 'admin.robogeex.com') {
-    // Paths that should not be rewritten under /editor
     const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads'];
     if (passthroughPaths.some(p => pathname.startsWith(p))) {
         return NextResponse.next();
     }
 
-    // Rewrite to /editor/... but preserve the path.
-    // e.g., admin.robogeex.com/dashboard -> /editor/dashboard
-    url.pathname = `/editor${pathname === '/' ? '' : pathname}`;
+    // If the path already starts with /editor, do nothing.
+    if (pathname.startsWith('/editor')) {
+      return NextResponse.next();
+    }
+
+    // Redirect the root to /editor
+    if (pathname === '/') {
+      url.pathname = '/editor';
+      return NextResponse.redirect(url);
+    }
+    
+    // Rewrite other paths to be under /editor
+    url.pathname = `/editor${pathname}`;
     return NextResponse.rewrite(url);
   }
 

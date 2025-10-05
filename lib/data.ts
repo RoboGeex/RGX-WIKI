@@ -21,8 +21,14 @@ export function getKits(wikiSlug?: string): Kit[] {
   if (wikiSlug) return kits.filter(k => k.wikiSlug === wikiSlug)
   return kits
 }
+
 export function getKit(slug: string, wikiSlug?: string) {
-  return kits.find(k => k.slug === slug && (!wikiSlug || k.wikiSlug === wikiSlug))
+  // If a wikiSlug is provided, find the exact kit for that wiki.
+  if (wikiSlug) {
+    return kits.find(k => k.slug === slug && k.wikiSlug === wikiSlug);
+  }
+  // Otherwise, just find the first kit with the given slug.
+  return kits.find(k => k.slug === slug);
 }
 
 export async function getLessons(kitSlug: string): Promise<Lesson[]> {

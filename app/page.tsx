@@ -1,13 +1,32 @@
 import { redirect } from 'next/navigation'
-import { getKits } from '@/lib/data'
+import { getWikiByDomain, getKits } from '@/lib/data'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 
+// This is the root page of the application. 
+// It checks for a custom domain and displays the corresponding wiki.
+// If no custom domain is found, it shows a default landing page.
 export default function RootPage() {
-  // For production deployment, always redirect to student-kit as the default
-  // This ensures users always land on a working page
-  redirect('/en/student-kit')
-  
-  // Alternative approach: Show available kits (commented out)
+  const host = headers().get('host')
+  const wiki = getWikiByDomain(host)
+
+  if (wiki) {
+    // If a wiki is matched to the domain, we want to show the content
+    // of the first kit associated with that wiki.
+    const kits = getKits(wiki.slug)
+    if (kits.length > 0) {
+      // Redirect to the first kit's page.
+      // e.g. /en/ziggy
+      redirect(`/${wiki.defaultLocale || 'en'}/${kits[0].slug}`)
+    }
+  }
+
+  // If no wiki is matched (e.g., when accessing via the .vercel.app URL),
+  // redirect to the default "ziggy" kit page.
+  redirect('/en/ziggy')
+
+  // The code below would show a list of all available kits,
+  // but the current requirement is to redirect to a specific kit.
   /*
   const kits = getKits()
   

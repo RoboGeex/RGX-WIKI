@@ -1,5 +1,5 @@
 // Server-only helpers to fetch from DB when USE_DB=true
-import type { Lesson } from '@/lib/data'
+import type { Lesson } from '@/lib/types'
 import { prisma } from '@/lib/prisma'
 
 export function syncGetLessons(kitSlug: string): Lesson[] {

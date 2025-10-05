@@ -28,7 +28,7 @@ type LessonSummary = {
   duration_min: number
 }
 
-export default function Sidebar({ locale, kitSlug, isOpen, onClose, propModules, lessons }: Props) {
+export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: propModules, lessons }: Props) {
   const pathname = usePathname()
   const safeLocale: Locale = locale && (locale === 'en' || locale === 'ar') ? locale : 'en'
   const [modules, setModules] = useState<Module[]>([])

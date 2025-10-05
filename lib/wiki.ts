@@ -1,5 +1,5 @@
-﻿import { headers } from 'next/headers'
-import type { Wiki, Kit } from '@/lib/data'
+import { headers } from 'next/headers'
+import type { Wiki, Kit } from '@/lib/types'
 import { getKit, getWiki, getWikiByDomain } from '@/lib/data'
 
 const DEFAULT_WIKI_SLUG = 'student-kit'

@@ -16,5 +16,14 @@
     "heroImage": "/images/student-kit-hero.jpg",
     "overview_en": "Learn electronics and programming with hands-on projects using Clicky.",
     "overview_ar": "Learn electronics and programming with hands-on projects using Clicky."
+  },
+  {
+    "slug": "student-kit",
+    "wikiSlug": "student-kit",
+    "title_en": "Arduino Student Kit",
+    "title_ar": "مجموعة أدوات الطالب Arduino",
+    "heroImage": "/images/student-kit-hero.jpg",
+    "overview_en": "Learn electronics and programming with hands-on projects using Arduino UNO.",
+    "overview_ar": "تعلم الإلكترونيات والبرمجة من خلال المشاريع العملية باستخدام Arduino UNO."
   }
 ]

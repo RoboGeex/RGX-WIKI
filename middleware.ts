@@ -5,23 +5,6 @@ import { getWikiByDomain } from '@/lib/data'
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
-  const wiki = getWikiByDomain(hostname)
-
-  if (url.pathname.startsWith('/unlock')) {
-    return NextResponse.next();
-  }
-
-  // If the wiki is locked and the user is not trying to unlock it, redirect to the unlock page
-  if (wiki && wiki.isLocked) {
-    const hasAccess = request.cookies.get(`wiki-${wiki.slug}-unlocked`)
-    if (!hasAccess) {
-      const originalPath = url.pathname
-      url.pathname = '/unlock'
-      url.searchParams.set('kit', wiki.slug)
-      url.searchParams.set('redirect', originalPath)
-      return NextResponse.redirect(url)
-    }
-  }
 
   // Skip Vercel deployment URLs completely
   if (hostname.includes('.vercel.app')) {

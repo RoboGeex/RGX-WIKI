@@ -10,9 +10,7 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-01-01T00:00:00.000Z",
-    "isLocked": true,
-    "accessCode": "f47ac10b"
+    "createdAt": "2025-01-01T00:00:00.000Z"
   },
   {
     "slug": "clicky",
@@ -25,8 +23,19 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-01-01T00:00:00.000Z",
-    "isLocked": true,
-    "accessCode": "c82a4e9e"
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "slug": "student-kit",
+    "displayName": "Arduino Student Kit",
+    "grade": "All Levels",
+    "picture": "/images/student-kit-hero.jpg",
+    "domains": [
+      "student-kit.robogeex.com"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-01-01T00:00:00.000Z"
   }
 ]

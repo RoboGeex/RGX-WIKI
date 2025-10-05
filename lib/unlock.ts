@@ -4,8 +4,7 @@ export function getUnlockKey() {
 }
 
 export function isUnlocked() {
-  if (typeof window === 'undefined') return false
-  return localStorage.getItem(getUnlockKey()) === 'true'
+  return true
 }
 
 export function setUnlocked(v: boolean) {

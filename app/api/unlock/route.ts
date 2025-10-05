@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getWikiFromKit } from '@/lib/data'
+import { getWiki } from '@/lib/data'
 
 export async function POST(request: NextRequest) {
   const { code, kitSlug } = await request.json()
@@ -9,10 +9,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing kitSlug' }, { status: 400 });
   }
 
-  const wiki = getWikiFromKit(kitSlug)
+  const wiki = getWiki(kitSlug)
 
   if (!wiki) {
-    return NextResponse.json({ error: 'No wiki found for this kit' }, { status: 400 })
+    return NextResponse.json({ error: 'No wiki found for this slug' }, { status: 400 })
   }
 
   if (wiki.accessCode === code) {

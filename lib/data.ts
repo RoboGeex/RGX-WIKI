@@ -22,12 +22,6 @@ export function getWiki(slug: string) {
   return wikis.find(w => w.slug === wikiSlug);
 }
 
-export function getWikiFromKit(kitSlug: string) {
-    const kit = kits.find(k => k.slug === kitSlug)
-    if (!kit) return undefined
-    return wikis.find(w => w.slug === kit.wikiSlug)
-}
-
 export function getWikiByDomain(host?: string | null) {
   const normalised = host?.split(':')[0].toLowerCase()
   if (!normalised) return undefined

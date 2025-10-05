@@ -112,11 +112,11 @@ export default function Sidebar({ locale, kitSlug, isOpen, onClose, modules: pro
               {lessons && lessons.length > 0 ? (
                 <div className="space-y-1">
                   {lessons.map((lesson) => {
-                    const isActive = pathname?.includes(`/lesson/${lesson.slug}`)
+                    const isActive = pathname?.endsWith(`/${lesson.slug}`)
                     return (
                       <a
                         key={lesson.slug}
-                        href={`/${locale}/${kitSlug}/lesson/${lesson.slug}`}
+                        href={`/${locale}/${lesson.slug}`}
                         className={`block rounded-md px-3 py-2 text-sm transition ${
                           isActive
                             ? 'bg-primary/10 text-primary font-medium'

@@ -7,7 +7,7 @@ export default function Breadcrumbs(
 ) {
   return (
     <nav className="text-xs flex items-center gap-2 text-gray-500">
-      <Link href={`/${locale}/${kit.slug}`} className="hover:text-gray-700">
+      <Link href={`/${locale}`} className="hover:text-gray-700">
         {locale === 'ar' ? kit.title_ar : kit.title_en}
       </Link>
       {moduleTitle && (

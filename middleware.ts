@@ -15,9 +15,9 @@ export function middleware(request: NextRequest) {
   }
 
   // Handle Vercel deployment URL
-  if (host.endsWith('.vercel.app')) {
-    return NextResponse.redirect('https://ziggy.robogeex.com')
-  }
+  // if (host.endsWith('.vercel.app')) {
+  //   return NextResponse.redirect('https://ziggy.robogeex.com')
+  // }
 
   // Handle root domain
   if (host === 'robogeex.com' || host === 'www.robogeex.com') {

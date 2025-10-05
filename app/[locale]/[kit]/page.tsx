@@ -26,7 +26,7 @@ export default async function KitPage(
 
   const kitData = getKit(kit)
   if (!kitData) {
-    redirect(`/${locale}/ziggy`)
+    redirect(`/${locale}/clicky`)
   }
 
   const firstLesson = await getFirstLesson(kit)

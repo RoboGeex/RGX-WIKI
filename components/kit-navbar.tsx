@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import type { Locale } from '@/lib/i18n'
-import type { Lesson } from '@/lib/data'
-import { isUnlocked, setStoredLocale } from '@/lib/unlock'
+import type { Locale } from '../lib/i18n'
+import type { Lesson } from '../lib/data'
+import { isUnlocked, setStoredLocale } from '../lib/unlock'
 import Navbar from './navbar'
 
 interface Props {

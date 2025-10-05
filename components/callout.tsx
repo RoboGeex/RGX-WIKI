@@ -1,4 +1,4 @@
-import type { LessonBodyItem } from '@/lib/data'
+import type { LessonBodyItem } from '../lib/types'
 import type { Locale } from '@/lib/i18n'
 import { Info, Lightbulb, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'

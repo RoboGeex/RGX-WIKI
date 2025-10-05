@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { isRTL, Locale } from '@/lib/i18n'
+import { isRTL, Locale } from '../../lib/i18n'
 
 export default function LocaleLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale } }

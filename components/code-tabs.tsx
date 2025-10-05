@@ -1,7 +1,7 @@
-﻿"use client"
+"use client"
 
 import { useState } from 'react'
-import type { LessonBodyItem } from '@/lib/data'
+import type { LessonBodyItem } from '@/lib/types'
 import type { Locale } from '@/lib/i18n'
 
 type TabKey = 'arduino' | 'microbit'

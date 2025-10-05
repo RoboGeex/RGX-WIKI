@@ -1,6 +1,6 @@
 import { getLessons, getKits, getWiki } from "@/lib/data"
 import { getLessonsFromDb } from "@/lib/server-data"
-import type { Lesson } from "@/lib/data"
+import type { Lesson } from "@/lib/types"
 
 export type LessonGroup = {
   kit: { slug: string; title: string }
@@ -43,7 +43,7 @@ function createGettingStartedLesson(wikiSlug: string): Lesson {
 }
 
 export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Promise<Lesson[]> {
-  const fileLessons = getLessons(kitSlug)
+  const fileLessons = await getLessons(kitSlug)
   let dbLessons: Lesson[] = []
   if (process.env.USE_DB === 'true') {
     try {

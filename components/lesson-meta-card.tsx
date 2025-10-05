@@ -1,5 +1,5 @@
 import { Clock, Target, BookOpen, ShoppingCart, HelpCircle } from 'lucide-react'
-import { Lesson } from '@/lib/data'
+import { Lesson } from '../lib/types'
 import { Locale, t } from '@/lib/i18n'
 
 interface LessonMetaCardProps {

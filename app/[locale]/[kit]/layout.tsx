@@ -1,7 +1,7 @@
-import KitNavbar from '@/components/kit-navbar'
-import { getKit, getLessons, getWiki } from '@/lib/data'
+import KitNavbar from '../../../components/kit-navbar'
+import { getKit, getLessons, getWiki } from '../../../lib/data'
 import { redirect } from 'next/navigation'
-import type { Locale } from '@/lib/i18n'
+import type { Locale } from '../../../lib/i18n'
 
 export default async function KitLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale; kit: string } }

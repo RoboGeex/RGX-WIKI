@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getKits } from '@/lib/data'
+import { getKits } from '../lib/data'
 import Link from 'next/link'
 
 export default function RootPage() {

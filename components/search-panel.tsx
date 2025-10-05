@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
-import type { Lesson } from '@/lib/data'
-import type { Locale } from '@/lib/i18n'
+import type { Lesson } from '../lib/types'
+import type { Locale } from '../lib/i18n'
 
 export default function SearchPanel(
   { query, lessons, locale, onClose }: 

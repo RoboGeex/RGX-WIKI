@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
 import { t } from '@/lib/i18n'
-import type { Module } from '@/lib/data'
+import type { Module } from '../lib/types'
 
 interface Props {
   locale: Locale

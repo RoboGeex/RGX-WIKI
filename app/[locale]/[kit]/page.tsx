@@ -6,16 +6,16 @@ import {
   getLesson,
   getNextLesson, getPrevLesson,
   getWiki
-} from '@/lib/data'
-import { getLessonBySlug } from '@/lib/server-data'
-import type { Locale } from '@/lib/i18n'
+} from '../../../lib/data'
+import { getLessonBySlug } from '../../../lib/server-data'
+import type { Locale } from '../../../lib/i18n'
 import { headers } from 'next/headers'
-import Breadcrumbs from '@/components/breadcrumbs'
-import Callout from '@/components/callout'
-import CodeTabs from '@/components/code-tabs'
-import PrevNextNav from '@/components/prev-next-nav'
-import Step from '@/components/step'
-import LessonToc from '@/components/lesson-toc'
+import Breadcrumbs from '../../../components/breadcrumbs'
+import Callout from '../../../components/callout'
+import CodeTabs from '../../../components/code-tabs'
+import PrevNextNav from '../../../components/prev-next-nav'
+import Step from '../../../components/step'
+import LessonToc from '../../../components/lesson-toc'
 
 export const dynamic = 'force-dynamic'
 

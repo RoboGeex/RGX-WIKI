@@ -1,4 +1,4 @@
-import type { Material } from '@/lib/data'
+import type { Material } from '../lib/types'
 import type { Locale } from '@/lib/i18n'
 
 export default function MaterialsList({ materials, locale }: { materials: Material[]; locale: Locale }) {

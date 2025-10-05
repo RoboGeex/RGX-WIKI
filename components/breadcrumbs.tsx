@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { Kit, Lesson } from '@/lib/data'
+import type { Kit, Lesson } from '../lib/types'
 import type { Locale } from '@/lib/i18n'
 
 export default function Breadcrumbs(

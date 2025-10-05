@@ -11,7 +11,17 @@ function wikiSlugForKit(kitSlug: string): string {
 }
 
 export function getWikis(): Wiki[] { return wikis }
-export function getWiki(slug: string) { return wikis.find(w => w.slug === slug) }
+
+export function getWiki(slug: string) {
+  const wiki = wikis.find(w => w.slug === slug);
+  if (wiki) {
+    return wiki;
+  }
+  // If no wiki is found by slug, try to find by kit slug
+  const wikiSlug = wikiSlugForKit(slug);
+  return wikis.find(w => w.slug === wikiSlug);
+}
+
 export function getWikiByDomain(host?: string | null) {
   const normalised = host?.split(':')[0].toLowerCase()
   if (!normalised) return undefined

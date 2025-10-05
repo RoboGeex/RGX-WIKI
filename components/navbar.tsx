@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Search, Globe, Menu, ChevronDown } from 'lucide-react'
 import { Locale, t } from '../lib/i18n'
@@ -105,7 +104,7 @@ export default function Navbar({
             <Menu size={18} />
           </button>
           <Link href={`/${safeLocale}/${kitSlug}`} className="flex items-center gap-2">
-            <Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} priority />
+            <img src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} />
             <span className="sr-only">RoboGeex Academy</span>
           </Link>
         </div>

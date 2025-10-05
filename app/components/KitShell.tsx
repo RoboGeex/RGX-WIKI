@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import Navbar from '../../../components/navbar'
-import Sidebar from '../../../components/sidebar'
-import type { Locale } from '../../../lib/i18n'
-import type { Lesson, Module } from '../../../lib/types'
-import { isUnlocked, setStoredLocale } from '../../../lib/unlock'
+import Navbar from '@/components/navbar'
+import Sidebar from '@/components/sidebar'
+import type { Locale } from '@/lib/i18n'
+import type { Lesson, Module } from '@/lib/types'
+import { isUnlocked, setStoredLocale } from '@/lib/unlock'
 
 interface Props {
   locale: Locale

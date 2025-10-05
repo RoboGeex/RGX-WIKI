@@ -6,7 +6,7 @@ const Navbar: React.FC = () => {
         <nav className="bg-gray-800 p-4">
             <div className="container mx-auto flex justify-between items-center">
                 <Link href="/" className="text-white text-lg font-bold">
-                    RGX Kits Wiki
+                    <img src="/logo.png" alt="RoboGeex Academy" className="h-8" />
                 </Link>
                 <div className="flex items-center">
                     <input

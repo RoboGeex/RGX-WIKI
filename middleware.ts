@@ -11,7 +11,10 @@ export function middleware(request: NextRequest) {
   if (wiki && wiki.isLocked && !url.pathname.startsWith('/unlock')) {
     const hasAccess = request.cookies.get(`wiki-${wiki.slug}-unlocked`)
     if (!hasAccess) {
+      const originalPath = url.pathname
       url.pathname = '/unlock'
+      url.searchParams.set('kit', wiki.slug)
+      url.searchParams.set('redirect', originalPath)
       return NextResponse.redirect(url)
     }
   }

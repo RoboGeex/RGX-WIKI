@@ -8,7 +8,6 @@ import { Locale, t } from '../lib/i18n'
 import { setStoredLocale } from '../lib/unlock'
 import SearchPanel from './search-panel'
 import type { Lesson } from '../lib/types'
-import { getKits, getLessons } from '../lib/data'
 
 interface Props {
   locale: Locale
@@ -35,36 +34,6 @@ export default function Navbar({
   const [searchOpen, setSearchOpen] = useState(false)
   const [lessonsOpen, setLessonsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
-  const [lessonsForWiki, setLessonsForWiki] = useState<(Lesson & { kitSlug: string })[]>([]);
-
-  useEffect(() => {
-    const fetchLessonsForWiki = async () => {
-      const allKits = getKits();
-      const currentKit = allKits.find(k => k.slug === kitSlug);
-      const currentWikiSlug = currentKit?.wikiSlug;
-
-      const kitsForWiki = currentWikiSlug
-          ? allKits.filter(k => k.wikiSlug === currentWikiSlug)
-          : currentKit ? [currentKit] : [];
-
-      const lessonsPromises = kitsForWiki.map(async (kit) => {
-        try {
-          const lessons = await getLessons(kit.slug);
-          if (Array.isArray(lessons)) {
-            return lessons.map(lesson => ({ ...lesson, kitSlug: kit.slug }));
-          }
-        } catch (error) {
-          console.error(`Failed to fetch lessons for kit ${kit.slug}`, error);
-        }
-        return [];
-      });
-
-      const lessonsArrays = await Promise.all(lessonsPromises);
-      setLessonsForWiki(lessonsArrays.flat());
-    };
-
-    fetchLessonsForWiki();
-  }, [kitSlug]);
 
   const changeLocale = () => {
     const next = safeLocale === 'en' ? 'ar' : 'en'
@@ -165,7 +134,6 @@ export default function Navbar({
             {searchOpen && (
               <SearchPanel
                 query={query}
-                lessons={lessonsForWiki} 
                 locale={safeLocale}
                 kitSlug={kitSlug}
                 onClose={() => setSearchOpen(false)}
@@ -200,7 +168,6 @@ export default function Navbar({
           <div className="px-0">
             <SearchPanel
               query={query}
-              lessons={lessonsForWiki}
               locale={safeLocale}
               kitSlug={kitSlug}
               onClose={() => setSearchOpen(false)}

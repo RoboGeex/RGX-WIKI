@@ -90,8 +90,6 @@ export default function PropertiesForm() {
     return base
   })
 
-  const isGettingStarted = meta.slug === 'getting-started' || meta.id === 'getting-started'
-
   const kitSlug = kitFromQuery || meta.wikiSlug
 
   useEffect(() => {
@@ -274,26 +272,22 @@ export default function PropertiesForm() {
           <div className="sm:col-span-2 grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">
-                Title (EN) {isGettingStarted && <span className="text-orange-600">(Fixed)</span>}
+                Title (EN)
               </label>
               <input
-                className={`w-full border rounded px-2 py-1 ${isGettingStarted ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                className="w-full border rounded px-2 py-1"
                 value={meta.title_en}
                 onChange={(e) => applyTitle(e.target.value, 'en')}
-                readOnly={isGettingStarted}
-                disabled={isGettingStarted}
               />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">
-                Title (AR) {isGettingStarted && <span className="text-orange-600">(Fixed)</span>}
+                Title (AR)
               </label>
               <input
-                className={`w-full border rounded px-2 py-1 ${isGettingStarted ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                className="w-full border rounded px-2 py-1"
                 value={meta.title_ar}
                 onChange={(e) => applyTitle(e.target.value, 'ar')}
-                readOnly={isGettingStarted}
-                disabled={isGettingStarted}
               />
             </div>
           </div>

@@ -25,52 +25,34 @@ function assignSequentialOrder(list: LessonSummary[]): LessonSummary[] {
 }
 
 function normalizeLessons(list: LessonSummary[]): LessonSummary[] {
-  const sorted = list.slice().sort((a, b) => {
-    // Getting Started lesson always comes first
-    if (a.slug === 'getting-started') return -1
-    if (b.slug === 'getting-started') return 1
-    // Then sort by order
-    return (a.order || 0) - (b.order || 0)
-  })
+  const sorted = list
+    .slice()
+    .sort((a, b) => {
+      const orderDiff = (a.order ?? 0) - (b.order ?? 0)
+      if (orderDiff !== 0) return orderDiff
+      return a.slug.localeCompare(b.slug)
+    })
   return assignSequentialOrder(sorted)
 }
 
 function reorderToIndex(list: LessonSummary[], slug: string, targetIndex: number): LessonSummary[] {
-  // Prevent moving getting-started from position 0
-  if (slug === 'getting-started' && targetIndex > 0) {
-    console.log('Prevented moving getting-started from position 0')
-    return list
-  }
-  
   const next = list.map((lesson) => ({ ...lesson }))
   const fromIndex = next.findIndex((lesson) => lesson.slug === slug)
   if (fromIndex === -1) {
     console.log('Source lesson not found:', slug)
     return list
   }
-  
-  // Prevent moving any lesson to position 0 if getting-started exists
-  const gettingStartedIndex = next.findIndex((lesson) => lesson.slug === 'getting-started')
-  if (gettingStartedIndex !== -1 && targetIndex === 0 && slug !== 'getting-started') {
-    console.log('Prevented moving lesson to position 0 (getting-started exists)')
-    return list
-  }
-  
-  const [moved] = next.splice(fromIndex, 1)
+
   let target = targetIndex
-  
-  // Handle special case: moving to the end
-  if (targetIndex >= list.length) {
-    target = next.length // Insert at the very end
-  } else {
-    // Normal case: adjust for the removed item
-    if (target < 0) target = 0
-    if (target > next.length) target = next.length
-    if (fromIndex < target) target -= 1
-  }
-  
+  if (target < 0) target = 0
+  if (target > next.length) target = next.length
+
+  const [moved] = next.splice(fromIndex, 1)
+
+  if (fromIndex < target) target -= 1
+
   next.splice(target, 0, moved)
-  
+
   console.log('Reordered:', { slug, fromIndex, targetIndex, finalTarget: target })
   return assignSequentialOrder(next)
 }
@@ -174,7 +156,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
   }
 
   const handleDragStart = (slug: string) => (event: DragEvent<HTMLButtonElement>) => {
-    if (saving || slug === 'getting-started') {
+    if (saving) {
       event.preventDefault()
       return
     }
@@ -225,7 +207,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
 
   const handleDragOverItem = (slug: string) => (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
-    if (!draggingSlug || saving || draggingSlug === slug || slug === 'getting-started') return
+    if (!draggingSlug || saving || draggingSlug === slug) return
     
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
     const mouseY = event.clientY - rect.top
@@ -243,16 +225,6 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
       position = indicatorPosition === "end" ? "before" : indicatorPosition
     }
     
-    // Prevent dropping on position 0 if getting-started exists
-    const currentIndex = items.findIndex((lesson) => lesson.slug === slug)
-    if (currentIndex !== -1) {
-      const targetIndex = currentIndex + (position === "after" ? 1 : 0)
-      const gettingStartedIndex = items.findIndex((lesson) => lesson.slug === 'getting-started')
-      if (gettingStartedIndex !== -1 && targetIndex === 0 && draggingSlug !== 'getting-started') {
-        return
-      }
-    }
-    
     if (indicator?.slug !== slug || indicator.position !== position) {
       setIndicator({ slug, position })
     }
@@ -260,7 +232,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
 
   const handleDropOnItem = (slug: string) => (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
-    if (!draggingSlug || saving || draggingSlug === slug || slug === 'getting-started') return
+    if (!draggingSlug || saving || draggingSlug === slug) return
     
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
     const mouseY = event.clientY - rect.top
@@ -369,36 +341,23 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="w-6 text-right text-xs font-medium text-gray-400">{index + 1}</span>
-                {lesson.slug === 'getting-started' ? (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-orange-200 bg-orange-50 text-orange-600">
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    draggable
-                    onDragStart={handleDragStart(lesson.slug)}
-                    onDragEnd={handleDragEnd}
-                    disabled={saving}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 cursor-grab active:cursor-grabbing transform-gpu"
-                    aria-label={`Reorder ${lesson.title_en || lesson.title_ar || lesson.slug}`}
-                  >
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M4 7h12M4 10h12M4 13h12" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={handleDragStart(lesson.slug)}
+                  onDragEnd={handleDragEnd}
+                  disabled={saving}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 cursor-grab active:cursor-grabbing transform-gpu"
+                  aria-label={`Reorder ${lesson.title_en || lesson.title_ar || lesson.slug}`}
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M4 7h12M4 10h12M4 13h12" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                   {lesson.title_en || lesson.title_ar || lesson.slug}
-                  {lesson.slug === 'getting-started' && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                      Fixed
-                    </span>
-                  )}
                 </div>
                 <div className="mt-1 text-xs text-gray-500">
                   {duration} min | {difficulty}

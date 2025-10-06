@@ -100,8 +100,6 @@ export default function WikiEditor() {
     return english || arabic || slug || id
   }, [meta.title_en, meta.title_ar, meta.slug, meta.id])
 
-  const isGettingStarted = meta.slug === 'getting-started' || meta.id === 'getting-started'
-
   const bubbleElementEnRef = useRef<HTMLElement | null>(null)
   const textBubbleElementEnRef = useRef<HTMLElement | null>(null)
   const [bubbleElementEn, setBubbleElementEn] = useState<HTMLElement | null>(null)
@@ -174,7 +172,6 @@ export default function WikiEditor() {
 
   const editorEn = useEditor({
     immediatelyRender: false,
-    editable: !isGettingStarted,
     extensions: [
       StarterKit.configure({
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
@@ -234,7 +231,6 @@ export default function WikiEditor() {
 
   const editorAr = useEditor({
     immediatelyRender: false,
-    editable: !isGettingStarted,
     extensions: [
       StarterKit.configure({
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
@@ -568,14 +564,6 @@ export default function WikiEditor() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
               <h1 className="font-semibold text-lg">Lesson Editor</h1>
-              {isGettingStarted && (
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                  </svg>
-                  Read Only
-                </span>
-              )}
               {status && <div className="text-sm text-gray-600">{status}</div>}
             </div>
             {(displayTitle || meta.slug || meta.wikiSlug) && (
@@ -587,35 +575,20 @@ export default function WikiEditor() {
             )}
           </div>
           <div className="flex gap-2">
-            {isGettingStarted ? (
-              <button 
-                className="px-3 py-1.5 rounded-md bg-gray-400 text-white text-sm cursor-not-allowed" 
-                disabled
-                title="Getting Started lesson cannot be published"
-              >
-                Read Only - Cannot Publish
-              </button>
-            ) : (
-              <button className="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm hover:opacity-90" onClick={publish}>Publish to Wiki</button>
-            )}
+            <button className="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm hover:opacity-90" onClick={publish}>Publish to Wiki</button>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
 
           {/* English Editor Pane */}
-          <div className={`bg-white border rounded-xl shadow-sm ${isGettingStarted ? 'border-orange-200 bg-orange-50' : 'border-gray-200'}`}>
-            <div className={`px-6 pt-6 pb-4 border-b text-sm ${isGettingStarted ? 'border-orange-200 text-orange-700' : 'text-gray-500'}`}>
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+            <div className="px-6 pt-6 pb-4 border-b text-sm text-gray-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span>English (left to right)</span>
-                  {isGettingStarted && (
-                    <span className="text-xs font-medium text-orange-600">Read Only</span>
-                  )}
                 </div>
-                {!isGettingStarted && (
-                  <span className="text-xs text-gray-400">Press <span className="px-1 rounded bg-gray-100">/</span> for commands</span>
-                )}
+                <span className="text-xs text-gray-400">Press <span className="px-1 rounded bg-gray-100">/</span> for commands</span>
               </div>
             </div>
             <div className="px-6 py-6 space-y-4">
@@ -665,18 +638,13 @@ export default function WikiEditor() {
           </div>
 
           {/* Arabic Editor Pane */}
-          <div className={`bg-white border rounded-xl shadow-sm ${isGettingStarted ? 'border-orange-200 bg-orange-50' : 'border-gray-200'}`}>
-            <div className={`px-6 pt-6 pb-4 border-b text-sm ${isGettingStarted ? 'border-orange-200 text-orange-700' : 'text-gray-500'}`}>
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+            <div className="px-6 pt-6 pb-4 border-b text-sm text-gray-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span>Arabic (right to left)</span>
-                  {isGettingStarted && (
-                    <span className="text-xs font-medium text-orange-600">Read Only</span>
-                  )}
                 </div>
-                {!isGettingStarted && (
-                  <span className="text-xs text-gray-400">يمكنك استخدام الأمر <span className="px-1 rounded bg-gray-100">/</span> للإدراج</span>
-                )}
+                <span className="text-xs text-gray-400">يمكنك استخدام الأمر <span className="px-1 rounded bg-gray-100">/</span> للإدراج</span>
               </div>
             </div>
             <div className="px-6 py-6 space-y-4">

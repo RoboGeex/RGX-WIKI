@@ -43,26 +43,12 @@ export async function POST(req: Request) {
     }
 
     const lessonsBySlug = new Map(allLessons.map(lesson => [lesson.slug, lesson]))
-    const seen = new Set<string>()
-    const reordered: typeof allLessons = []
-
-    const gettingStarted = allLessons.find(lesson => lesson.isGettingStarted)
-    if (gettingStarted) {
-      reordered.push(gettingStarted)
-      seen.add(gettingStarted.slug)
-    }
-
-    for (const slug of sequence) {
-      if (seen.has(slug)) continue
-      const lesson = lessonsBySlug.get(slug)
-      if (lesson) {
-        reordered.push(lesson)
-        seen.add(slug)
-      }
-    }
-
+    const ordered = sequence
+      .map(slug => lessonsBySlug.get(slug))
+      .filter((lesson): lesson is typeof allLessons[number] => Boolean(lesson))
+    const seen = new Set(ordered.map((lesson) => lesson.slug))
     const remaining = allLessons.filter(lesson => !seen.has(lesson.slug))
-    const finalOrder = [...reordered, ...remaining]
+    const finalOrder = [...ordered, ...remaining]
 
     console.log('Database reorder - final order:', finalOrder.map((l, i) => ({ slug: l.slug, order: i + 1 })))
     

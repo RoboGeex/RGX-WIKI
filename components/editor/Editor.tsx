@@ -129,45 +129,7 @@ export default function WikiEditor() {
       type: 'doc',
       content: [
         {
-          type: 'heading',
-          attrs: { level: 1 },
-          content: initialTitleRef.current ? [{ type: 'text', text: initialTitleRef.current }] : [],
-        },
-        {
-          type: 'heading',
-          attrs: { level: 2 },
-          content: [{ type: 'text', text: 'Introduction' }],
-        },
-        {
           type: 'paragraph',
-          content: [{ type: 'text', text: 'Welcome to this lesson. Here we will learn about the basics.' }],
-        },
-        {
-          type: 'heading',
-          attrs: { level: 2 },
-          content: [{ type: 'text', text: 'Getting Started' }],
-        },
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'First, make sure you have all the required materials.' }],
-        },
-        {
-          type: 'heading',
-          attrs: { level: 3 },
-          content: [{ type: 'text', text: 'Required Materials' }],
-        },
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'You will need: Arduino board, LED lights, resistors, and jumper wires.' }],
-        },
-        {
-          type: 'heading',
-          attrs: { level: 2 },
-          content: [{ type: 'text', text: 'Building the Circuit' }],
-        },
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'Now let\'s start building our first circuit.' }],
         },
       ],
     }
@@ -223,7 +185,7 @@ export default function WikiEditor() {
         },
         options: { placement: 'top', offset: 8 },
       }),
-      Placeholder.configure({ placeholder: "Type '/' for commands" }),
+      Placeholder.configure({ placeholder: "type '/' to add a new element" }),
       SlashCommand,
     ],
     content: initialContentRef.current,

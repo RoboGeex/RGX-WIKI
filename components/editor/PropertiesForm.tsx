@@ -242,16 +242,13 @@ export default function PropertiesForm() {
 
 
     
-    // Use generated values if not already set
-    nextMeta.id = nextMeta.id || generatedId
-    nextMeta.slug = nextMeta.slug || generatedSlug
-    
-    // Ensure we have valid identifiers
-    if (!nextMeta.id || nextMeta.id.trim() === '') {
-      nextMeta.id = generatedId
-    }
-    if (!nextMeta.slug || nextMeta.slug.trim() === '') {
-      nextMeta.slug = generatedSlug
+    if (!nextMeta.isNew) {
+      if (!nextMeta.id || nextMeta.id.trim() === '') {
+        nextMeta.id = generatedId
+      }
+      if (!nextMeta.slug || nextMeta.slug.trim() === '') {
+        nextMeta.slug = generatedSlug
+      }
     }
     
     nextMeta.isNew = typeof nextMeta.isNew === 'boolean' ? nextMeta.isNew : isNewLesson
@@ -372,5 +369,6 @@ export default function PropertiesForm() {
     </div>
   )
 }
+
 
 

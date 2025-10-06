@@ -242,6 +242,7 @@ export default function WikiEditor() {
   const syncingArRef = useRef(false)
   const arabicDirtyRef = useRef(false)
   const [, forceArabicDirtyRender] = useState(false)
+  const loadedLessonKeyRef = useRef<string | null>(null)
 
   function getFirstHeadingText(editor: any): string {
     const json: any = editor?.getJSON()
@@ -272,6 +273,163 @@ export default function WikiEditor() {
     if (editor === editorEn) setTimeout(() => { syncingEnRef.current = false }, 0)
     if (editor === editorAr) setTimeout(() => { syncingArRef.current = false }, 0)
   }
+
+
+  function bodyToDocument(body: any[] | undefined, language: 'en' | 'ar') {
+    const textKey = language === 'ar' ? 'ar' : 'en'
+    const titleKey = language === 'ar' ? 'title_ar' : 'title_en'
+    const captionKey = language === 'ar' ? 'caption_ar' : 'caption_en'
+    const nodes: any[] = []
+
+    if (Array.isArray(body)) {
+      for (const item of body) {
+        if (!item || typeof item !== 'object') continue
+        const textValue = typeof item[textKey] === 'string' ? item[textKey].trim() : ''
+        switch (item.type) {
+          case 'heading':
+            nodes.push({
+              type: 'heading',
+              attrs: { level: Number(item.level) || 2 },
+              content: textValue ? [{ type: 'text', text: textValue }] : [],
+            })
+            break
+          case 'paragraph':
+            nodes.push({
+              type: 'paragraph',
+              content: textValue ? [{ type: 'text', text: textValue }] : [],
+            })
+            break
+          case 'callout':
+            nodes.push({
+              type: 'blockquote',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: textValue ? [{ type: 'text', text: textValue }] : [],
+                },
+              ],
+            })
+            break
+          case 'image': {
+            if (!item.image) break
+            const altSource = typeof item[titleKey] === 'string' && item[titleKey].trim()
+              ? item[titleKey].trim()
+              : (typeof item[captionKey] === 'string' ? item[captionKey].trim() : '')
+            nodes.push({
+              type: 'image',
+              attrs: {
+                src: item.image,
+                alt: altSource || undefined,
+                title: altSource || undefined,
+              },
+            })
+            break
+          }
+          default:
+            if (textValue) {
+              nodes.push({
+                type: 'paragraph',
+                content: [{ type: 'text', text: textValue }],
+              })
+            }
+            break
+        }
+      }
+    }
+
+    if (nodes.length === 0) {
+      nodes.push({ type: 'paragraph' })
+    }
+
+    return { type: 'doc', content: nodes }
+  }
+
+  useEffect(() => {
+    if (meta.isNew) {
+      loadedLessonKeyRef.current = null
+      return
+    }
+    if (!editorEn || !editorAr) return
+
+    const identifier = (meta.slug || meta.id || '').trim()
+    if (!identifier) return
+    const wikiSlug = (meta.wikiSlug || 'student-kit').trim() || 'student-kit'
+    const cacheKey = `${wikiSlug}::${identifier}`
+    if (loadedLessonKeyRef.current === cacheKey) return
+
+    let cancelled = false
+
+    const loadLesson = async () => {
+      try {
+        const res = await fetch(`/api/lessons/${encodeURIComponent(identifier)}?kit=${encodeURIComponent(wikiSlug)}`, { cache: 'no-store' })
+        if (!res.ok) {
+          console.error('Failed to load lesson content', res.status)
+          setStatus('Failed to load lesson content.')
+          return
+        }
+        const lesson = await res.json()
+        if (cancelled) return
+
+        loadedLessonKeyRef.current = cacheKey
+
+        const body = Array.isArray(lesson?.body) ? lesson.body : []
+        const docEn = bodyToDocument(body, 'en')
+        const docAr = bodyToDocument(body, 'ar')
+
+        syncingEnRef.current = true
+        editorEn.commands.setContent(docEn, false)
+        setTimeout(() => { syncingEnRef.current = false }, 0)
+
+        syncingArRef.current = true
+        editorAr.commands.setContent(docAr, false)
+        setTimeout(() => { syncingArRef.current = false }, 0)
+
+        arabicDirtyRef.current = false
+        forceArabicDirtyRender((prev) => !prev)
+        setStatus((prev) => prev === 'Failed to load lesson content.' ? '' : prev)
+
+        setMeta((prev: typeof meta) => {
+          const next = { ...prev }
+          let changed = false
+          if (typeof lesson?.title_en === 'string' && lesson.title_en.trim() && lesson.title_en !== prev.title_en) {
+            next.title_en = lesson.title_en
+            changed = true
+          }
+          if (typeof lesson?.title_ar === 'string' && lesson.title_ar.trim() && lesson.title_ar !== prev.title_ar) {
+            next.title_ar = lesson.title_ar
+            changed = true
+          }
+          if (typeof lesson?.duration_min === 'number' && lesson.duration_min !== prev.duration_min) {
+            next.duration_min = lesson.duration_min
+            changed = true
+          }
+          if (typeof lesson?.difficulty === 'string' && lesson.difficulty.trim() && lesson.difficulty !== prev.difficulty) {
+            next.difficulty = lesson.difficulty
+            changed = true
+          }
+          if (typeof lesson?.order === 'number' && lesson.order !== prev.order) {
+            next.order = lesson.order
+            changed = true
+          }
+          if (next.isNew) {
+            next.isNew = false
+            changed = true
+          }
+          return changed ? next : prev
+        })
+      } catch (error) {
+        if (cancelled) return
+        console.error('Error loading lesson content', error)
+        setStatus('Failed to load lesson content.')
+      }
+    }
+
+    loadLesson()
+
+    return () => {
+      cancelled = true
+    }
+  }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

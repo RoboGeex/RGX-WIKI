@@ -41,7 +41,7 @@ export default function SearchPanel(
         <div className="p-4 text-sm text-gray-500">No results</div>
       )}
       {results.map(l => {
-        const href = `/${locale}/lesson/${l.slug}`;
+        const href = `/${locale}/${l.slug}`;
         return (
           <Link
             key={l.id}

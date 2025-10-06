@@ -24,31 +24,5 @@
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
     "createdAt": "2025-01-01T00:00:00.000Z"
-  },
-  {
-    "slug": "student-kit",
-    "displayName": "Arduino Student Kit",
-    "grade": "All Levels",
-    "picture": "/images/student-kit-hero.jpg",
-    "domains": [
-      "student-kit.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-01-01T00:00:00.000Z"
-  },
-  {
-    "slug": "admin",
-    "displayName": "Admin",
-    "grade": "All Levels",
-    "picture": "/images/robogeex-logo.png",
-    "domains": [
-      "admin.robogeex.com"
-    ],
-    "defaultLocale": "en",
-    "defaultLessonSlug": "getting-started",
-    "resourcesUrl": "/resources",
-    "createdAt": "2025-01-01T00:00:00.000Z"
   }
 ]

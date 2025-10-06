@@ -16,25 +16,21 @@ export async function GET(request: Request) {
           {
             title_en: {
               contains: query,
-              mode: 'insensitive',
             },
           },
           {
             title_ar: {
               contains: query,
-              mode: 'insensitive',
             },
           },
           {
             content_en: {
               contains: query,
-              mode: 'insensitive',
             },
           },
           {
             content_ar: {
               contains: query,
-              mode: 'insensitive',
             },
           },
         ],

@@ -43,9 +43,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         })
         
         if (!lesson) {
+          const fallbackLessons = await readLessonsFromFile(wikiSlug)
+          const fallbackLesson = fallbackLessons.find(l => l.id === id || l.slug === id)
+          if (fallbackLesson) {
+            return NextResponse.json(fallbackLesson)
+          }
           return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
         }
-        
+
         return NextResponse.json(lesson)
       } catch (e: any) {
         return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('query');
+  const kit = searchParams.get('kit');
 
   if (!query) {
     return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
   try {
     const lessons = await prisma.lesson.findMany({
       where: {
+        ...(kit && { wikiSlug: kit }),
         OR: [
           {
             title_en: {
@@ -25,21 +27,8 @@ export async function GET(request: Request) {
           },
         ],
       },
-      include: {
-        kit: {
-          select: {
-            slug: true,
-          },
-        },
-      },
     });
-
-    const lessonsWithKitSlug = lessons.map(lesson => ({
-      ...lesson,
-      kitSlug: lesson.kit.slug,
-    }));
-
-    return NextResponse.json(lessonsWithKitSlug);
+    return NextResponse.json(lessons);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });

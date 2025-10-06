@@ -13,13 +13,13 @@ export default function SearchPanel(
     kitSlug: string; 
   }
 ) {
-  const [results, setResults] = useState<(Lesson & { kitSlug: string })[]>([]);
+  const [results, setResults] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (query.trim().length > 0) {
       setLoading(true);
-      fetch(`/api/search?query=${query}`)
+      fetch(`/api/search?query=${query}&kit=${kitSlug}`)
         .then(res => res.json())
         .then(data => {
           setResults(data);
@@ -41,7 +41,7 @@ export default function SearchPanel(
         <div className="p-4 text-sm text-gray-500">No results</div>
       )}
       {results.map(l => {
-        const href = `/${locale}/${l.slug}`;
+        const href = `/${locale}/lesson/${l.slug}`;
         return (
           <Link
             key={l.id}

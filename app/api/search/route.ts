@@ -25,8 +25,21 @@ export async function GET(request: Request) {
           },
         ],
       },
+      include: {
+        kit: {
+          select: {
+            slug: true,
+          },
+        },
+      },
     });
-    return NextResponse.json(lessons);
+
+    const lessonsWithKitSlug = lessons.map(lesson => ({
+      ...lesson,
+      kitSlug: lesson.kit.slug,
+    }));
+
+    return NextResponse.json(lessonsWithKitSlug);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });

@@ -22,7 +22,7 @@ export default function SearchPanel(
       fetch(`/api/search?query=${query}`)
         .then(res => res.json())
         .then(data => {
-          setResults(data.map((l: Lesson) => ({ ...l, kitSlug })));
+          setResults(data);
           setLoading(false);
         })
         .catch(err => {
@@ -41,7 +41,7 @@ export default function SearchPanel(
         <div className="p-4 text-sm text-gray-500">No results</div>
       )}
       {results.map(l => {
-        const href = `/${locale}/${l.kitSlug}/lesson/${l.slug}`;
+        const href = `/${locale}/${l.slug}`;
         return (
           <Link
             key={l.id}

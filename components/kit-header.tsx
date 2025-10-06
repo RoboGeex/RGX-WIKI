@@ -1,38 +1,11 @@
 'use client'
-// Force new build
-import { useEffect, useState } from 'react'
-import { getKits, getLessons } from '@/lib/data'
+import { useState } from 'react'
 import Link from 'next/link'
 import SearchPanel from './search-panel'
 import { i18n, t, Locale } from '@/lib/i18n'
-import { Lesson } from '@/lib/types'
 
 export default function KitHeader({ lang, kitSlug, lessonSlug }: { lang: Locale; kitSlug: string, lessonSlug: string }) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [lessonsForWiki, setLessonsForWiki] = useState<(Lesson & { kitSlug: string })[]>([]);
-
-  useEffect(() => {
-    const fetchLessonsForWiki = async () => {
-      const allKits = getKits();
-      const currentKit = allKits.find(k => k.slug === kitSlug);
-      const currentWikiSlug = currentKit?.wikiSlug;
-
-      if (currentWikiSlug) {
-        const kitsInSameWiki = allKits.filter(k => k.wikiSlug === currentWikiSlug);
-        const lessonPromises = kitsInSameWiki.map(async k => {
-          const lessons = await getLessons(k.slug);
-          return lessons.map(l => ({ ...l, kitSlug: k.slug }));
-        });
-        const lessonsFromAllKits = await Promise.all(lessonPromises);
-        setLessonsForWiki(lessonsFromAllKits.flat());
-      } else {
-        const lessons = await getLessons(kitSlug);
-        setLessonsForWiki(lessons.map(l => ({ ...l, kitSlug })));
-      }
-    };
-
-    fetchLessonsForWiki();
-  }, [kitSlug]);
 
   const otherLocale = i18n.locales.find((l) => l !== lang);
 
@@ -55,7 +28,6 @@ export default function KitHeader({ lang, kitSlug, lessonSlug }: { lang: Locale;
           {searchQuery && 
             <SearchPanel 
               query={searchQuery} 
-              lessons={lessonsForWiki} 
               locale={lang} 
               onClose={() => setSearchQuery('')} 
               kitSlug={kitSlug} 

@@ -377,11 +377,11 @@ export default function WikiEditor() {
         const docAr = bodyToDocument(body, 'ar')
 
         syncingEnRef.current = true
-        editorEn.commands.setContent(docEn, false)
+        editorEn.commands.setContent(docEn, { emitUpdate: false })
         setTimeout(() => { syncingEnRef.current = false }, 0)
 
         syncingArRef.current = true
-        editorAr.commands.setContent(docAr, false)
+        editorAr.commands.setContent(docAr, { emitUpdate: false })
         setTimeout(() => { syncingArRef.current = false }, 0)
 
         arabicDirtyRef.current = false

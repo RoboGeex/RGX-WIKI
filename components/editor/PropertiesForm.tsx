@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -234,6 +234,13 @@ export default function PropertiesForm() {
     const titleSource = nextMeta.title_en || nextMeta.title_ar || 'untitled'
     const generatedId = slugify(titleSource)
     const generatedSlug = slugify(titleSource)
+
+    if (nextMeta.isNew) {
+      nextMeta.id = ''
+      nextMeta.slug = ''
+    }
+
+
     
     // Use generated values if not already set
     nextMeta.id = nextMeta.id || generatedId

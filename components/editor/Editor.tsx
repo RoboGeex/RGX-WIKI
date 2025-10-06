@@ -48,6 +48,7 @@ export default function WikiEditor() {
       title_ar: '',
       duration_min: 30,
       difficulty: 'Beginner',
+      isNew: false,
     }
     
     // Check for URL parameters first
@@ -65,6 +66,7 @@ export default function WikiEditor() {
           slug: urlSlug || (urlId ? slugify(urlId) : ''),
           id: urlId || (urlSlug ? slugify(urlSlug) : ''),
           title_en: urlTitle || '',
+          isNew: searchParams.get('new') === 'true',
         }
         
         // Store in sessionStorage so it persists
@@ -86,6 +88,7 @@ export default function WikiEditor() {
             ...base,
             ...parsed,
             wikiSlug: parsed.wikiSlug || base.wikiSlug,
+            isNew: typeof parsed.isNew === 'boolean' ? parsed.isNew : base.isNew,
           }
         }
       } catch {}
@@ -329,11 +332,17 @@ export default function WikiEditor() {
       
       if (raw) {
         const parsed = JSON.parse(raw)
-        setMeta((m: typeof meta) => ({
-          ...m,
-          ...parsed,
-          wikiSlug: parsed.wikiSlug || m.wikiSlug || 'student-kit',
-        }))
+        setMeta((m: typeof meta) => {
+          const next = {
+            ...m,
+            ...parsed,
+            wikiSlug: parsed.wikiSlug || m.wikiSlug || 'student-kit',
+          }
+          if (typeof parsed.isNew === 'boolean') {
+            next.isNew = parsed.isNew
+          }
+          return next
+        })
       }
     } catch {
       if (!hasUrlParams) {
@@ -540,17 +549,50 @@ export default function WikiEditor() {
       prerequisites_ar: [],
       materials: [],
       body: mergedBody,
+      forceNew: meta.isNew === true,
     }
     try {
       console.log('Publishing lesson with payload:', payload)
       const res = await fetch('/api/lessons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
+
       if (!res.ok) {
         console.error('API Error:', data)
         const detail = Array.isArray(data.missing) && data.missing.length ? ` (missing: ${data.missing.join(', ')})` : ''
         throw new Error((data.error || 'Failed') + detail)
       }
-      setStatus('Published!')
+
+      const savedLesson = data?.lesson ?? {}
+      const isUpdate = Boolean(data?.isUpdate)
+
+      const updatedMeta = {
+        ...meta,
+        id: typeof savedLesson.id === 'string' && savedLesson.id.trim() ? savedLesson.id : generatedId,
+        slug: typeof savedLesson.slug === 'string' && savedLesson.slug.trim() ? savedLesson.slug : generatedSlug,
+        order: typeof savedLesson.order === 'number' ? savedLesson.order : meta.order,
+        isNew: false,
+      }
+
+      setMeta(updatedMeta)
+      try {
+        sessionStorage.setItem('lessonMeta', JSON.stringify(updatedMeta))
+      } catch {}
+
+      const params = new URLSearchParams(searchParams?.toString() ?? '')
+      params.set('slug', updatedMeta.slug)
+      params.set('id', updatedMeta.id)
+      if (updatedMeta.wikiSlug) {
+        params.set('wiki', updatedMeta.wikiSlug)
+      }
+      params.delete('new')
+      router.replace(`/editor/lesson?${params.toString()}`)
+
+      const slugOrIdChanged = updatedMeta.slug !== generatedSlug || updatedMeta.id !== generatedId
+      if (!isUpdate && slugOrIdChanged) {
+        setStatus(`Lesson published! Saved as "${updatedMeta.slug}".`)
+      } else {
+        setStatus(isUpdate ? 'Changes saved!' : 'Lesson published!')
+      }
     } catch (e: any) {
       console.error('Publish error:', e)
       setStatus(`Error: ${e.message}`)

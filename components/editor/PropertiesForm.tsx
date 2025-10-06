@@ -18,6 +18,7 @@ type LessonMeta = {
   title_ar: string
   duration_min: number
   difficulty: string
+  isNew?: boolean
 }
 
 const DEFAULT_WIKI = 'student-kit'
@@ -69,6 +70,7 @@ export default function PropertiesForm() {
       title_ar: '',
       duration_min: 30,
       difficulty: 'Beginner',
+      isNew: isNewLesson,
     }
     
     // If creating a new lesson, clear session storage and don't load existing data
@@ -87,6 +89,10 @@ export default function PropertiesForm() {
     if (idFromQuery) base.id = idFromQuery
     if (!base.slug && base.id) base.slug = slugify(base.id)
     if (wikiFromQuery) base.wikiSlug = wikiFromQuery
+    base.isNew = typeof base.isNew === 'boolean' ? base.isNew : isNewLesson
+    if (isNewLesson) {
+      base.isNew = true
+    }
     return base
   })
 
@@ -200,6 +206,7 @@ export default function PropertiesForm() {
         title_ar: lesson.title_ar || prev.title_ar,
         duration_min: lesson.duration_min ?? prev.duration_min,
         difficulty: lesson.difficulty || prev.difficulty,
+        isNew: false,
       }))
       setLoadStatus('Lesson data loaded. Review and adjust if needed.')
     } finally {
@@ -240,6 +247,11 @@ export default function PropertiesForm() {
       nextMeta.slug = generatedSlug
     }
     
+    nextMeta.isNew = typeof nextMeta.isNew === 'boolean' ? nextMeta.isNew : isNewLesson
+    if (isNewLesson) {
+      nextMeta.isNew = true
+    }
+
     try {
       sessionStorage.setItem('lessonMeta', JSON.stringify(nextMeta))
     } catch {}

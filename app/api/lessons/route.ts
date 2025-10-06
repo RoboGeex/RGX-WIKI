@@ -37,6 +37,8 @@ type NewLesson = {
   body: LessonBodyItem[]
 }
 
+type LessonPayload = NewLesson & { forceNew?: boolean }
+
 function lessonsFilePath(wikiSlug: string) {
   return path.join(process.cwd(), 'data', 'lessons.' + wikiSlug + '.json')
 }
@@ -77,16 +79,17 @@ function generateUniqueId(baseId: string, existingLessons: NewLesson[]): string 
 
 export async function POST(req: Request) {
   try {
-    const incoming = (await req.json()) as NewLesson
+    const incoming = (await req.json()) as LessonPayload
+    const { forceNew = false, ...rawLesson } = incoming
     const lesson: NewLesson = {
-      ...incoming,
-      order: Number(incoming.order) || 0,
-      id: (incoming.id || incoming.slug || '').trim(),
-      slug: (incoming.slug || '').trim(),
-      wikiSlug: (incoming.wikiSlug || 'student-kit').trim(),
-      title_en: (incoming.title_en || incoming.title_ar || '').trim(),
-      title_ar: (incoming.title_ar || incoming.title_en || '').trim(),
-      difficulty: (incoming.difficulty || 'Beginner').trim(),
+      ...rawLesson,
+      order: Number(rawLesson.order) || 0,
+      id: (rawLesson.id || rawLesson.slug || '').trim(),
+      slug: (rawLesson.slug || '').trim(),
+      wikiSlug: (rawLesson.wikiSlug || 'student-kit').trim(),
+      title_en: (rawLesson.title_en || rawLesson.title_ar || '').trim(),
+      title_ar: (rawLesson.title_ar || rawLesson.title_en || '').trim(),
+      difficulty: (rawLesson.difficulty || 'Beginner').trim(),
     }
 
     if (!lesson.slug) {
@@ -95,7 +98,7 @@ export async function POST(req: Request) {
     }
 
     if (!lesson.id) {
-      const basis = incoming.slug || incoming.title_en || incoming.title_ar
+      const basis = rawLesson.slug || rawLesson.title_en || rawLesson.title_ar
       if (basis) lesson.id = slugify(basis)
     }
 
@@ -105,7 +108,7 @@ export async function POST(req: Request) {
     if (!lesson.slug || lesson.slug.trim() === '') {
       lesson.slug = slugify(lesson.id || lesson.title_en || lesson.title_ar || 'untitled')
     }
-    
+
     const missing: string[] = []
     if (!lesson.id || lesson.id.trim() === '') missing.push('id')
     if (!lesson.slug || lesson.slug.trim() === '') missing.push('slug')
@@ -123,66 +126,88 @@ export async function POST(req: Request) {
     if (process.env.USE_DB === 'true') {
       try {
         const { prisma } = await import('@/lib/prisma')
-        
+
         const existingRecord = await prisma.lesson.findUnique({
-            where: { id: lesson.id },
-            select: { order: true },
-        });
-        const isUpdate = !!existingRecord;
+          where: { id: lesson.id },
+          select: { order: true },
+        })
+
+        let isUpdate = !forceNew && !!existingRecord
 
         if (!Number.isFinite(lesson.order) || lesson.order < 1) {
-            if (existingRecord) {
-                lesson.order = existingRecord.order;
-            } else {
-                const agg = await prisma.lesson.aggregate({
-                    where: { wikiSlug: lesson.wikiSlug },
-                    _max: { order: true },
-                });
-                lesson.order = (agg._max?.order || 0) + 1;
+          if (isUpdate && existingRecord) {
+            lesson.order = existingRecord.order
+          } else {
+            const agg = await prisma.lesson.aggregate({
+              where: { wikiSlug: lesson.wikiSlug },
+              _max: { order: true },
+            })
+            lesson.order = (agg._max?.order || 0) + 1
+          }
+        }
+
+        if (!isUpdate) {
+          const ensureUnique = async (value: string, field: 'id' | 'slug'): Promise<string> => {
+            const base = value && value.trim() ? value.trim() : 'lesson'
+            let candidate = base
+            let counter = 1
+            while (true) {
+              const existing = field === 'id'
+                ? await prisma.lesson.findUnique({ where: { id: candidate } })
+                : await prisma.lesson.findUnique({ where: { slug: candidate } })
+              if (!existing) break
+              candidate = `${base}-${counter++}`
             }
+            return candidate
+          }
+
+          lesson.id = await ensureUnique(lesson.id, 'id')
+          lesson.slug = await ensureUnique(lesson.slug, 'slug')
         }
 
         const dataForDb = {
-            order: lesson.order,
-            slug: lesson.slug,
-            title_en: lesson.title_en,
-            title_ar: lesson.title_ar,
-            duration_min: lesson.duration_min,
-            difficulty: lesson.difficulty,
-            prerequisites_en: lesson.prerequisites_en as any,
-            prerequisites_ar: lesson.prerequisites_ar as any,
-            materials: lesson.materials as any,
-            body: lesson.body as any,
-        };
+          order: lesson.order,
+          slug: lesson.slug,
+          title_en: lesson.title_en,
+          title_ar: lesson.title_ar,
+          duration_min: lesson.duration_min,
+          difficulty: lesson.difficulty,
+          prerequisites_en: lesson.prerequisites_en as any,
+          prerequisites_ar: lesson.prerequisites_ar as any,
+          materials: lesson.materials as any,
+          body: lesson.body as any,
+        }
 
-        await prisma.lesson.upsert({
-            where: { id: lesson.id },
-            create: {
+        const saved = isUpdate
+          ? await prisma.lesson.update({
+              where: { id: lesson.id },
+              data: { ...dataForDb, updatedAt: new Date() },
+            })
+          : await prisma.lesson.create({
+              data: {
                 id: lesson.id,
                 wikiSlug: lesson.wikiSlug,
                 ...dataForDb,
-            },
-            update: {
-              ...dataForDb,
-              updatedAt: new Date(),
-            }
-        });
+              },
+            })
 
-        return NextResponse.json({ ok: true, isUpdate });
+        return NextResponse.json({
+          ok: true,
+          isUpdate,
+          lesson: { id: saved.id, slug: saved.slug, order: saved.order },
+        })
       } catch (e: any) {
-        // Prisma code for unique constraint violation
         if (e?.code === 'P2002') {
-            const target = e.meta?.target || []
-            const fields = Array.isArray(target) ? target.join(', ') : 'unknown field';
-            return NextResponse.json({ error: `A lesson with this ${fields} already exists.` }, { status: 409 });
+          const target = e.meta?.target || []
+          const fields = Array.isArray(target) ? target.join(', ') : 'unknown field'
+          return NextResponse.json({ error: `A lesson with this ${fields} already exists.` }, { status: 409 })
         }
-        return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 });
+        return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })
       }
     } else {
-      // Fallback to file-based storage if USE_DB is not 'true'
       const existingLessons = await readLessonsFromFile(lesson.wikiSlug)
       const existingLessonIndex = existingLessons.findIndex(l => l.id === lesson.id)
-      const isUpdate = existingLessonIndex !== -1
+      const isUpdate = !forceNew && existingLessonIndex !== -1
 
       if (!isUpdate) {
         lesson.id = generateUniqueId(lesson.id, existingLessons)
@@ -193,8 +218,8 @@ export async function POST(req: Request) {
 
       const list = existingLessons
       if (isUpdate) {
-        const existingLesson = list[existingLessonIndex];
-        list[existingLessonIndex] = { ...existingLesson, ...lesson };
+        const existingLesson = list[existingLessonIndex]
+        list[existingLessonIndex] = { ...existingLesson, ...lesson }
       } else {
         const maxOrder = list.reduce((max, item) => Math.max(max, item.order || 0), 0)
         if (!Number.isFinite(lesson.order) || lesson.order < 1) {
@@ -202,15 +227,15 @@ export async function POST(req: Request) {
         }
         list.push(lesson)
       }
-      
+
       try {
         const ordered = sortLessons(list)
         const filePath = lessonsFilePath(lesson.wikiSlug)
         const dir = path.dirname(filePath)
         await fs.mkdir(dir, { recursive: true })
         await fs.writeFile(filePath, JSON.stringify(ordered, null, 2), 'utf-8')
-        
-        return NextResponse.json({ ok: true, isUpdate });
+
+        return NextResponse.json({ ok: true, isUpdate, lesson: { id: lesson.id, slug: lesson.slug, order: lesson.order } })
       } catch (error) {
         console.error('Error saving lessons to file:', error)
         return NextResponse.json({ 

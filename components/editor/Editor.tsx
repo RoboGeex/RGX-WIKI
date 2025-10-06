@@ -527,8 +527,10 @@ export default function WikiEditor() {
     const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'
     
     // Generate ID and slug - API will handle uniqueness
-    const generatedId = (meta.id && meta.id.trim()) || slugify(titleEn)
-    const generatedSlug = (meta.slug && meta.slug.trim()) || slugify(titleEn)
+    const baseSlug = slugify(titleEn) || 'lesson'
+    const uniqueToken = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    const generatedId = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.id && meta.id.trim()) || baseSlug)
+    const generatedSlug = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.slug && meta.slug.trim()) || baseSlug)
     
     // Ensure we have valid IDs and slugs
     if (!generatedId || !generatedSlug) {

@@ -24,16 +24,6 @@ export async function GET(request: Request) {
               contains: query,
             },
           },
-          {
-            content_en: {
-              contains: query,
-            },
-          },
-          {
-            content_ar: {
-              contains: query,
-            },
-          },
         ],
       },
     });

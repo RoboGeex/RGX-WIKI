@@ -1,3 +1,4 @@
+
 import { getLessons, getKits, getWiki } from "@/lib/data"
 import { getLessonsFromDb } from "@/lib/server-data"
 import type { Lesson } from "@/lib/types"
@@ -52,28 +53,32 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
   }
   const map = new Map<string, Lesson>()
   
-  // Add all lessons except getting-started first
   fileLessons.forEach((lesson) => {
-    if (lesson.slug !== 'getting-started') {
+    map.set(lesson.slug, lesson)
+  })
+
+  dbLessons.forEach((lesson) => {
+    if (lesson?.slug) {
       map.set(lesson.slug, lesson)
     }
   })
-  dbLessons.forEach((lesson) => {
-    if (!lesson?.slug || lesson.slug === 'getting-started') return
-    map.set(lesson.slug, lesson)
-  })
   
-  // Always add the Getting Started lesson last to ensure it's not overwritten
-  const gettingStartedLesson = createGettingStartedLesson(wikiSlug)
-  map.set('getting-started', gettingStartedLesson)
-  
+  if (!map.has('getting-started')) {
+    const gettingStartedLesson = createGettingStartedLesson(wikiSlug)
+    map.set('getting-started', gettingStartedLesson)
+  } else {
+    const lesson = map.get('getting-started')
+    if (lesson) {
+        lesson.isGettingStarted = true;
+        lesson.order = -1;
+    }
+  }
+
   const allLessons = Array.from(map.values())
     .filter((lesson) => !lesson.wikiSlug || lesson.wikiSlug === wikiSlug)
     .sort((a, b) => {
-      // Getting Started lesson always comes first
       if (a.slug === 'getting-started') return -1
       if (b.slug === 'getting-started') return 1
-      // Then sort by order
       return (a.order || 0) - (b.order || 0)
     })
   

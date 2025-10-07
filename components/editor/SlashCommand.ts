@@ -1,5 +1,6 @@
 import { Extension, type Editor } from '@tiptap/core'
 import Suggestion, { SuggestionOptions } from '@tiptap/suggestion'
+import { TextSelection } from 'prosemirror-state'
 
 export type SlashItem = {
   title: string
@@ -8,29 +9,33 @@ export type SlashItem = {
   command: (props: any) => void
 }
 
-const insertListWithFallback = (editor: Editor, range: any, listType: 'bulletList' | 'orderedList') => {
-  const toggled = listType === 'orderedList'
-    ? editor.chain().focus().deleteRange(range).toggleOrderedList().run()
-    : editor.chain().focus().deleteRange(range).toggleBulletList().run()
+const insertListWithFallback = (editor: Editor, range: { from: number; to: number }, listType: 'bulletList' | 'orderedList') => {
+  const toggleChain = listType === 'orderedList'
+    ? editor.chain().focus().deleteRange(range).toggleOrderedList()
+    : editor.chain().focus().deleteRange(range).toggleBulletList()
 
-  if (toggled) {
-    return
+  if (toggleChain.run()) {
+    return true
   }
 
-  editor.chain().focus().insertContent({
-    type: listType,
-    content: [
-      {
-        type: 'listItem',
-        content: [
-          {
-            type: 'paragraph',
-            content: [],
-          },
-        ],
-      },
-    ],
-  }).run()
+  const html = listType === 'orderedList'
+    ? '<ol><li><p></p></li></ol>'
+    : '<ul><li><p></p></li></ul>'
+
+  return editor
+    .chain()
+    .focus()
+    .deleteRange(range)
+    .insertContent(html)
+    .command(({ tr, dispatch }) => {
+      const listStart = Math.max(0, range.from)
+      const targetPos = Math.max(0, Math.min(tr.doc.content.size, listStart + 2))
+      if (dispatch) {
+        dispatch(tr.setSelection(TextSelection.create(tr.doc, targetPos)))
+      }
+      return true
+    })
+    .run()
 }
 
 const items: SlashItem[] = [

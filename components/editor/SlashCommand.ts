@@ -10,32 +10,37 @@ export type SlashItem = {
 }
 
 const insertListWithFallback = (editor: Editor, range: { from: number; to: number }, listType: 'bulletList' | 'orderedList') => {
-  const toggleChain = listType === 'orderedList'
-    ? editor.chain().focus().deleteRange(range).toggleOrderedList()
-    : editor.chain().focus().deleteRange(range).toggleBulletList()
+  const toggleSucceeded = listType === 'orderedList'
+    ? editor.chain().focus().deleteRange(range).toggleOrderedList().run()
+    : editor.chain().focus().deleteRange(range).toggleBulletList().run()
 
-  if (toggleChain.run()) {
+  if (toggleSucceeded) {
     return true
   }
 
-  const html = listType === 'orderedList'
-    ? '<ol><li><p></p></li></ol>'
-    : '<ul><li><p></p></li></ul>'
+  const listNode = {
+    type: listType,
+    content: [
+      {
+        type: 'listItem',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '' }],
+          },
+        ],
+      },
+    ],
+  }
 
-  return editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .insertContent(html)
-    .command(({ tr, dispatch }) => {
-      const listStart = Math.max(0, range.from)
-      const targetPos = Math.max(0, Math.min(tr.doc.content.size, listStart + 2))
-      if (dispatch) {
-        dispatch(tr.setSelection(TextSelection.create(tr.doc, targetPos)))
-      }
-      return true
-    })
-    .run()
+  const inserted = editor.chain().focus().deleteRange(range).insertContent(listNode).run()
+  if (!inserted) {
+    return false
+  }
+
+  const targetPos = Math.max(0, Math.min(editor.state.doc.content.size, range.from + 2))
+  editor.commands.setTextSelection(targetPos)
+  return true
 }
 
 const items: SlashItem[] = [

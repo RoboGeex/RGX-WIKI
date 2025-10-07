@@ -11,10 +11,16 @@ export default function Callout({ callout, locale }: { callout: LessonBodyItem; 
   }
   const variant = map[callout.variant || 'info']
   const Icon = variant.icon
+  const text = locale === 'ar' ? callout.ar : callout.en
+  const html = locale === 'ar' ? callout.html_ar : callout.html_en
   return (
     <div className={clsx('rounded-xl p-4 border flex gap-3 items-start', variant.cls)}>
       <Icon size={18} className="mt-0.5" />
-      <p className="text-sm">{locale === 'ar' ? callout.ar : callout.en}</p>
+      {html ? (
+        <div className="text-sm" dangerouslySetInnerHTML={{ __html: html }} />
+      ) : (
+        <p className="text-sm">{text}</p>
+      )}
     </div>
   )
 }

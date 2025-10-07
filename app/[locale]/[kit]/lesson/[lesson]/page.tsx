@@ -44,22 +44,101 @@ export default async function LessonPage(
   let stepIndex = 0
   let skippedTitleHeading = false
 
+  const parseYouTubeTime = (value: string): number => {
+    if (!value) return 0
+    if (/^\d+$/.test(value)) {
+      return Number.parseInt(value, 10) || 0
+    }
+    const match = value.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/)
+    if (!match) return 0
+    const hours = match[1] ? Number.parseInt(match[1], 10) : 0
+    const minutes = match[2] ? Number.parseInt(match[2], 10) : 0
+    const seconds = match[3] ? Number.parseInt(match[3], 10) : 0
+    return hours * 3600 + minutes * 60 + seconds
+  }
+
+  const toYoutubeEmbed = (url: string): string => {
+    try {
+      const u = new URL(url)
+      let videoId = ''
+      if (u.hostname.includes('youtu.be')) {
+        videoId = u.pathname.slice(1)
+      } else if (u.hostname.includes('youtube.com')) {
+        if (u.pathname.startsWith('/embed/')) {
+          const segments = u.pathname.split('/')
+          videoId = segments[segments.length - 1] || ''
+        } else {
+          videoId = u.searchParams.get('v') || ''
+        }
+      }
+      if (!videoId) return ''
+      const params = new URLSearchParams()
+      const startParam = u.searchParams.get('start') || u.searchParams.get('t')
+      if (startParam) {
+        const startSeconds = parseYouTubeTime(startParam)
+        if (startSeconds > 0) {
+          params.set('start', startSeconds.toString())
+        }
+      }
+      const paramString = params.toString()
+      return `https://www.youtube.com/embed/${videoId}${paramString ? `?${paramString}` : ''}`
+    } catch {
+      return ''
+    }
+  }
+
   const renderBlock = (block: any, index: number) => {
     if (!block || !block.type) return null
-    
+
     if (block.type === 'paragraph') {
+      const html = locale === 'ar' ? block.html_ar : block.html_en
+      const text = locale === 'ar' ? (block.ar || '') : (block.en || '')
+      if (html) {
+        return (
+          <p
+            key={index}
+            className="text-base leading-7 text-gray-700"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        )
+      }
+      if (!text) return null
       return (
         <p key={index} className="text-base leading-7 text-gray-700">
-          {locale === 'ar' ? (block.ar || '') : (block.en || '')}
+          {text}
         </p>
       )
     }
 
+    if (block.type === 'list') {
+      const items = locale === 'ar' ? block.items_ar : block.items_en
+      if (!Array.isArray(items) || items.length === 0) return null
+      const ListWrapper = (block.ordered ? 'ol' : 'ul') as 'ol' | 'ul'
+      const listClass = block.ordered ? 'list-decimal' : 'list-disc'
+      const paddingClass = locale === 'ar' ? 'pr-6' : 'pl-6'
+      const itemSpacingClass = locale === 'ar' ? 'mr-2' : 'ml-2'
+      return (
+        <ListWrapper
+          key={index}
+          dir={locale === 'ar' ? 'rtl' : 'ltr'}
+          className={`text-base leading-7 text-gray-700 ${listClass} ${paddingClass} space-y-2`}
+        >
+          {items.map((item: string, itemIndex: number) => (
+            <li
+              key={itemIndex}
+              className={itemSpacingClass}
+              dangerouslySetInnerHTML={{ __html: item }}
+            />
+          ))}
+        </ListWrapper>
+      )
+    }
+
     if (block.type === 'heading') {
-      const text = (locale === 'ar' ? (block.ar || '') : (block.en || '')) || ''
-      if (!text) return null
-      
-      const base = slugify(text)
+      const textValue = (locale === 'ar' ? (block.ar || '') : (block.en || '')) || ''
+      if (!textValue) return null
+
+      const base = slugify(textValue)
       const count = headingCounts.get(base) ?? 0
       headingCounts.set(base, count + 1)
       const id = count === 0 ? base : `${base}-${count}`
@@ -67,26 +146,27 @@ export default async function LessonPage(
       const level = block.level && block.level >= 2 && block.level <= 6 ? block.level : 2
       const tagLevel = Math.min(level + 1, 4)
       const Tag = (`h${tagLevel}` as keyof JSX.IntrinsicElements)
-      const sizeClass = tagLevel === 3 ? 'text-2xl' : 'text-xl'
+      const sizeClass = tagLevel === 3 ? 'text-2xl' : tagLevel === 4 ? 'text-xl' : 'text-3xl'
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
-      const isTitleHeading = originalLevel === 1 && !skippedTitleHeading && text.trim() === lessonDisplayTitle.trim()
-      
+      const isTitleHeading = originalLevel === 1 && !skippedTitleHeading && textValue.trim() === lessonDisplayTitle.trim()
+
       if (isTitleHeading) {
         skippedTitleHeading = true
         return null
       } else {
-        tocEntries.push({ id, text, level })
+        tocEntries.push({ id, text: textValue, level })
       }
-      
+
       return (
         <Tag
           key={index}
           id={id}
           data-toc={true}
           data-level={level}
-          data-toc-text={text}
-          className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4 ${paddingClass}`}>
-          {text}
+          data-toc-text={textValue}
+          className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4 ${paddingClass}`}
+        >
+          {textValue}
         </Tag>
       )
     }
@@ -99,6 +179,46 @@ export default async function LessonPage(
             src={block.image}
             alt={caption || ''}
             className="w-full rounded-xl border border-gray-200 bg-gray-50 object-contain"
+          />
+          {caption ? (
+            <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>
+          ) : null}
+        </figure>
+      )
+    }
+
+    if (block.type === 'youtube' && block.url) {
+      const embedUrl = toYoutubeEmbed(block.url)
+      if (!embedUrl) return null
+      const title =
+        locale === 'ar'
+          ? block.title_ar || block.title_en || 'YouTube video'
+          : block.title_en || block.title_ar || 'YouTube video'
+      return (
+        <div key={index} className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+          <iframe
+            src={embedUrl}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="h-full w-full"
+          />
+        </div>
+      )
+    }
+
+    if (block.type === 'video' && block.url) {
+      const caption =
+        locale === 'ar'
+          ? block.caption_ar || block.title_ar || ''
+          : block.caption_en || block.title_en || ''
+      return (
+        <figure key={index} className="space-y-3">
+          <video
+            controls
+            className="w-full rounded-xl border border-gray-200 bg-black"
+            src={block.url}
+            poster={block.poster || undefined}
           />
           {caption ? (
             <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>

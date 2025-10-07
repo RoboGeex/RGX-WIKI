@@ -8,9 +8,11 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 type LessonBodyItem = {
-  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image'
+  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video'
   en?: string
   ar?: string
+  html_en?: string
+  html_ar?: string
   title_en?: string
   title_ar?: string
   caption_en?: string
@@ -20,6 +22,15 @@ type LessonBodyItem = {
   arduino?: string
   makecodeUrl?: string
   level?: number
+  ordered?: boolean
+  items_en?: string[]
+  items_ar?: string[]
+  url?: string
+  poster?: string
+  width?: number
+  height?: number
+  json_en?: any
+  json_ar?: any
 }
 
 type NewLesson = {

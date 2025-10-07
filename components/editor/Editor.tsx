@@ -1,4 +1,4 @@
-ï»¿"use client"
+"use client"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
@@ -21,6 +21,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import BubbleMenuExt from '@tiptap/extension-bubble-menu'
 import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
+import Video from './extensions/Video'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function slugify(value: string) {
@@ -146,10 +147,10 @@ export default function WikiEditor() {
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
             switch (level) {
-              case 1: return 'text-2xl font-bold mt-8 mb-4'
-              case 2: return 'text-xl font-semibold mt-6 mb-3'
-              case 3: return 'text-lg font-medium mt-4 mb-2'
-              default: return 'text-base font-medium mt-4 mb-2'
+              case 1: return 'text-4xl font-bold mt-10 mb-5'
+              case 2: return 'text-3xl font-semibold mt-8 mb-4'
+              case 3: return 'text-2xl font-semibold mt-6 mb-3'
+              default: return 'text-xl font-medium mt-5 mb-3'
             }
           }
         }
@@ -166,6 +167,7 @@ export default function WikiEditor() {
       TableHeader,
       TableCellWithBackground,
       CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
+      Video,
       BubbleMenuExt.configure({
         element: bubbleElementEn,
         pluginKey: 'table-bubble-en',
@@ -205,10 +207,10 @@ export default function WikiEditor() {
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
             switch (level) {
-              case 1: return 'text-2xl font-bold mt-8 mb-4'
-              case 2: return 'text-xl font-semibold mt-6 mb-3'
-              case 3: return 'text-lg font-medium mt-4 mb-2'
-              default: return 'text-base font-medium mt-4 mb-2'
+              case 1: return 'text-4xl font-bold mt-10 mb-5'
+              case 2: return 'text-3xl font-semibold mt-8 mb-4'
+              case 3: return 'text-2xl font-semibold mt-6 mb-3'
+              default: return 'text-xl font-medium mt-5 mb-3'
             }
           }
         }
@@ -225,7 +227,8 @@ export default function WikiEditor() {
       TableHeader,
       TableCellWithBackground,
       CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
-      Placeholder.configure({ placeholder: "Ø§ÙƒØªØ¨ '/' Ù„Ù„Ø¥Ø¯Ø±Ø§Ø¬" }),
+      Video,
+      Placeholder.configure({ placeholder: "ÇßÊÈ '/' ááÅÏÑÇÌ" }),
       SlashCommand,
     ],
     content: initialContentRef.current,
@@ -275,16 +278,200 @@ export default function WikiEditor() {
   }
 
 
+  type CalloutVariant = 'info' | 'tip' | 'warning'
+
+  const cloneNode = (node: any) => JSON.parse(JSON.stringify(node))
+
+  const escapeHtml = (value: string): string =>
+    typeof value === 'string'
+      ? value
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+      : ''
+
+  const escapeAttribute = (value: string): string => escapeHtml(value)
+
+  const applyMarks = (html: string, marks?: any[]): string => {
+    if (!Array.isArray(marks) || marks.length === 0) return html
+    return marks.reduce((acc: string, mark: any) => {
+      if (!mark || typeof mark.type !== 'string') return acc
+      switch (mark.type) {
+        case 'bold':
+          return '<strong>' + acc + '</strong>'
+        case 'italic':
+          return '<em>' + acc + '</em>'
+        case 'underline':
+          return '<u>' + acc + '</u>'
+        case 'strike':
+          return '<s>' + acc + '</s>'
+        case 'code':
+          return '<code>' + acc + '</code>'
+        case 'link': {
+          const href = mark.attrs?.href
+          if (!href) return acc
+          const target = mark.attrs?.target ? escapeAttribute(String(mark.attrs.target)) : '_blank'
+          const rel = 'noopener noreferrer'
+          return '<a href="' + escapeAttribute(String(href)) + '" target="' + target + '" rel="' + rel + '">' + acc + '</a>'
+        }
+        case 'textStyle': {
+          const color = mark.attrs?.color
+          if (!color) return acc
+          return '<span style="color: ' + escapeAttribute(String(color)) + '">' + acc + '</span>'
+        }
+        case 'highlight': {
+          const color = mark.attrs?.color
+          const styleAttr = color ? ' style="background-color: ' + escapeAttribute(String(color)) + '"' : ''
+          return '<mark' + styleAttr + '>' + acc + '</mark>'
+        }
+        default:
+          return acc
+      }
+    }, html)
+  }
+
+  const serializeInline = (nodes?: any[]): { text: string; html: string } => {
+    if (!Array.isArray(nodes) || nodes.length === 0) {
+      return { text: '', html: '' }
+    }
+    const textParts: string[] = []
+    const htmlParts: string[] = []
+
+    nodes.forEach((node: any) => {
+      if (!node) return
+      if (node.type === 'text') {
+        const value = typeof node.text === 'string' ? node.text : ''
+        textParts.push(value)
+        let htmlValue = escapeHtml(value)
+        htmlValue = applyMarks(htmlValue, node.marks)
+        htmlParts.push(htmlValue)
+        return
+      }
+      if (node.type === 'hardBreak') {
+        textParts.push('\n')
+        htmlParts.push('<br />')
+        return
+      }
+      if (node.type === 'image' && node.attrs?.src) {
+        const src = escapeAttribute(String(node.attrs.src))
+        const altAttr = node.attrs?.alt ? ' alt="' + escapeAttribute(String(node.attrs.alt)) + '"' : ''
+        const titleAttr = node.attrs?.title ? ' title="' + escapeAttribute(String(node.attrs.title)) + '"' : ''
+        htmlParts.push('<img src="' + src + '"' + altAttr + titleAttr + ' />')
+        return
+      }
+      if (Array.isArray(node.content) && node.content.length > 0) {
+        const nested = serializeInline(node.content)
+        if (nested.text) textParts.push(nested.text)
+        if (nested.html) htmlParts.push(nested.html)
+      }
+    })
+
+    return {
+      text: textParts.join(''),
+      html: htmlParts.join(''),
+    }
+  }
+
+  const serializeListNode = (node: any): { htmlItems: string[]; textItems: string[] } => {
+    const htmlItems: string[] = []
+    const textItems: string[] = []
+
+    if (!Array.isArray(node?.content)) {
+      return { htmlItems, textItems }
+    }
+
+    node.content.forEach((item: any) => {
+      if (!item || item.type !== 'listItem') return
+      const htmlParts: string[] = []
+      const textParts: string[] = []
+
+      if (Array.isArray(item.content)) {
+        item.content.forEach((child: any) => {
+          if (child.type === 'paragraph') {
+            const { text, html } = serializeInline(child.content)
+            if (html) {
+              htmlParts.push(html)
+            } else if (text) {
+              htmlParts.push(escapeHtml(text))
+            }
+            if (text) {
+              textParts.push(text)
+            }
+          } else if (child.type === 'bulletList' || child.type === 'orderedList') {
+            const nested = serializeListNode(child)
+            if (nested.htmlItems.length > 0) {
+              const tag = child.type === 'orderedList' ? 'ol' : 'ul'
+              const nestedHtml = nested.htmlItems.map((li) => '<li>' + li + '</li>').join('')
+              htmlParts.push('<' + tag + '>' + nestedHtml + '</' + tag + '>')
+            }
+            if (nested.textItems.length > 0) {
+              textParts.push(nested.textItems.join('\n'))
+            }
+          }
+        })
+      }
+
+      const htmlItem = htmlParts.join('<br />')
+      const textItem = textParts.join('\n')
+      htmlItems.push(htmlItem)
+      textItems.push(textItem)
+    })
+
+    return { htmlItems, textItems }
+  }
+
+  const stripHtml = (value: string): string =>
+    typeof value === 'string'
+      ? value
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      : ''
+
+  const deriveCalloutVariant = (value: string): CalloutVariant => {
+    const normalized = value.trim().toLowerCase()
+    if (normalized.startsWith('tip:')) return 'tip'
+    if (normalized.startsWith('warning:')) return 'warning'
+    if (normalized.startsWith('info:')) return 'info'
+    return 'info'
+  }
+
+  const stripVariantPrefix = (value: string, variant: CalloutVariant): string => {
+    const prefixes: Record<CalloutVariant, string> = {
+      info: 'info:',
+      tip: 'tip:',
+      warning: 'warning:',
+    }
+    const prefix = prefixes[variant]
+    const trimmed = value.trim()
+    if (!trimmed.toLowerCase().startsWith(prefix)) {
+      return trimmed
+    }
+    const withoutPrefix = trimmed.slice(prefix.length)
+    return withoutPrefix.replace(/^\s+/, '')
+  }
+
   function bodyToDocument(body: any[] | undefined, language: 'en' | 'ar') {
     const textKey = language === 'ar' ? 'ar' : 'en'
     const titleKey = language === 'ar' ? 'title_ar' : 'title_en'
     const captionKey = language === 'ar' ? 'caption_ar' : 'caption_en'
+    const htmlKey = language === 'ar' ? 'html_ar' : 'html_en'
+    const itemsKey = language === 'ar' ? 'items_ar' : 'items_en'
+    const jsonKey = language === 'ar' ? 'json_ar' : 'json_en'
     const nodes: any[] = []
 
     if (Array.isArray(body)) {
-      for (const item of body) {
-        if (!item || typeof item !== 'object') continue
-        const textValue = typeof item[textKey] === 'string' ? item[textKey].trim() : ''
+      body.forEach((item: any) => {
+        if (!item || typeof item !== 'object') return
+        const jsonNode = item[jsonKey]
+        if (jsonNode) {
+          nodes.push(cloneNode(jsonNode))
+          return
+        }
+        const textValue = typeof item[textKey] === 'string' ? item[textKey] : ''
         switch (item.type) {
           case 'heading':
             nodes.push({
@@ -293,38 +480,90 @@ export default function WikiEditor() {
               content: textValue ? [{ type: 'text', text: textValue }] : [],
             })
             break
-          case 'paragraph':
+          case 'paragraph': {
+            const htmlValue = typeof item[htmlKey] === 'string' ? item[htmlKey] : ''
+            const plain = htmlValue ? stripHtml(htmlValue) : textValue
             nodes.push({
               type: 'paragraph',
-              content: textValue ? [{ type: 'text', text: textValue }] : [],
+              content: plain ? [{ type: 'text', text: plain }] : [],
             })
             break
-          case 'callout':
+          }
+          case 'list': {
+            const listItems = Array.isArray(item[itemsKey]) ? item[itemsKey] : []
+            if (listItems.length > 0) {
+              nodes.push({
+                type: item.ordered ? 'orderedList' : 'bulletList',
+                content: listItems.map((entry: string) => ({
+                  type: 'listItem',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: stripHtml(entry) ? [{ type: 'text', text: stripHtml(entry) }] : [],
+                    },
+                  ],
+                })),
+              })
+            }
+            break
+          }
+          case 'callout': {
+            const variant = deriveCalloutVariant(textValue)
+            const normalized = stripVariantPrefix(textValue, variant)
             nodes.push({
               type: 'blockquote',
               content: [
                 {
                   type: 'paragraph',
-                  content: textValue ? [{ type: 'text', text: textValue }] : [],
+                  content: normalized ? [{ type: 'text', text: normalized }] : [],
                 },
               ],
             })
             break
-          case 'image': {
-            if (!item.image) break
-            const altSource = typeof item[titleKey] === 'string' && item[titleKey].trim()
-              ? item[titleKey].trim()
-              : (typeof item[captionKey] === 'string' ? item[captionKey].trim() : '')
-            nodes.push({
-              type: 'image',
-              attrs: {
-                src: item.image,
-                alt: altSource || undefined,
-                title: altSource || undefined,
-              },
-            })
-            break
           }
+          case 'image':
+            if (item.image) {
+              const altSource =
+                typeof item[titleKey] === 'string' && item[titleKey]
+                  ? item[titleKey]
+                  : typeof item[captionKey] === 'string'
+                    ? item[captionKey]
+                    : ''
+              nodes.push({
+                type: 'image',
+                attrs: {
+                  src: item.image,
+                  alt: altSource || undefined,
+                  title: altSource || undefined,
+                },
+              })
+            }
+            break
+          case 'youtube':
+            if (item.url) {
+              nodes.push({
+                type: 'youtube',
+                attrs: {
+                  src: item.url,
+                  width: item.width || 640,
+                  height: item.height || 360,
+                },
+              })
+            }
+            break
+          case 'video':
+            if (item.url) {
+              nodes.push({
+                type: 'video',
+                attrs: {
+                  src: item.url,
+                  poster: item.poster || null,
+                  title: item[titleKey] || item[captionKey] || null,
+                  controls: true,
+                },
+              })
+            }
+            break
           default:
             if (textValue) {
               nodes.push({
@@ -332,9 +571,8 @@ export default function WikiEditor() {
                 content: [{ type: 'text', text: textValue }],
               })
             }
-            break
         }
-      }
+      })
     }
 
     if (nodes.length === 0) {
@@ -587,40 +825,161 @@ export default function WikiEditor() {
   }, [editorEn])
 
   function extractBody(doc: any, language: 'en' | 'ar') {
-    const out: any[] = []
+    const blocks: any[] = []
     const textKey = language === 'ar' ? 'ar' : 'en'
+    const htmlKey = language === 'ar' ? 'html_ar' : 'html_en'
     const titleKey = language === 'ar' ? 'title_ar' : 'title_en'
     const captionKey = language === 'ar' ? 'caption_ar' : 'caption_en'
+    const itemsKey = language === 'ar' ? 'items_ar' : 'items_en'
+    const jsonKey = language === 'ar' ? 'json_ar' : 'json_en'
 
-    const walk = (nodes?: any[]) => {
-      if (!nodes) return
-      for (const n of nodes) {
-        if (n.type === 'paragraph') {
-          const text = (n.content || []).filter((c: any) => c.type === 'text').map((t: any) => t.text).join('')
-          if (text.trim()) out.push({ type: 'paragraph', [textKey]: text })
-        } else if (n.type === 'blockquote') {
-          const text = (n.content || []).flatMap((p: any) => (p.content || [])).filter((c: any) => c.type === 'text').map((t: any) => t.text).join(' ')
-          if (text.trim()) out.push({ type: 'callout', variant: 'info', [textKey]: text })
-        } else if (n.type === 'heading') {
-          const text = (n.content || []).filter((c: any) => c.type === 'text').map((t: any) => t.text).join('')
-          if (text.trim()) {
-            const level = Number(n.attrs?.level) || 2
-            out.push({ type: 'heading', [textKey]: text, level })
+    const handleNode = (node: any) => {
+      if (!node || typeof node !== 'object') return
+      switch (node.type) {
+        case 'paragraph': {
+          const { text, html } = serializeInline(node.content)
+          if (!text && !html) {
+            break
           }
-        } else if (n.type === 'image' && n.attrs?.src) {
-          const alt = typeof n.attrs?.alt === 'string' ? n.attrs.alt.trim() : ''
-          out.push({
-            type: 'image',
-            image: n.attrs.src,
-            [titleKey]: alt || undefined,
-            [captionKey]: alt || undefined,
-          })
+          const block: any = {
+            type: 'paragraph',
+            [textKey]: (text || '').trim(),
+            [jsonKey]: cloneNode(node),
+          }
+          if (html) {
+            block[htmlKey] = html
+          }
+          blocks.push(block)
+          break
         }
-        if (n.content) walk(n.content)
+        case 'blockquote': {
+          const htmlParts: string[] = []
+          const textParts: string[] = []
+          if (Array.isArray(node.content)) {
+            node.content.forEach((child: any) => {
+              if (child?.type === 'paragraph') {
+                const { text, html } = serializeInline(child.content)
+                if (html) {
+                  htmlParts.push(html)
+                }
+                if (text) {
+                  textParts.push(text)
+                }
+              }
+            })
+          }
+          const rawText = textParts.join('\n').trim()
+          if (!rawText) {
+            break
+          }
+          const variant = deriveCalloutVariant(rawText)
+          const normalized = stripVariantPrefix(rawText, variant)
+          const block: any = {
+            type: 'callout',
+            variant,
+            [textKey]: normalized,
+            [jsonKey]: cloneNode(node),
+          }
+          if (htmlParts.length > 0) {
+            block[htmlKey] = htmlParts.join('<br />')
+          }
+          blocks.push(block)
+          break
+        }
+        case 'heading': {
+          const { text, html } = serializeInline(node.content)
+          if (!text) {
+            break
+          }
+          const block: any = {
+            type: 'heading',
+            level: Number(node.attrs?.level) || 2,
+            [textKey]: text.trim(),
+            [jsonKey]: cloneNode(node),
+          }
+          if (html && html !== escapeHtml(text.trim())) {
+            block[htmlKey] = html
+          }
+          blocks.push(block)
+          break
+        }
+        case 'bulletList':
+        case 'orderedList': {
+          const { htmlItems, textItems } = serializeListNode(node)
+          if (htmlItems.length === 0 && textItems.length === 0) {
+            break
+          }
+          const block: any = {
+            type: 'list',
+            ordered: node.type === 'orderedList',
+            [itemsKey]: htmlItems,
+            [textKey]: textItems.join('\n'),
+            [jsonKey]: cloneNode(node),
+          }
+          blocks.push(block)
+          break
+        }
+        case 'image': {
+          const src = node.attrs?.src
+          if (!src) break
+          const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt.trim() : ''
+          const title = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
+          const block: any = {
+            type: 'image',
+            image: src,
+            [jsonKey]: cloneNode(node),
+          }
+          if (alt) {
+            block[titleKey] = alt
+            block[captionKey] = block[captionKey] || alt
+          }
+          if (title) {
+            block[titleKey] = block[titleKey] || title
+            block[captionKey] = block[captionKey] || title
+          }
+          blocks.push(block)
+          break
+        }
+        case 'youtube': {
+          const url = node.attrs?.src
+          if (!url) break
+          const block: any = {
+            type: 'youtube',
+            url,
+            width: node.attrs?.width ? Number(node.attrs.width) : undefined,
+            height: node.attrs?.height ? Number(node.attrs.height) : undefined,
+            [jsonKey]: cloneNode(node),
+          }
+          blocks.push(block)
+          break
+        }
+        case 'video': {
+          const url = node.attrs?.src
+          if (!url) break
+          const block: any = {
+            type: 'video',
+            url,
+            poster: node.attrs?.poster || undefined,
+            [titleKey]: node.attrs?.title ? String(node.attrs.title) : undefined,
+            [jsonKey]: cloneNode(node),
+          }
+          blocks.push(block)
+          break
+        }
+        default: {
+          if (Array.isArray(node.content)) {
+            node.content.forEach((child: any) => handleNode(child))
+          }
+          break
+        }
       }
     }
-    walk(doc?.content)
-    return out
+
+    if (Array.isArray(doc?.content)) {
+      doc.content.forEach((node: any) => handleNode(node))
+    }
+
+    return blocks
   }
 
   async function publish() {
@@ -644,7 +1003,7 @@ export default function WikiEditor() {
     }
     // Generate ID and slug if they don't exist
     const titleEn = meta.title_en || meta.title_ar || 'Untitled'
-    const titleAr = meta.title_ar || meta.title_en || 'Ø¹Ù†ÙˆØ§Ù† ØºÙŠØ± Ù…ØªÙˆÙØ±'
+    const titleAr = meta.title_ar || meta.title_en || 'ÚäæÇä ÛíÑ ãÊæİÑ'
     
     // Generate ID and slug - API will handle uniqueness
     const baseSlug = slugify(titleEn) || 'lesson'
@@ -808,7 +1167,7 @@ export default function WikiEditor() {
                 <div className="flex items-center gap-2">
                   <span>Arabic (right to left)</span>
                 </div>
-                <span className="text-xs text-gray-400">ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø£Ù…Ø± <span className="px-1 rounded bg-gray-100">/</span> Ù„Ù„Ø¥Ø¯Ø±Ø§Ø¬</span>
+                <span className="text-xs text-gray-400">íãßäß ÇÓÊÎÏÇã ÇáÃãÑ <span className="px-1 rounded bg-gray-100">/</span> ááÅÏÑÇÌ</span>
               </div>
             </div>
             <div className="px-6 py-6 space-y-4">
@@ -823,6 +1182,9 @@ export default function WikiEditor() {
     </div>
   )
 }
+
+
+
 
 
 

@@ -137,7 +137,7 @@ const items: SlashItem[] = [
           if (!res.ok) throw new Error(data.error || 'Upload failed')
           // Insert as simple HTML video node placeholder via paragraph
           const url = data.url
-          editor.commands.insertContent(`<video controls src="${url}"></video>`)
+          editor.chain().focus().insertVideo({ src: url }).run()
         } catch (e: any) {
           alert('Upload error: ' + (e?.message || 'unknown'))
         }

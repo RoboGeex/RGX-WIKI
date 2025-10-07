@@ -40,3 +40,33 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Tiptap editor list styling */
+.tiptap ul,
+.tiptap ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+.tiptap ul {
+  list-style-type: disc;
+}
+.tiptap ol {
+  list-style-type: decimal;
+}
+.tiptap li {
+  margin: 0.25rem 0;
+}
+.tiptap-rtl ul,
+.tiptap-rtl ol {
+  padding-left: 0;
+  padding-right: 1.5rem;
+  margin-left: 0;
+  margin-right: 1.5rem;
+}
+.tiptap-rtl ul {
+  list-style-type: disc;
+}
+.tiptap-rtl ol {
+  list-style-type: decimal;
+}
+

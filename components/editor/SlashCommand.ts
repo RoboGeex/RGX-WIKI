@@ -1,6 +1,5 @@
 import { Extension, type Editor } from '@tiptap/core'
 import Suggestion, { SuggestionOptions } from '@tiptap/suggestion'
-import { TextSelection } from 'prosemirror-state'
 
 export type SlashItem = {
   title: string

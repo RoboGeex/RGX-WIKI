@@ -192,7 +192,7 @@ export default function WikiEditor() {
     ],
     content: initialContentRef.current,
     editorProps: {
-      attributes: { class: 'max-w-none focus:outline-none', lang: 'en' },
+      attributes: { class: 'tiptap max-w-none focus:outline-none', lang: 'en' },
     },
   }, [bubbleElementEn, textBubbleElementEn])
 
@@ -233,7 +233,7 @@ export default function WikiEditor() {
     ],
     content: initialContentRef.current,
     editorProps: {
-      attributes: { class: 'max-w-none focus:outline-none', lang: 'ar', dir: 'rtl' },
+      attributes: { class: 'tiptap tiptap-rtl max-w-none focus:outline-none', lang: 'ar', dir: 'rtl' },
     },
   }, [])
 

@@ -1,4 +1,4 @@
-import { Extension } from '@tiptap/core'
+import { Extension, type Editor } from '@tiptap/core'
 import Suggestion, { SuggestionOptions } from '@tiptap/suggestion'
 
 export type SlashItem = {
@@ -6,6 +6,31 @@ export type SlashItem = {
   shortcut?: string
   keywords?: string[]
   command: (props: any) => void
+}
+
+const insertListWithFallback = (editor: Editor, range: any, listType: 'bulletList' | 'orderedList') => {
+  const toggled = listType === 'orderedList'
+    ? editor.chain().focus().deleteRange(range).toggleOrderedList().run()
+    : editor.chain().focus().deleteRange(range).toggleBulletList().run()
+
+  if (toggled) {
+    return
+  }
+
+  editor.chain().focus().insertContent({
+    type: listType,
+    content: [
+      {
+        type: 'listItem',
+        content: [
+          {
+            type: 'paragraph',
+            content: [],
+          },
+        ],
+      },
+    ],
+  }).run()
 }
 
 const items: SlashItem[] = [
@@ -48,13 +73,13 @@ const items: SlashItem[] = [
     title: 'Bullet List',
     shortcut: '•',
     keywords: ['list', 'ul'],
-    command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleBulletList().run(),
+    command: ({ editor, range }: any) => insertListWithFallback(editor, range, 'bulletList'),
   },
   {
     title: 'Numbered List',
     shortcut: '1.',
     keywords: ['list', 'ol'],
-    command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
+    command: ({ editor, range }: any) => insertListWithFallback(editor, range, 'orderedList'),
   },
   {
     title: 'Callout',
@@ -213,3 +238,4 @@ function renderList(container: HTMLDivElement, { items, command, clientRect }: a
     container.style.zIndex = '90'
   }
 }
+

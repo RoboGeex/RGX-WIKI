@@ -102,11 +102,36 @@ const items: SlashItem[] = [
     keywords: ['gallery', 'carousel', 'images', 'slider'],
     command: ({ editor, range }: any) => {
       editor.chain().focus().deleteRange(range).run()
-      const input = window.prompt('Enter image URLs separated by commas (or new lines)')
-      if (!input) return
-      const images = input.split(/[,\n]/).map((value) => value.trim()).filter(Boolean)
-      if (!images.length) return
-      editor.chain().focus().insertImageSlider({ images }).run()
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = 'image/*'
+      input.multiple = true
+      input.onchange = async () => {
+        const files = Array.from(input.files ?? []).filter((file) => file.type.startsWith('image/'))
+        if (!files.length) return
+        try {
+          const uploads = await Promise.all(files.map(async (file) => {
+            const formData = new FormData()
+            formData.append('file', file)
+            const res = await fetch('/api/upload', { method: 'POST', body: formData })
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}))
+              throw new Error(data.error || 'Upload failed')
+            }
+            const data = await res.json()
+            if (!data?.url) {
+              throw new Error('Upload failed')
+            }
+            return data.url as string
+          }))
+          if (!uploads.length) return
+          editor.chain().focus().insertImageSlider({ images: uploads }).run()
+        } catch (error: any) {
+          console.error('Image slider upload failed', error)
+          alert(error?.message || 'Failed to upload images for slider')
+        }
+      }
+      input.click()
     },
   },
   {

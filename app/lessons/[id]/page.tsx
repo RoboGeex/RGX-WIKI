@@ -86,6 +86,21 @@ const LessonPage = () => {
                     </div>
                 );
             }
+            if (item.type === 'imageSlider') {
+                const images = Array.isArray(item.images) ? item.images : []
+                if (!images.length) return null
+                return (
+                    <div key={idx} className="tiptap-image-slider overflow-x-auto">
+                        <div className="tiptap-image-slider-track">
+                            {images.map((src: string, slideIdx: number) => (
+                                <div key={slideIdx} className="tiptap-image-slide">
+                                    <img src={src} alt={`Slide ${slideIdx + 1}`} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
 
             if (item.type === 'image' && item.image) {
                 const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || '';
@@ -143,7 +158,7 @@ const LessonPage = () => {
             <div className="flex-1 min-w-0">
                 <div className="w-full rounded-3xl border border-gray-200 bg-white p-12 shadow-md">
                     <KitHeader lang="en" kitSlug="student-kit" lessonSlug={id} />
-                    <div ref={contentRef} className="prose mt-6 max-w-none">
+                    <div ref={contentRef} className="tiptap prose mt-6 max-w-none">
                         {renderBody()}
                     </div>
                 </div>

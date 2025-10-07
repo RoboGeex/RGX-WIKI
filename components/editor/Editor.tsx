@@ -23,6 +23,7 @@ import { DOMSerializer } from 'prosemirror-model'
 import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
+import ImageSlider from './extensions/ImageSlider'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function slugify(value: string) {
@@ -169,6 +170,7 @@ export default function WikiEditor() {
       TableCellWithBackground,
       CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
       Video,
+      ImageSlider,
       BubbleMenuExt.configure({
         element: bubbleElementEn,
         pluginKey: 'table-bubble-en',
@@ -229,6 +231,7 @@ export default function WikiEditor() {
       TableCellWithBackground,
       CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
       Video,
+      ImageSlider,
       Placeholder.configure({ placeholder: "اكتب '/' للإدراج" }),
       SlashCommand,
     ],
@@ -423,7 +426,7 @@ export default function WikiEditor() {
     return { htmlItems, textItems }
   }
 
-  const tableNodeToHTML = (node: any, editorInstance?: any): string => {
+  const serializeNodeToHTML = (node: any, editorInstance?: any): string => {
     if (!editorInstance?.schema || typeof document === 'undefined') {
       return ''
     }
@@ -530,6 +533,18 @@ export default function WikiEditor() {
             const jsonNode = item[jsonKey]
             if (jsonNode && typeof jsonNode === 'object') {
               nodes.push(cloneNode(jsonNode))
+            }
+            break
+          }
+          case 'imageSlider': {
+            const jsonNode = item[jsonKey]
+            if (jsonNode && typeof jsonNode === 'object') {
+              nodes.push(cloneNode(jsonNode))
+            } else {
+              const images = Array.isArray(item.images) ? item.images.filter((src: string) => typeof src === 'string' && src.trim().length) : []
+              if (images.length) {
+                nodes.push({ type: 'imageSlider', attrs: { images } })
+              }
             }
             break
           }
@@ -950,7 +965,21 @@ export default function WikiEditor() {
             type: 'table',
             [jsonKey]: cloneNode(node),
           }
-          const html = tableNodeToHTML(node, editorInstance)
+          const html = serializeNodeToHTML(node, editorInstance)
+          if (html) {
+            block[htmlKey] = html
+          }
+          blocks.push(block)
+          break
+        }
+        case 'imageSlider': {
+          const images = Array.isArray(node.attrs?.images) ? node.attrs.images.filter((src: string) => typeof src === 'string' && src.trim().length) : []
+          const block: any = {
+            type: 'imageSlider',
+            images,
+            [jsonKey]: cloneNode(node),
+          }
+          const html = serializeNodeToHTML(node, editorInstance)
           if (html) {
             block[htmlKey] = html
           }

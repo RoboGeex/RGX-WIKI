@@ -97,6 +97,19 @@ const items: SlashItem[] = [
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setBlockquote().run(),
   },
   {
+    title: 'Image Slider',
+    shortcut: 'Slider',
+    keywords: ['gallery', 'carousel', 'images', 'slider'],
+    command: ({ editor, range }: any) => {
+      editor.chain().focus().deleteRange(range).run()
+      const input = window.prompt('Enter image URLs separated by commas (or new lines)')
+      if (!input) return
+      const images = input.split(/[,\n]/).map((value) => value.trim()).filter(Boolean)
+      if (!images.length) return
+      editor.chain().focus().insertImageSlider({ images }).run()
+    },
+  },
+  {
     title: 'Image',
     shortcut: 'Img',
     keywords: ['picture', 'photo'],

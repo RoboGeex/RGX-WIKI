@@ -38,7 +38,7 @@ export interface Module {
 export type LessonBodyItemVariant = 'info' | 'tip' | 'warning';
 
 export interface LessonBodyItem {
-  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video' | 'table';
+  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video' | 'table' | 'imageSlider';
   en?: string;
   ar?: string;
   html_en?: string;
@@ -49,6 +49,7 @@ export interface LessonBodyItem {
   caption_ar?: string;
   variant?: LessonBodyItemVariant;
   image?: string;
+  images?: string[];
   arduino?: string;
   makecodeUrl?: string;
   level?: number;

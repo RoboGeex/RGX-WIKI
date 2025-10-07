@@ -181,6 +181,22 @@ export default async function LessonPage(
       )
     }
 
+    if (block.type === 'imageSlider') {
+      const images = Array.isArray(block.images) ? block.images : []
+      if (!images.length) return null
+      return (
+        <div key={index} className="tiptap-image-slider overflow-x-auto">
+          <div className="tiptap-image-slider-track">
+            {images.map((src: string, slideIndex: number) => (
+              <div key={slideIndex} className="tiptap-image-slide">
+                <img src={src} alt={`Slide ${slideIndex + 1}`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
     if (block.type === 'image' && block.image) {
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (

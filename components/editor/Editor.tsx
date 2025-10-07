@@ -228,7 +228,7 @@ export default function WikiEditor() {
       TableCellWithBackground,
       CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
       Video,
-      Placeholder.configure({ placeholder: "ÇßÊÈ '/' ááÅÏÑÇÌ" }),
+      Placeholder.configure({ placeholder: "Ø§ÙƒØªØ¨ '/' Ù„Ù„Ø¥Ø¯Ø±Ø§Ø¬" }),
       SlashCommand,
     ],
     content: initialContentRef.current,
@@ -1003,7 +1003,7 @@ export default function WikiEditor() {
     }
     // Generate ID and slug if they don't exist
     const titleEn = meta.title_en || meta.title_ar || 'Untitled'
-    const titleAr = meta.title_ar || meta.title_en || 'ÚäæÇä ÛíÑ ãÊæİÑ'
+    const titleAr = meta.title_ar || meta.title_en || 'Ø¹Ù†ÙˆØ§Ù† ØºÙŠØ± Ù…ØªÙˆÙØ±'
     
     // Generate ID and slug - API will handle uniqueness
     const baseSlug = slugify(titleEn) || 'lesson'
@@ -1167,7 +1167,7 @@ export default function WikiEditor() {
                 <div className="flex items-center gap-2">
                   <span>Arabic (right to left)</span>
                 </div>
-                <span className="text-xs text-gray-400">íãßäß ÇÓÊÎÏÇã ÇáÃãÑ <span className="px-1 rounded bg-gray-100">/</span> ááÅÏÑÇÌ</span>
+                <span className="text-xs text-gray-400">ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø£Ù…Ø± <span className="px-1 rounded bg-gray-100">/</span> Ù„Ù„Ø¥Ø¯Ø±Ø§Ø¬</span>
               </div>
             </div>
             <div className="px-6 py-6 space-y-4">

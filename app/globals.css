@@ -70,3 +70,39 @@ html {
   list-style-type: decimal;
 }
 
+.tiptap table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: hsl(var(--card));
+  box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.25);
+}
+.tiptap thead th {
+  background: rgba(240, 93, 78, 0.12);
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+.tiptap th,
+.tiptap td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem 0.9rem;
+  vertical-align: top;
+  background: hsl(var(--card));
+}
+.tiptap tbody tr:nth-child(even) td {
+  background: rgba(148, 163, 184, 0.08);
+}
+.tiptap tbody tr:hover td {
+  background: rgba(240, 93, 78, 0.08);
+}
+.tiptap .selectedCell::after {
+  border: 2px solid hsl(var(--primary));
+  box-shadow: inset 0 0 0 2px rgba(240, 93, 78, 0.35);
+}
+.tiptap-rtl table {
+  direction: rtl;
+}
+

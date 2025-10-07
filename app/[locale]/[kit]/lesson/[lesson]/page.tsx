@@ -171,6 +171,16 @@ export default async function LessonPage(
       )
     }
 
+    if (block.type === 'table') {
+      const html = locale === 'ar' ? (block.html_ar || block.html_en || '') : (block.html_en || block.html_ar || '')
+      if (!html) return null
+      return (
+        <div key={index} className="overflow-x-auto">
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
+      )
+    }
+
     if (block.type === 'image' && block.image) {
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (
@@ -276,7 +286,7 @@ export default async function LessonPage(
               </h1>
             </header>
 
-            <article className="prose prose-lg max-w-none space-y-6">
+            <article className="tiptap prose prose-lg max-w-none space-y-6">
               {renderedBlocks}
             </article>
 

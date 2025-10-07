@@ -38,7 +38,7 @@ export interface Module {
 export type LessonBodyItemVariant = 'info' | 'tip' | 'warning';
 
 export interface LessonBodyItem {
-  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video';
+  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video' | 'table';
   en?: string;
   ar?: string;
   html_en?: string;

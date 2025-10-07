@@ -78,6 +78,15 @@ const LessonPage = () => {
             if (item.type === 'paragraph' && item.en) {
                 return <p key={idx} className="mb-4">{item.en}</p>;
             }
+            if (item.type === 'table') {
+                const html = item.html_en || ''
+                return (
+                    <div key={idx} className="overflow-x-auto">
+                        <div className="tiptap" dangerouslySetInnerHTML={{ __html: html }} />
+                    </div>
+                );
+            }
+
             if (item.type === 'image' && item.image) {
                 const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || '';
                 return (

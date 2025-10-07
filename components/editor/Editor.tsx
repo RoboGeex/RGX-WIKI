@@ -19,6 +19,7 @@ import { common, createLowlight } from 'lowlight'
 const lowlightInstance = createLowlight(common)
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import BubbleMenuExt from '@tiptap/extension-bubble-menu'
+import { DOMSerializer } from 'prosemirror-model'
 import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
@@ -422,6 +423,24 @@ export default function WikiEditor() {
     return { htmlItems, textItems }
   }
 
+  const tableNodeToHTML = (node: any, editorInstance?: any): string => {
+    if (!editorInstance?.schema || typeof document === 'undefined') {
+      return ''
+    }
+    try {
+      const docJson = { type: 'doc', content: [node] }
+      const docNode = editorInstance.schema.nodeFromJSON(docJson)
+      const serializer = DOMSerializer.fromSchema(editorInstance.schema)
+      const fragment = serializer.serializeFragment(docNode.content, { document })
+      const container = document.createElement('div')
+      container.appendChild(fragment)
+      return container.innerHTML
+    } catch (error) {
+      console.warn('Failed to serialize table node', error)
+      return ''
+    }
+  }
+
   const stripHtml = (value: string): string =>
     typeof value === 'string'
       ? value
@@ -504,6 +523,13 @@ export default function WikiEditor() {
                   ],
                 })),
               })
+            }
+            break
+          }
+          case 'table': {
+            const jsonNode = item[jsonKey]
+            if (jsonNode && typeof jsonNode === 'object') {
+              nodes.push(cloneNode(jsonNode))
             }
             break
           }
@@ -824,7 +850,7 @@ export default function WikiEditor() {
     }
   }, [editorEn])
 
-  function extractBody(doc: any, language: 'en' | 'ar') {
+  function extractBody(doc: any, language: 'en' | 'ar', editorInstance?: any) {
     const blocks: any[] = []
     const textKey = language === 'ar' ? 'ar' : 'en'
     const htmlKey = language === 'ar' ? 'html_ar' : 'html_en'
@@ -919,6 +945,18 @@ export default function WikiEditor() {
           blocks.push(block)
           break
         }
+        case 'table': {
+          const block: any = {
+            type: 'table',
+            [jsonKey]: cloneNode(node),
+          }
+          const html = tableNodeToHTML(node, editorInstance)
+          if (html) {
+            block[htmlKey] = html
+          }
+          blocks.push(block)
+          break
+        }
         case 'image': {
           const src = node.attrs?.src
           if (!src) break
@@ -991,8 +1029,8 @@ export default function WikiEditor() {
     setStatus('')
     const docEn = editorEn.getJSON()
     const docAr = editorAr.getJSON()
-    const bodyEn = extractBody(docEn, 'en')
-    const bodyAr = extractBody(docAr, 'ar')
+    const bodyEn = extractBody(docEn, 'en', editorEn)
+    const bodyAr = extractBody(docAr, 'ar', editorAr)
     const maxLen = Math.max(bodyEn.length, bodyAr.length)
     const mergedBody = [] as any[]
     for (let i = 0; i < maxLen; i++) {

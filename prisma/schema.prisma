@@ -40,3 +40,13 @@ model Asset {
   data      Bytes?   @db.LongBlob
   createdAt DateTime @default(now())
 }
+
+model AccessCode {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  wikiSlug  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([wikiSlug])
+}

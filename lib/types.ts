@@ -81,3 +81,11 @@ export interface Lesson {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface AccessCode {
+  id?: number;
+  code: string;
+  wikiSlug: string;
+  createdAt?: string;
+  updatedAt?: string;
+}

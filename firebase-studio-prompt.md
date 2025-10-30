@@ -366,6 +366,18 @@ interface Module {
 }
 ```
 
+### Access Code Interface
+```typescript
+interface AccessCode {
+  id?: number
+  code: string
+  wikiSlug: string
+  createdAt?: string
+  updatedAt?: string
+}
+```
+
+
 ## Key Features Implementation
 
 ### 1. Internationalization (i18n)

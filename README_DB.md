@@ -13,6 +13,7 @@ Setup
 Models
 - Lessons are stored in table `Lesson` with JSON columns for prerequisites/materials/body.
 - Media uploads can be stored in table `Asset` if `STORE_MEDIA_IN_DB=true`.
+- Access passwords/tokens live in table `AccessCode` (`code`, `wikiSlug`, timestamps) and are validated by `/api/unlock` when `USE_DB=true`.
 
 Behavior
 - Editor “Publish to Wiki” posts to `/api/lessons` which writes to DB if `USE_DB=true`, else to JSON file under `data/`.

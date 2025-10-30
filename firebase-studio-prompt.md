@@ -1,7 +1,7 @@
 # Firebase Studio Prompt: RGX Kits Wiki - Complete Project Recreation
 
 ## Project Overview
-Create a modern, Arduino-style lesson wiki platform called "RGX Kits Wiki" using Next.js 14, TypeScript, and Tailwind CSS. This is a comprehensive educational platform with multi-language support (English/Arabic), content management system, and beautiful glass morphism design.
+Create a modern, Arduvino-style lesson wiki platform called "RGX Kits Wiki" using Next.js 14, TypeScript, and Tailwind CSS. This is a comprehensive educational platform with multi-language support (English/Arabic), content management system, and beautiful glass morphism design.
 
 ## Technology Stack
 - **Framework**: Next.js 14 with App Router (Core Framework)
@@ -396,6 +396,13 @@ interface Module {
 - Backdrop blur effects with `glass` utility class
 - Gradient backgrounds and modern card designs
 - Responsive design with mobile-first approach
+
+### 5a. Mobile Control Surface Layout
+- Top glassmorphism navbar spans full width with RoboGeek logo/text on the left, primary `Connect` CTA (red pill with icon) centered-right, secondary `Disconnect` pill, and a stateless status badge (`Not Connected`) aligned to the far right; buttons share consistent border radius, glow, and inner shadow.
+- Central controller card stacks vertically: a slim glass slider with circular red thumb, numeric value chip to the right, and A/B/C/D buttons framing the slider; maintain generous spacing and 3D button styling identical to the reference mockup.
+- Vertical control stack (Up / Stop / Down) centered under the slider with circular soft-pressed buttons and subtle highlights.
+- Two oversized circular joysticks anchored to the bottom left/right corners, each using a translucent lilac ring (`rgba(225,213,255,0.35)`), inner dark glass disk, and white arrow glyphs (vertical arrows left, horizontal arrows right); ensure responsive scaling (approx 42% viewport width, max 260px).
+- Apply deep brown/charcoal gradient background (`#150b0b` -> `#231717`), soft ambient shadows, and consistent blur (`backdrop-blur-2xl`) so the mobile viewport matches the provided reference while keeping touch targets >= 48px.
 
 ### 6. Search Functionality
 - Real-time lesson search with filtering

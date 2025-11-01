@@ -1,4 +1,4 @@
-
+﻿
 export const i18n = {
   locales: ['en', 'ar'],
   defaultLocale: 'en'
@@ -48,14 +48,18 @@ export const translations = {
     unlockDescription: 'Please enter your access code to continue',
     accessCode: 'Access code',
     continue: 'Continue',
+    showCode: 'Show code',
+    hideCode: 'Hide code',
     missingKitOrRedirect: 'Error: URL is missing kit or redirect parameter.',
     invalidAccessCode: 'Invalid access code.',
     unlocking: 'Unlocking...',
     accessCodePlaceholder: 'Enter your code',
     unlockWiki: 'Unlock Wiki',
     enterAccessCodeToContinue: 'Enter the access code you received to continue.',
-
-    
+    accessCodeHint: 'Code format: XXXX-XXXX-XXXX',
+    accessCodeSuccess: 'Access granted! Redirecting...',
+    dontHaveCode: 'Don't have a code?',
+    contactUs: 'Contact us',
     // Code
     copy: 'Copy',
     copied: 'Copied!',
@@ -109,8 +113,11 @@ export const translations = {
     unlocking: 'جاري إلغاء القفل...',
     accessCodePlaceholder: 'أدخل الرمز الخاص بك',
     unlockWiki: 'فتح الموسوعة',
-    enterAccessCodeToContinue: 'أدخل رمز الوصول الذي تلقيته للمتابعة.',
-    
+    enterAccessCodeToContinue: 'Enter the access code you received to continue.',
+    accessCodeHint: 'Code format: XXXX-XXXX-XXXX',
+    accessCodeSuccess: 'Access granted! Redirecting...',
+    dontHaveCode: 'Don't have a code?',
+    contactUs: 'Contact us',
     // Code
     copy: 'نسخ',
     copied: 'تم النسخ!',
@@ -133,3 +140,5 @@ export function t(key: keyof typeof translations.en, locale: Locale): string {
   
   return (translations as any)[locale][key] || translations.en[key] || key
 }
+
+

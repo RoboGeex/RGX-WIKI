@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { t, type Locale } from '@/lib/i18n'
 import { setStoredLocale, setUnlocked } from '@/lib/unlock'
@@ -8,7 +8,11 @@ import { setStoredLocale, setUnlocked } from '@/lib/unlock'
 export default function UnlockPage({ params }: { params: { locale: Locale } }) {
   const [accessCode, setAccessCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [showCode, setShowCode] = useState(false)
+  const [feedback, setFeedback] = useState<{ status: 'idle' | 'error' | 'success'; message: string | null }>({
+    status: 'idle',
+    message: null,
+  })
   const searchParams = useSearchParams()
 
   const kit = searchParams.get('kit')
@@ -28,14 +32,31 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
     }
   }, [locale])
 
+  const helperId = 'access-code-helper'
+  const feedbackId = 'access-code-feedback'
+  const describedBy = useMemo(() => {
+    const ids = [helperId]
+    if (feedback.status !== 'idle' && feedback.message) {
+      ids.push(feedbackId)
+    }
+    return ids.join(' ')
+  }, [feedback.status, feedback.message])
+
+  const inputBorderClasses =
+    feedback.status === 'error'
+      ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+      : feedback.status === 'success'
+        ? 'border-emerald-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
+        : 'border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20'
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!accessCode.trim() || !kit || !redirect) {
-      setError(t('missingKitOrRedirect', locale))
+      setFeedback({ status: 'error', message: t('missingKitOrRedirect', locale) })
       return
     }
     setIsLoading(true)
-    setError(null)
+    setFeedback({ status: 'idle', message: null })
     try {
       const response = await fetch('/api/unlock', {
         method: 'POST',
@@ -49,64 +70,127 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
       }
 
       setUnlocked(true)
-      window.location.href = redirect
+      setFeedback({ status: 'success', message: t('accessCodeSuccess', locale) })
+      setTimeout(() => {
+        window.location.href = redirect
+      }, 650)
     } catch (err: any) {
-      setError(err.message)
+      setFeedback({ status: 'error', message: err.message })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#eef2f1] flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-lg">
-        <div className="rounded-3xl border border-white/60 bg-white/70 backdrop-blur-2xl shadow-xl space-y-6 px-8 py-10">
-          <div className="flex flex-col items-center gap-4">
-            <img
-              src="/images/robogeex-logo-wordmark.png"
-              alt="RoboGeex Academy"
-              className="h-16 w-auto drop-shadow-sm"
-            />
-            {kitName ? (
-              <span className="text-xs uppercase tracking-[0.45em] text-primary/80">{kitName}</span>
-            ) : null}
-          </div>
-
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-semibold text-gray-900">{t('unlockWiki', locale)}</h1>
-            <p className="text-sm text-gray-600">
-              {t('enterAccessCodeToContinue', locale)}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="accessCode" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('accessCode', locale)}
-              </label>
-              <input
-                id="accessCode"
-                type="text"
-                value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                placeholder={t('accessCodePlaceholder', locale)}
-                required
+    <>
+      <div className="min-h-screen bg-[#eef2f1] flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-2xl">
+          <div
+            className="rounded-[32px] border border-white/60 bg-white/80 backdrop-blur-2xl shadow-xl shadow-zinc-900/5 px-10 py-12 space-y-8 md:space-y-10"
+            style={{ opacity: 0, transform: 'translateY(16px)', animation: 'fadeInUp 0.6s ease-out forwards' }}
+          >
+            <div className="flex flex-col items-center gap-5 text-center">
+              <img
+                src="/images/robogeex-logo-wordmark.png"
+                alt="RoboGeex Academy"
+                className="h-16 w-auto drop-shadow-sm"
               />
+              {kitName ? (
+                <span className="text-[0.7rem] uppercase tracking-[0.65em] text-primary/70 font-semibold">
+                  {kitName}
+                </span>
+              ) : null}
+              <h1 className="text-3xl md:text-[2rem] font-semibold text-gray-900">{t('unlockWiki', locale)}</h1>
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            <p className="text-left text-sm md:text-base text-gray-700 leading-relaxed">
+              {t('enterAccessCodeToContinue', locale)}
+            </p>
 
-            <button
-              type="submit"
-              disabled={isLoading || !accessCode.trim()}
-              className="w-full bg-primary text-primary-foreground font-medium py-3 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-transform hover:-translate-y-[1px] shadow-md shadow-primary/30"
-            >
-              {isLoading ? t('unlocking', locale) : t('continue', locale)}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-6 text-left" noValidate>
+              <div className="space-y-2">
+                <label htmlFor="accessCode" className="block text-sm font-semibold text-gray-800">
+                  {t('accessCode', locale)}
+                </label>
+                <div className="relative">
+                  <input
+                    id="accessCode"
+                    type={showCode ? 'text' : 'password'}
+                    autoComplete="one-time-code"
+                    inputMode="text"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-2xl bg-white shadow-sm focus:outline-none transition-all ${inputBorderClasses}`}
+                    placeholder={t('accessCodePlaceholder', locale)}
+                    aria-describedby={describedBy}
+                    aria-invalid={feedback.status === 'error'}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCode((prev) => !prev)}
+                    className="absolute inset-y-1 right-1 flex items-center rounded-xl px-3 text-xs font-semibold uppercase tracking-wider text-primary/80 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition"
+                    aria-pressed={showCode}
+                  >
+                    {t(showCode ? 'hideCode' : 'showCode', locale)}
+                  </button>
+                </div>
+                <p id={helperId} className="text-xs text-gray-500">
+                  {t('accessCodeHint', locale)}
+                </p>
+              </div>
+
+              <div
+                id={feedbackId}
+                role="status"
+                aria-live="polite"
+                className={`min-h-[1.25rem] text-sm ${
+                  feedback.status === 'error'
+                    ? 'text-red-600'
+                    : feedback.status === 'success'
+                      ? 'text-emerald-600'
+                      : 'text-gray-500'
+                }`}
+              >
+                {feedback.message}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || !accessCode.trim()}
+                className="w-full bg-[#f05d4e] text-white font-semibold py-3.5 px-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 hover:-translate-y-[1px] hover:shadow-lg hover:shadow-[#f05d4e]/40 active:translate-y-0 active:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#f05d4e]"
+                aria-busy={isLoading}
+              >
+                {isLoading ? t('unlocking', locale) : t('continue', locale)}
+              </button>
+
+              <div className="pt-2 text-sm text-gray-500">
+                {t('dontHaveCode', locale)}{' '}
+                <a
+                  href="https://robogeex.com/contact"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-md"
+                >
+                  {t('contactUs', locale)}
+                </a>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translate3d(0, 16px, 0);
+          }
+          to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+          }
+        }
+      `}</style>
+    </>
   )
 }

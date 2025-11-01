@@ -72,10 +72,25 @@ const items: SlashItem[] = [
     shortcut: 'Ctrl+K',
     keywords: ['url', 'hyperlink'],
     command: ({ editor, range }: any) => {
-      editor.chain().focus().deleteRange(range).run()
+      const text = window.prompt('Link text')
+      if (!text || !text.trim()) {
+        return
+      }
       const url = window.prompt('Enter link URL')
-      if (!url) return
-      editor.chain().focus().setLink({ href: url }).run()
+      if (!url || !url.trim()) {
+        return
+      }
+      const displayText = text.trim()
+      const href = url.trim()
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent(displayText)
+        .setTextSelection({ from: range.from, to: range.from + displayText.length })
+        .setLink({ href, target: '_blank', rel: 'noopener noreferrer' })
+        .setTextSelection(range.from + displayText.length)
+        .run()
     },
   },
   {

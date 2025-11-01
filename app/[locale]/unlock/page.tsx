@@ -15,6 +15,13 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
   const redirect = searchParams.get('redirect')
   const locale = params.locale
 
+  const kitDisplayNames: Record<string, string> = {
+    ziggy: 'Ziggy Learning Kit',
+    clicky: 'Clicky Learning Kit',
+    'student-kit': 'Student Kit',
+  }
+  const kitName = kit ? kitDisplayNames[kit] || kit.replace(/-/g, ' ') : ''
+
   useEffect(() => {
     if (locale) {
       setStoredLocale(locale)
@@ -54,6 +61,17 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
     <div className="min-h-screen bg-[#eef2f1] flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-lg">
         <div className="rounded-3xl border border-white/60 bg-white/70 backdrop-blur-2xl shadow-xl space-y-6 px-8 py-10">
+          <div className="flex flex-col items-center gap-4">
+            <img
+              src="/images/robogeex-logo.png"
+              alt="RoboGeex Academy"
+              className="h-14 w-auto drop-shadow-sm"
+            />
+            {kitName ? (
+              <span className="text-xs uppercase tracking-[0.45em] text-primary/80">{kitName}</span>
+            ) : null}
+          </div>
+
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-semibold text-gray-900">{t('unlockWiki', locale)}</h1>
             <p className="text-sm text-gray-600">

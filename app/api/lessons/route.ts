@@ -165,7 +165,12 @@ export async function POST(req: Request) {
             while (true) {
               const existing = field === 'id'
                 ? await prisma.lesson.findUnique({ where: { id: candidate } })
-                : await prisma.lesson.findUnique({ where: { slug: candidate } })
+                : await prisma.lesson.findFirst({
+                    where: {
+                      slug: candidate,
+                      wikiSlug: lesson.wikiSlug,
+                    },
+                  })
               if (!existing) break
               candidate = `${base}-${counter++}`
             }

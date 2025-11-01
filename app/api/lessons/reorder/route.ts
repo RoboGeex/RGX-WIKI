@@ -54,7 +54,10 @@ export async function POST(req: Request) {
     
     await prisma.$transaction(
       finalOrder.map((lesson, idx) =>
-        prisma.lesson.update({ where: { slug: lesson.slug }, data: { order: idx + 1 } })
+        prisma.lesson.update({
+          where: { id: lesson.id },
+          data: { order: idx + 1 },
+        })
       )
     )
 

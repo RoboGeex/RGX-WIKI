@@ -15,7 +15,7 @@ datasource db {
 model Lesson {
   id               String   @id
   order            Int
-  slug             String   @unique
+  slug             String
   wikiSlug         String
   title_en         String
   title_ar         String
@@ -29,6 +29,7 @@ model Lesson {
   updatedAt        DateTime @updatedAt
 
   @@index([wikiSlug])
+  @@unique([wikiSlug, slug])
 }
 
 model Asset {

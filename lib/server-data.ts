@@ -18,11 +18,16 @@ export async function getLessonsFromDb(wikiSlug?: string): Promise<Lesson[]> {
   return rows as unknown as Lesson[]
 }
 
-export async function getLessonBySlug(slug: string): Promise<Lesson | undefined> {
+export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<Lesson | undefined> {
   if (process.env.USE_DB !== 'true') {
     return undefined
   }
 
-  const row = await prisma.lesson.findUnique({ where: { slug } })
+  const row = await prisma.lesson.findFirst({
+    where: {
+      slug,
+      ...(wikiSlug ? { wikiSlug } : {}),
+    },
+  })
   return row as unknown as Lesson | undefined
 }

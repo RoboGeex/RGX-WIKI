@@ -136,9 +136,11 @@ export default async function LessonPage(
 
     if (block.type === 'heading') {
       const textValue = (locale === 'ar' ? (block.ar || '') : (block.en || '')) || ''
-      if (!textValue) return null
+      const htmlValue = locale === 'ar' ? block.html_ar : block.html_en
+      if (!textValue && !htmlValue) return null
 
-      const base = slugify(textValue)
+      const anchorText = textValue || (typeof htmlValue === 'string' ? htmlValue.replace(/<[^>]+>/g, '') : '')
+      const base = slugify(anchorText || 'heading')
       const count = headingCounts.get(base) ?? 0
       headingCounts.set(base, count + 1)
       const id = count === 0 ? base : `${base}-${count}`
@@ -154,7 +156,7 @@ export default async function LessonPage(
         skippedTitleHeading = true
         return null
       } else {
-        tocEntries.push({ id, text: textValue, level })
+        tocEntries.push({ id, text: anchorText || textValue, level })
       }
 
       return (
@@ -163,10 +165,14 @@ export default async function LessonPage(
           id={id}
           data-toc={true}
           data-level={level}
-          data-toc-text={textValue}
+          data-toc-text={anchorText}
           className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4 ${paddingClass}`}
         >
-          {textValue}
+          {htmlValue ? (
+            <span dangerouslySetInnerHTML={{ __html: htmlValue }} />
+          ) : (
+            textValue
+          )}
         </Tag>
       )
     }

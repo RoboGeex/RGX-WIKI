@@ -118,7 +118,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
                     inputMode="text"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-2xl bg-slate-50 shadow-md focus:outline-none transition-all ${inputBorderClasses}`}
+                    className={`w-full px-4 py-3 rounded-2xl bg-slate-50 shadow-[0_-8px_18px_-10px_rgba(15,23,42,0.55)] focus:outline-none transition-all ${inputBorderClasses}`}
                     placeholder={t('accessCodePlaceholder', locale)}
                     aria-describedby={describedBy}
                     aria-invalid={feedback.status === 'error'}

@@ -26,10 +26,18 @@ export default function KitNavbar({
   const pathname = usePathname()
 
   useEffect(() => {
-    if (pathname.includes('/lesson/') && !isUnlocked()) {
-      router.push('/unlock')
-    }
-  }, [pathname, router])
+    if (!pathname) return
+    if (!pathname.includes('/lesson/')) return
+    if (pathname.includes('/unlock')) return
+    if (isUnlocked()) return
+
+    const search = new URLSearchParams({
+      kit: kitSlug,
+      redirect: pathname,
+    })
+
+    router.push(`/${locale}/unlock?${search.toString()}`)
+  }, [pathname, router, locale, kitSlug])
 
   const handleLocaleChange = (nextLocale: Locale) => {
     setStoredLocale(nextLocale)

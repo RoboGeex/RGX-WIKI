@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { t, type Locale } from '@/lib/i18n'
-import { setStoredLocale } from '@/lib/unlock'
+import { setStoredLocale, setUnlocked } from '@/lib/unlock'
 
 export default function UnlockPage({ params }: { params: { locale: Locale } }) {
   const [accessCode, setAccessCode] = useState('')
@@ -41,6 +41,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
         throw new Error(data.error || t('invalidAccessCode', locale))
       }
 
+      setUnlocked(true)
       window.location.href = redirect
     } catch (err: any) {
       setError(err.message)

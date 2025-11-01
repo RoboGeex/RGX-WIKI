@@ -63,9 +63,9 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
         <div className="rounded-3xl border border-white/60 bg-white/70 backdrop-blur-2xl shadow-xl space-y-6 px-8 py-10">
           <div className="flex flex-col items-center gap-4">
             <img
-              src="/images/robogeex-logo.png"
+              src="/images/robogeex-logo-wordmark.png"
               alt="RoboGeex Academy"
-              className="h-14 w-auto drop-shadow-sm"
+              className="h-16 w-auto drop-shadow-sm"
             />
             {kitName ? (
               <span className="text-xs uppercase tracking-[0.45em] text-primary/80">{kitName}</span>

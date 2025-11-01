@@ -58,6 +58,22 @@ export function middleware(request: NextRequest) {
     if (passthroughPaths.some(p => pathname.startsWith(p))) {
         return NextResponse.next();
     }
+
+    const accessCookie = request.cookies.get(`wiki-${wiki.slug}-access`)
+    const unlockLocales = ['en', 'ar']
+    const isLocaleUnlock = unlockLocales.some(loc =>
+      pathname === `/${loc}/unlock` || pathname.startsWith(`/${loc}/unlock/`)
+    )
+    const isUnlockPath = pathname === '/unlock' || isLocaleUnlock
+
+    if (!accessCookie && !isUnlockPath) {
+      const unlockUrl = new URL(`/${locale}/unlock`, request.url)
+      unlockUrl.searchParams.set('kit', kitSlug)
+      const redirectTarget = pathname === '/' ? '/' : pathname
+      const redirectWithQuery = `${redirectTarget}${request.nextUrl.search || ''}`
+      unlockUrl.searchParams.set('redirect', redirectWithQuery || '/')
+      return NextResponse.redirect(unlockUrl)
+    }
     
     // Handle /unlock page specifically
     if (pathname.endsWith('/unlock')) {

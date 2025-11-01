@@ -38,7 +38,13 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ success: true })
-  response.cookies.set(`wiki-${wiki.slug}-unlocked`, 'true', {
+
+  response.cookies.set(`wiki-${wiki.slug}-unlocked`, '', {
+    path: '/',
+    maxAge: 0,
+  })
+
+  response.cookies.set(`wiki-${wiki.slug}-access`, 'true', {
     path: '/',
     maxAge: ONE_YEAR_SECONDS,
     httpOnly: false,

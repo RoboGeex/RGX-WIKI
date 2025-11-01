@@ -1,6 +1,14 @@
+const STORAGE_PREFIX = 'unlocked-v2'
+const LEGACY_STORAGE_PREFIX = 'unlocked'
+
+function buildStorageKey(prefix: string) {
+  if (typeof window === 'undefined') return ''
+  return `${prefix}:${location.host}`
+}
+
 export function getUnlockKey() {
   if (typeof window === 'undefined') return ''
-  return `unlocked:${location.host}`
+  return buildStorageKey(STORAGE_PREFIX)
 }
 
 export function isUnlocked() {
@@ -9,7 +17,12 @@ export function isUnlocked() {
   const key = getUnlockKey()
   if (!key) return false
 
+  const legacyKey = buildStorageKey(LEGACY_STORAGE_PREFIX)
+
   try {
+    if (legacyKey && window.localStorage.getItem(legacyKey) !== null) {
+      window.localStorage.removeItem(legacyKey)
+    }
     if (window.localStorage.getItem(key) === 'true') {
       return true
     }
@@ -17,9 +30,17 @@ export function isUnlocked() {
     console.warn('Failed to read unlock key from localStorage', err)
   }
 
-  const hasCookie = typeof document !== 'undefined'
-    ? /(?:^|;\s*)wiki-[^=]+-unlocked=true/.test(document.cookie)
-    : false
+  if (typeof document !== 'undefined') {
+    const legacyCookieMatch = document.cookie.match(/(?:^|;\s*)(wiki-[^=]+-unlocked)=true/)
+    if (legacyCookieMatch && legacyCookieMatch[1]) {
+      document.cookie = `${legacyCookieMatch[1]}=; Max-Age=0; path=/`
+    }
+  }
+
+  const cookieMatch = typeof document !== 'undefined'
+    ? document.cookie.match(/(?:^|;\s*)(wiki-[^=]+-access)=true/)
+    : null
+  const hasCookie = Boolean(cookieMatch)
 
   if (hasCookie) {
     try {
@@ -38,6 +59,15 @@ export function setUnlocked(v: boolean) {
 
   const key = getUnlockKey()
   if (!key) return
+
+  const legacyKey = buildStorageKey(LEGACY_STORAGE_PREFIX)
+  if (legacyKey) {
+    try {
+      window.localStorage.removeItem(legacyKey)
+    } catch (err) {
+      console.warn('Failed to remove legacy unlock key from localStorage', err)
+    }
+  }
 
   try {
     if (v) {

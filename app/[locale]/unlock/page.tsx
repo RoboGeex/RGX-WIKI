@@ -162,9 +162,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
               <div className="pt-2 text-sm text-gray-500">
                 {t('dontHaveCode', locale)}{' '}
                 <a
-                  href="https://robogeex.com/contact"
-                  target="_blank"
-                  rel="noreferrer"
+                  href="mailto:info@robogeex.com"
                   className="font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-md"
                 >
                   {t('contactUs', locale)}

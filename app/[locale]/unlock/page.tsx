@@ -51,19 +51,19 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 flex items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        <div className="glass rounded-3xl p-8 shadow-xl space-y-6">
+    <div className="min-h-screen bg-[#eef2f1] flex items-center justify-center px-6 py-12">
+      <div className="w-full max-w-lg">
+        <div className="rounded-3xl border border-white/60 bg-white/70 backdrop-blur-2xl shadow-xl space-y-6 px-8 py-10">
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold">{t('unlockWiki', locale)}</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <h1 className="text-3xl font-semibold text-gray-900">{t('unlockWiki', locale)}</h1>
+            <p className="text-sm text-gray-600">
               {t('enterAccessCodeToContinue', locale)}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="accessCode" className="block text-sm font-medium mb-2">
+              <label htmlFor="accessCode" className="block text-sm font-medium text-gray-700 mb-2">
                 {t('accessCode', locale)}
               </label>
               <input
@@ -71,7 +71,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
                 type="text"
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 backdrop-blur focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
                 placeholder={t('accessCodePlaceholder', locale)}
                 required
               />
@@ -82,7 +82,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
             <button
               type="submit"
               disabled={isLoading || !accessCode.trim()}
-              className="w-full bg-primary text-primary-foreground font-medium py-3 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition hover:opacity-90"
+              className="w-full bg-primary text-primary-foreground font-medium py-3 px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-transform hover:-translate-y-[1px] shadow-md shadow-primary/30"
             >
               {isLoading ? t('unlocking', locale) : t('continue', locale)}
             </button>

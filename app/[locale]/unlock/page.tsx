@@ -86,7 +86,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
       <div className="min-h-screen bg-[#eef2f1] flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-2xl">
           <div
-            className="rounded-[32px] border border-white/60 bg-white/80 backdrop-blur-2xl shadow-xl shadow-zinc-900/5 px-10 py-12 space-y-8 md:space-y-10"
+            className="rounded-[32px] border border-white/70 bg-white/90 ring-1 ring-black/5 backdrop-blur-2xl shadow-2xl shadow-zinc-900/10 px-10 py-12 space-y-8 md:space-y-10"
             style={{ opacity: 0, transform: 'translateY(16px)', animation: 'fadeInUp 0.6s ease-out forwards' }}
           >
             <div className="flex flex-col items-center gap-5 text-center">
@@ -120,7 +120,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
                     inputMode="text"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-2xl bg-white shadow-sm focus:outline-none transition-all ${inputBorderClasses}`}
+                    className={`w-full px-4 py-3 rounded-2xl bg-slate-50 shadow-md focus:outline-none transition-all ${inputBorderClasses}`}
                     placeholder={t('accessCodePlaceholder', locale)}
                     aria-describedby={describedBy}
                     aria-invalid={feedback.status === 'error'}

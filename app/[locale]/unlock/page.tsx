@@ -42,10 +42,10 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
 
   const inputBorderClasses =
     feedback.status === 'error'
-      ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+      ? 'border-red-500 focus:border-red-500 focus:[box-shadow:inset_0_0_0_3px_rgba(248,113,113,0.25)]'
       : feedback.status === 'success'
-        ? 'border-emerald-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
-        : 'border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20'
+        ? 'border-emerald-500 focus:border-emerald-500 focus:[box-shadow:inset_0_0_0_3px_rgba(16,185,129,0.22)]'
+        : 'border-gray-200 focus:border-primary focus:[box-shadow:inset_0_0_0_3px_rgba(240,93,78,0.18)]'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

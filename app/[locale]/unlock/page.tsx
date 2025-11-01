@@ -32,14 +32,12 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
     }
   }, [locale])
 
-  const helperId = 'access-code-helper'
   const feedbackId = 'access-code-feedback'
   const describedBy = useMemo(() => {
-    const ids = [helperId]
     if (feedback.status !== 'idle' && feedback.message) {
-      ids.push(feedbackId)
+      return feedbackId
     }
-    return ids.join(' ')
+    return undefined
   }, [feedback.status, feedback.message])
 
   const inputBorderClasses =
@@ -135,9 +133,6 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
                     {t(showCode ? 'hideCode' : 'showCode', locale)}
                   </button>
                 </div>
-                <p id={helperId} className="text-xs text-gray-500">
-                  {t('accessCodeHint', locale)}
-                </p>
               </div>
 
               <div

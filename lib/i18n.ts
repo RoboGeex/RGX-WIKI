@@ -1,7 +1,6 @@
-﻿
 export const i18n = {
   locales: ['en', 'ar'],
-  defaultLocale: 'en'
+  defaultLocale: 'en',
 } as const
 
 export type Locale = (typeof i18n.locales)[number]
@@ -16,7 +15,7 @@ export const translations = {
     search: 'Search lessons...',
     language: 'Language',
     theme: 'Theme',
-    light: 'Light',    
+    light: 'Light',
     // Lesson meta
     difficulty: 'Difficulty',
     duration: 'Duration',
@@ -25,7 +24,7 @@ export const translations = {
     materials: 'Materials',
     buySpares: 'Buy spare parts',
     getSupport: 'Get support',
-    
+
     // Navigation
     home: 'Home',
     kit: 'Kit',
@@ -41,7 +40,7 @@ export const translations = {
     onThisPage: 'On this page',
     noHeadingsYet: 'No headings yet.',
     allLessons: 'All lessons',
-    
+
     // Unlock
     unlock: 'Unlock',
     unlockTitle: 'Enter Access Code',
@@ -58,14 +57,15 @@ export const translations = {
     enterAccessCodeToContinue: 'Enter the access code you received to continue.',
     accessCodeHint: 'Code format: XXXX-XXXX-XXXX',
     accessCodeSuccess: 'Access granted! Redirecting...',
-    dontHaveCode: 'Don't have a code?',
+    dontHaveCode: "Don’t have a code?",
     contactUs: 'Contact us',
+
     // Code
     copy: 'Copy',
     copied: 'Copied!',
     arduino: 'Arduino (C/C++)',
     microbit: 'micro:bit (MakeCode)',
-    
+
     // 404
     notFound: 'Page not found',
     notFoundDescription: 'The page you are looking for does not exist.',
@@ -73,72 +73,77 @@ export const translations = {
   },
   ar: {
     // Navigation
-    search: 'البحث في الدروس...',
+    search: 'ابحث عن الدروس...',
     language: 'اللغة',
-    theme: 'المظهر',
-    light: 'فاتح',    
+    theme: 'السمة',
+    light: 'فاتح',
     // Lesson meta
     difficulty: 'الصعوبة',
     duration: 'المدة',
-    minutes: 'دقيقة',
+    minutes: 'دقائق',
     prerequisites: 'المتطلبات المسبقة',
     materials: 'المواد',
-    buySpares: 'شراء قطع غيار',
-    getSupport: 'الحصول على الدعم',
-    
+    buySpares: 'اشترِ قطع غيار',
+    getSupport: 'اطلب الدعم',
+
     // Navigation
     home: 'الرئيسية',
-    kit: 'المجموعة',
-    module: 'الوحدة',
-    lesson: 'الدرس',
-    lessons: 'الدروس',
-    modules: 'الوحدات',
+    kit: 'الحقيبة',
+    module: 'وحدة',
+    lesson: 'درس',
+    lessons: 'دروس',
+    modules: 'وحدات',
     previous: 'السابق',
     next: 'التالي',
-    gettingStarted: 'البداية',
+    gettingStarted: 'البدء',
     resources: 'الموارد',
     noLessonsYet: 'لا توجد دروس بعد.',
     onThisPage: 'في هذه الصفحة',
     noHeadingsYet: 'لا توجد عناوين بعد.',
     allLessons: 'جميع الدروس',
-    
+
     // Unlock
     unlock: 'إلغاء القفل',
     unlockTitle: 'أدخل رمز الوصول',
     unlockDescription: 'يرجى إدخال رمز الوصول للمتابعة',
     accessCode: 'رمز الوصول',
     continue: 'متابعة',
-    missingKitOrRedirect: 'خطأ: الرابط لا يحتوي على معلمة المجموعة أو إعادة التوجيه.',
+    showCode: 'إظهار الرمز',
+    hideCode: 'إخفاء الرمز',
+    missingKitOrRedirect: 'خطأ: عنوان URL يفتقد إلى الحقيبة أو رابط إعادة التوجيه.',
     invalidAccessCode: 'رمز الوصول غير صالح.',
     unlocking: 'جاري إلغاء القفل...',
-    accessCodePlaceholder: 'أدخل الرمز الخاص بك',
+    accessCodePlaceholder: 'أدخل الرمز هنا',
     unlockWiki: 'فتح الموسوعة',
-    enterAccessCodeToContinue: 'Enter the access code you received to continue.',
-    accessCodeHint: 'Code format: XXXX-XXXX-XXXX',
-    accessCodeSuccess: 'Access granted! Redirecting...',
-    dontHaveCode: 'Don't have a code?',
-    contactUs: 'Contact us',
+    enterAccessCodeToContinue: 'أدخل رمز الوصول الذي وصلك للمتابعة.',
+    accessCodeHint: 'صيغة الرمز: XXXX-XXXX-XXXX',
+    accessCodeSuccess: 'تم التحقق من الرمز! جارٍ إعادة التوجيه...',
+    dontHaveCode: 'لا تملك رمزاً؟',
+    contactUs: 'تواصل معنا',
+
     // Code
     copy: 'نسخ',
     copied: 'تم النسخ!',
     arduino: 'Arduino (C/C++)',
     microbit: 'micro:bit (MakeCode)',
-    
+
     // 404
     notFound: 'الصفحة غير موجودة',
-    notFoundDescription: 'الصفحة التي تبحث عنها غير موجودة.',
-    backToKit: 'العودة إلى المجموعة',
-  }
+    notFoundDescription: 'الصفحة التي تبحث عنها غير متاحة.',
+    backToKit: 'العودة إلى الحقيبة',
+  },
 } as const
 
 export function t(key: keyof typeof translations.en, locale: Locale): string {
-  // Handle undefined or invalid locale
   if (!locale || !translations[locale]) {
     console.warn(`Invalid locale: ${locale}, falling back to English`)
     return translations.en[key] || key
   }
-  
-  return (translations as any)[locale][key] || translations.en[key] || key
+
+  const value = (translations as Record<string, Record<string, string>>)[locale][key]
+  if (value !== undefined) {
+    return value
+  }
+
+  return translations.en[key] || key
 }
-
-

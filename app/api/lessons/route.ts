@@ -140,10 +140,11 @@ export async function POST(req: Request) {
 
         const existingRecord = await prisma.lesson.findUnique({
           where: { id: lesson.id },
-          select: { order: true },
+          select: { order: true, wikiSlug: true },
         })
 
-        let isUpdate = !forceNew && !!existingRecord
+        const isSameWiki = existingRecord?.wikiSlug === lesson.wikiSlug
+        let isUpdate = !forceNew && !!existingRecord && isSameWiki
 
         if (!Number.isFinite(lesson.order) || lesson.order < 1) {
           if (isUpdate && existingRecord) {
@@ -157,28 +158,32 @@ export async function POST(req: Request) {
           }
         }
 
-        if (!isUpdate) {
-          const ensureUnique = async (value: string, field: 'id' | 'slug'): Promise<string> => {
-            const base = value && value.trim() ? value.trim() : 'lesson'
-            let candidate = base
-            let counter = 1
-            while (true) {
-              const existing = field === 'id'
-                ? await prisma.lesson.findUnique({ where: { id: candidate } })
-                : await prisma.lesson.findFirst({
-                    where: {
-                      slug: candidate,
-                      wikiSlug: lesson.wikiSlug,
-                    },
-                  })
-              if (!existing) break
-              candidate = `${base}-${counter++}`
-            }
-            return candidate
+        const ensureUnique = async (value: string, field: 'id' | 'slug'): Promise<string> => {
+          const base = value && value.trim() ? value.trim() : 'lesson'
+          let candidate = base
+          let counter = 1
+          while (true) {
+            const existing = field === 'id'
+              ? await prisma.lesson.findUnique({ where: { id: candidate } })
+              : await prisma.lesson.findFirst({
+                  where: {
+                    slug: candidate,
+                    wikiSlug: lesson.wikiSlug,
+                  },
+                })
+            if (!existing) break
+            candidate = `${base}-${counter++}`
           }
+          return candidate
+        }
 
+        if (!isUpdate) {
           lesson.id = await ensureUnique(lesson.id, 'id')
           lesson.slug = await ensureUnique(lesson.slug, 'slug')
+        } else if (existingRecord && !isSameWiki) {
+          lesson.id = await ensureUnique(lesson.id, 'id')
+          lesson.slug = await ensureUnique(lesson.slug, 'slug')
+          isUpdate = false
         }
 
         const dataForDb = {

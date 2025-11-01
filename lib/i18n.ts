@@ -1,4 +1,4 @@
-export const i18n = {
+﻿export const i18n = {
   locales: ['en', 'ar'],
   defaultLocale: 'en',
 } as const
@@ -52,10 +52,10 @@ export const translations = {
     missingKitOrRedirect: 'Error: URL is missing kit or redirect parameter.',
     invalidAccessCode: 'Invalid access code.',
     unlocking: 'Unlocking...',
-    accessCodePlaceholder: 'XXXX-XXXX-XXXX',
+    accessCodePlaceholder: 'XXXX',
     unlockWiki: 'Unlock Wiki',
     enterAccessCodeToContinue: 'Enter the access code you received to continue.',
-    accessCodeHint: 'Code format: XXXX-XXXX-XXXX',
+    accessCodeHint: 'Code format: XXXX',
     accessCodeSuccess: 'Access granted! Redirecting...',
     dontHaveCode: "Don’t have a code?",
     contactUs: 'Contact us',
@@ -113,10 +113,10 @@ export const translations = {
     missingKitOrRedirect: 'خطأ: عنوان URL يفتقد إلى الحقيبة أو رابط إعادة التوجيه.',
     invalidAccessCode: 'رمز الوصول غير صالح.',
     unlocking: 'جاري إلغاء القفل...',
-    accessCodePlaceholder: 'XXXX-XXXX-XXXX',
+    accessCodePlaceholder: 'XXXX',
     unlockWiki: 'فتح الموسوعة',
     enterAccessCodeToContinue: 'أدخل رمز الوصول الذي وصلك للمتابعة.',
-    accessCodeHint: 'صيغة الرمز: XXXX-XXXX-XXXX',
+    accessCodeHint: 'صيغة الرمز: XXXX',
     accessCodeSuccess: 'تم التحقق من الرمز! جارٍ إعادة التوجيه...',
     dontHaveCode: 'لا تملك رمزاً؟',
     contactUs: 'تواصل معنا',

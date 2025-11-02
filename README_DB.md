@@ -4,6 +4,8 @@ Env variables
 - `DATABASE_URL`: MySQL connection string (e.g., mysql://user:pass@host:3306/db)
 - `USE_DB`: set to `true` to use DB for lessons API and server pages
 - `STORE_MEDIA_IN_DB`: set to `true` to store uploaded binary files in DB (otherwise files go to `public/uploads` and only URLs are stored)
+- `UPLOAD_STRATEGY`: optional. Set to `sftp` to push uploads to an external SFTP destination instead of the local filesystem.
+- `SFTP_HOST`, `SFTP_USERNAME`, `SFTP_BASE_URL`: required when `UPLOAD_STRATEGY=sftp`. Provide either `SFTP_PASSWORD` or `SFTP_PRIVATE_KEY` (with `\n` escaped) and optionally `SFTP_PASSPHRASE`, `SFTP_PORT`, `SFTP_REMOTE_DIR`.
 
 Setup
 1) Install dependencies: `npm i`
@@ -12,7 +14,7 @@ Setup
 
 Models
 - Lessons are stored in table `Lesson` with JSON columns for prerequisites/materials/body.
-- Media uploads can be stored in table `Asset` if `STORE_MEDIA_IN_DB=true`.
+- Media uploads can be stored in table `Asset` if `STORE_MEDIA_IN_DB=true`. Otherwise assets are written to the configured filesystem/SFTP target and only their URLs are stored in lessons.
 - Access passwords/tokens live in table `AccessCode` (`code`, `wikiSlug`, timestamps) and are validated by `/api/unlock` when `USE_DB=true`.
 
 Behavior

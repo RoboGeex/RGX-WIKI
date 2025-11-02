@@ -399,7 +399,7 @@ interface AccessCode {
 
 ### 4. Content Management
 - Full CRUD operations for wikis, kits, lessons, modules
-- File upload handling for images and media
+- File upload handling for images and media (local filesystem by default, optional SFTP offload via `UPLOAD_STRATEGY=sftp` and `SFTP_*` envs)
 - Lesson reordering with drag-and-drop
 - Wiki creation with automatic file generation
 

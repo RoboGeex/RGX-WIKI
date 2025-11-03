@@ -122,12 +122,13 @@ html {
   border-radius: 1rem;
   overflow: hidden;
   border: 1px solid hsl(var(--border));
-  min-width: min(320px, 80vw);
   box-shadow: 0 18px 35px -20px rgba(15, 23, 42, 0.35);
+  max-width: min(480px, 90vw);
+  min-width: min(280px, 75vw);
 }
 .tiptap-image-slider .tiptap-image-slide img {
   width: 100%;
   height: auto;
   display: block;
+  object-fit: cover;
 }
-

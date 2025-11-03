@@ -13,7 +13,9 @@ export type UploadContext = {
 }
 
 const getUploadContext = (editor: Editor): UploadContext => {
-  const storage = editor.storage['slash-command'] as Record<string, any> | undefined
+  const storage = (editor as any)?.storage?.['slash-command'] as
+    | { getUploadContext?: () => UploadContext }
+    | undefined
   const getter = storage && typeof storage.getUploadContext === 'function'
     ? storage.getUploadContext
     : undefined

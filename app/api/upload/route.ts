@@ -11,6 +11,8 @@ export async function POST(req: Request) {
     const form = await req.formData()
     const file = form.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 })
+    const wikiSlugRaw = (form.get('wikiSlug') as string | null) || undefined
+    const mediaTypeRaw = (form.get('mediaType') as string | null) || undefined
 
     // Generate filename
     const bytes = await file.arrayBuffer()
@@ -18,6 +20,18 @@ export async function POST(req: Request) {
     const safeName = (file.name || 'upload').replace(/[^a-zA-Z0-9._-]/g, '_')
     const ts = Date.now()
     const filename = `${ts}-${safeName}`
+    const sanitizedWikiSegment = wikiSlugRaw ? wikiSlugRaw.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'global'
+    const inferredType = file.type?.startsWith('video/')
+      ? 'video'
+      : file.type?.startsWith('image/')
+        ? 'image'
+        : undefined
+    const mediaSegment =
+      (mediaTypeRaw || inferredType) === 'video'
+        ? 'videos'
+        : (mediaTypeRaw || inferredType) === 'image'
+          ? 'images'
+          : 'files'
 
     const storeInDb = process.env.STORE_MEDIA_IN_DB === 'true'
     const uploadStrategy = (process.env.UPLOAD_STRATEGY || '').toLowerCase()
@@ -51,7 +65,8 @@ export async function POST(req: Request) {
 
       const client = new Client()
       const port = Number(process.env.SFTP_PORT || '22')
-      const remoteDir = (process.env.SFTP_REMOTE_DIR || '/uploads').replace(/\/+$/, '')
+      const remoteRoot = (process.env.SFTP_REMOTE_DIR || '/uploads').replace(/\/+$/, '')
+      const remoteDir = `${remoteRoot}/${sanitizedWikiSegment}/${mediaSegment}`
 
       const connectionConfig: any = {
         host,
@@ -87,13 +102,14 @@ export async function POST(req: Request) {
         }
       }
 
-      publicUrl = `${baseUrl.replace(/\/$/, '')}/${filename}`
+      publicUrl = `${baseUrl.replace(/\/$/, '')}/${sanitizedWikiSegment}/${mediaSegment}/${filename}`
     } else {
-      const outDir = path.join(process.cwd(), 'public', 'uploads')
+      const outDir = path.join(process.cwd(), 'public', 'uploads', sanitizedWikiSegment, mediaSegment)
       await fs.mkdir(outDir, { recursive: true })
       const outPath = path.join(outDir, filename)
       await fs.writeFile(outPath, buf)
-      publicUrl = `/uploads/${path.basename(outPath)}`
+      const relativePath = path.join('/uploads', sanitizedWikiSegment, mediaSegment, filename).replace(/\\+/g, '/')
+      publicUrl = relativePath
     }
 
     return NextResponse.json({ url: publicUrl })

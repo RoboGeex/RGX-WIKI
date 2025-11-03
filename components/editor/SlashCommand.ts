@@ -8,6 +8,15 @@ export type SlashItem = {
   command: (props: any) => void
 }
 
+export type UploadContext = {
+  wikiSlug?: string
+}
+
+const getUploadContext = (editor: Editor): UploadContext => {
+  const storage = editor.storage['slash-command'] as { getUploadContext?: () => UploadContext } | undefined
+  return storage?.getUploadContext?.() ?? {}
+}
+
 const insertListWithFallback = (editor: Editor, range: { from: number; to: number }, listType: 'bulletList' | 'orderedList') => {
   const toggleSucceeded = listType === 'orderedList'
     ? editor.chain().focus().deleteRange(range).toggleOrderedList().run()
@@ -124,10 +133,13 @@ const items: SlashItem[] = [
       input.onchange = async () => {
         const files = Array.from(input.files ?? []).filter((file) => file.type.startsWith('image/'))
         if (!files.length) return
+        const context = getUploadContext(editor)
         try {
           const uploads = await Promise.all(files.map(async (file) => {
             const formData = new FormData()
             formData.append('file', file)
+            if (context.wikiSlug) formData.append('wikiSlug', context.wikiSlug)
+            formData.append('mediaType', file.type.startsWith('video/') ? 'video' : 'image')
             const res = await fetch('/api/upload', { method: 'POST', body: formData })
             if (!res.ok) {
               const data = await res.json().catch(() => ({}))
@@ -192,6 +204,9 @@ const items: SlashItem[] = [
         if (!file) return
         const fd = new FormData()
         fd.append('file', file)
+        const context = getUploadContext(editor)
+        if (context.wikiSlug) fd.append('wikiSlug', context.wikiSlug)
+        fd.append('mediaType', file.type.startsWith('video/') ? 'video' : 'image')
         try {
           const res = await fetch('/api/upload', { method: 'POST', body: fd })
           const data = await res.json()
@@ -218,6 +233,9 @@ const items: SlashItem[] = [
         if (!file) return
         const fd = new FormData()
         fd.append('file', file)
+        const context = getUploadContext(editor)
+        if (context.wikiSlug) fd.append('wikiSlug', context.wikiSlug)
+        fd.append('mediaType', 'video')
         try {
           const res = await fetch('/api/upload', { method: 'POST', body: fd })
           const data = await res.json()
@@ -234,7 +252,12 @@ const items: SlashItem[] = [
   },
 ]
 
-export const SlashCommand = Extension.create<{ suggestion: Partial<SuggestionOptions> }>({
+type SlashCommandOptions = {
+  suggestion: Partial<SuggestionOptions>
+  getUploadContext?: () => UploadContext
+}
+
+export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slash-command',
   addOptions() {
     return {
@@ -273,7 +296,16 @@ export const SlashCommand = Extension.create<{ suggestion: Partial<SuggestionOpt
           }
         },
       },
+      getUploadContext: () => ({}),
     }
+  },
+  addStorage() {
+    return {
+      getUploadContext: this.options.getUploadContext,
+    }
+  },
+  onUpdate() {
+    this.storage.getUploadContext = this.options.getUploadContext
   },
   addProseMirrorPlugins() {
     // @ts-ignore

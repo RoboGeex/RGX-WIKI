@@ -98,6 +98,10 @@ export default function WikiEditor() {
     }
     return base
   })
+  const metaRef = useRef(meta)
+  useEffect(() => {
+    metaRef.current = meta
+  }, [meta])
   const displayTitle = useMemo(() => {
     const english = typeof meta.title_en === 'string' ? meta.title_en.trim() : ''
     const arabic = typeof meta.title_ar === 'string' ? meta.title_ar.trim() : ''
@@ -191,7 +195,9 @@ export default function WikiEditor() {
         options: { placement: 'top', offset: 8 },
       }),
       Placeholder.configure({ placeholder: "type '/' to add a new element" }),
-      SlashCommand,
+      SlashCommand.configure({
+        getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
+      }),
     ],
     content: initialContentRef.current,
     editorProps: {
@@ -233,7 +239,9 @@ export default function WikiEditor() {
       Video,
       ImageSlider,
       Placeholder.configure({ placeholder: "اكتب '/' للإدراج" }),
-      SlashCommand,
+      SlashCommand.configure({
+        getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
+      }),
     ],
     content: initialContentRef.current,
     editorProps: {

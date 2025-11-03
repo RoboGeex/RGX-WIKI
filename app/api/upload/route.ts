@@ -33,8 +33,10 @@ export async function POST(req: Request) {
           ? 'images'
           : 'files'
 
-    const storeInDb = process.env.STORE_MEDIA_IN_DB === 'true'
-    const uploadStrategy = (process.env.UPLOAD_STRATEGY || '').toLowerCase()
+    const uploadStrategyRaw = (process.env.UPLOAD_STRATEGY || '').toLowerCase()
+    const storeInDbEnv = process.env.STORE_MEDIA_IN_DB === 'true'
+    const uploadStrategy = uploadStrategyRaw === 'sftp' ? 'sftp' : 'local'
+    const storeInDb = uploadStrategy !== 'sftp' && storeInDbEnv
     let publicUrl = ''
 
     if (storeInDb) {

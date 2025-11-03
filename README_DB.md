@@ -3,7 +3,7 @@ Database-backed storage (SiteGround)
 Env variables
 - `DATABASE_URL`: MySQL connection string (e.g., mysql://user:pass@host:3306/db)
 - `USE_DB`: set to `true` to use DB for lessons API and server pages
-- `STORE_MEDIA_IN_DB`: set to `true` to store uploaded binary files in DB (otherwise files go to `public/uploads` and only URLs are stored)
+- `STORE_MEDIA_IN_DB`: set to `true` to store uploaded binary files in DB (otherwise files go to `public/uploads` and only URLs are stored). Ignored when `UPLOAD_STRATEGY=sftp`.
 - `UPLOAD_STRATEGY`: optional. Set to `sftp` to push uploads to an external SFTP destination instead of the local filesystem.
 - `SFTP_HOST`, `SFTP_USERNAME`, `SFTP_BASE_URL`: required when `UPLOAD_STRATEGY=sftp`. Provide either `SFTP_PASSWORD` or `SFTP_PRIVATE_KEY` (with `\n` escaped) and optionally `SFTP_PASSPHRASE`, `SFTP_PORT`, `SFTP_REMOTE_DIR`.
 
@@ -19,7 +19,7 @@ Models
 
 Behavior
 - Editor “Publish to Wiki” posts to `/api/lessons` which writes to DB if `USE_DB=true`, else to JSON file under `data/`.
-- Uploads go to `/api/upload` and return a URL. If `STORE_MEDIA_IN_DB=true`, files are available at `/api/upload/{id}`; otherwise they are written to `public/uploads/`.
+- Uploads go to `/api/upload` and return a URL. If `STORE_MEDIA_IN_DB=true`, files are available at `/api/upload/{id}`. Otherwise they are written to `public/uploads/` (local) or `/uploads/{wiki}/{type}/` on the configured SFTP host when `UPLOAD_STRATEGY=sftp`.
 
 SiteGround notes
 - Ensure your app runs with a persistent Node process (not serverless) if you use filesystem uploads.

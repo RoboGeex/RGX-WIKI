@@ -13,8 +13,11 @@ export type UploadContext = {
 }
 
 const getUploadContext = (editor: Editor): UploadContext => {
-  const storage = editor.storage['slash-command'] as { getUploadContext?: () => UploadContext } | undefined
-  return storage?.getUploadContext?.() ?? {}
+  const storage = editor.storage['slash-command'] as Record<string, any> | undefined
+  const getter = storage && typeof storage.getUploadContext === 'function'
+    ? storage.getUploadContext
+    : undefined
+  return getter ? getter() ?? {} : {}
 }
 
 const insertListWithFallback = (editor: Editor, range: { from: number; to: number }, listType: 'bulletList' | 'orderedList') => {

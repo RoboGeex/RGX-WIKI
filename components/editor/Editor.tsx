@@ -1157,7 +1157,7 @@ export default function WikiEditor() {
 
   return (
     <div className="min-h-screen bg-[#eef2f1]">
-      <div className="mx-auto w-full max-w-[1920px] px-3 sm:px-6 lg:px-12 2xl:px-16 py-8">
+      <div className="mx-auto w-full max-w-none px-2 sm:px-6 lg:px-12 xl:px-16 py-8">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">

@@ -1157,7 +1157,7 @@ export default function WikiEditor() {
 
   return (
     <div className="min-h-screen bg-[#eef2f1]">
-      <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 py-8">
+      <div className="mx-auto w-full max-w-[1920px] px-3 sm:px-6 lg:px-12 2xl:px-16 py-8">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
@@ -1177,7 +1177,7 @@ export default function WikiEditor() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6 xl:gap-10">
 
           {/* English Editor Pane */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm">

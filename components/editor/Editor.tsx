@@ -34,6 +34,26 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
+function promptForLink(editor: any) {
+  if (typeof window === 'undefined' || !editor) return
+  const previous = editor.getAttributes('link')?.href || ''
+  const input = window.prompt('Enter link URL', previous)
+  if (input === null) {
+    return
+  }
+  const url = input.trim()
+  if (!url) {
+    editor.chain().focus().unsetLink().run()
+    return
+  }
+  editor
+    .chain()
+    .focus()
+    .extendMarkRange('link')
+    .setLink({ href: url, target: '_blank', rel: 'noopener noreferrer' })
+    .run()
+}
+
 const bubbleIdEn = 'table-bubble-menu-en'
 const textBubbleIdEn = 'text-bubble-menu-en'
 
@@ -1227,14 +1247,17 @@ export default function WikiEditor() {
               <div id={textBubbleIdEn} className="mt-2 rounded-lg border bg-white shadow p-1 flex items-center gap-1 text-xs" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
                 <button className="px-2 py-1 rounded hover:bg-gray-100 font-semibold" onClick={() => editorEn?.chain().focus().toggleBold().run()}>B</button>
                 <button className="px-2 py-1 rounded hover:bg-gray-100 italic" onClick={() => editorEn?.chain().focus().toggleItalic().run()}>I</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100 underline" onClick={() => editorEn?.chain().focus().toggleUnderline().run()}>U</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100 line-through" onClick={() => editorEn?.chain().focus().toggleStrike().run()}>S</button>
-                <span className="mx-1 h-4 w-px bg-gray-200" />
-                {textColors.map(col => (
-                  <button key={col} className="w-4 h-4 rounded border" style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} />
-                ))}
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined}>Clear</button>
-                <span className="mx-1 h-4 w-px bg-gray-200" />
+              <button className="px-2 py-1 rounded hover:bg-gray-100 underline" onClick={() => editorEn?.chain().focus().toggleUnderline().run()}>U</button>
+              <button className="px-2 py-1 rounded hover:bg-gray-100 line-through" onClick={() => editorEn?.chain().focus().toggleStrike().run()}>S</button>
+              <span className="mx-1 h-4 w-px bg-gray-200" />
+              <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => promptForLink(editorEn)}>Link</button>
+              <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().unsetLink().run()}>Unlink</button>
+              <span className="mx-1 h-4 w-px bg-gray-200" />
+              {textColors.map(col => (
+                <button key={col} className="w-4 h-4 rounded border" style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} />
+              ))}
+              <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined}>Clear</button>
+              <span className="mx-1 h-4 w-px bg-gray-200" />
                 {highlightColors.map(col => (
                   <button key={col} className="w-4 h-4 rounded border" style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} />
                 ))}

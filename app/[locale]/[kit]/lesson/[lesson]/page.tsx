@@ -145,10 +145,14 @@ export default async function LessonPage(
       headingCounts.set(base, count + 1)
       const id = count === 0 ? base : `${base}-${count}`
       const originalLevel = block.level
-      const level = block.level && block.level >= 2 && block.level <= 6 ? block.level : 2
-      const tagLevel = Math.min(level + 1, 4)
-      const Tag = (`h${tagLevel}` as keyof JSX.IntrinsicElements)
-      const sizeClass = tagLevel === 3 ? 'text-2xl' : tagLevel === 4 ? 'text-xl' : 'text-3xl'
+      const level = block.level && block.level >= 1 && block.level <= 6 ? block.level : 2
+      const Tag = (`h${level}` as keyof JSX.IntrinsicElements)
+      const sizeClass =
+        level === 1 ? 'text-4xl' :
+        level === 2 ? 'text-3xl' :
+        level === 3 ? 'text-2xl' :
+        level === 4 ? 'text-xl' :
+        'text-lg'
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
       const isTitleHeading = originalLevel === 1 && !skippedTitleHeading && textValue.trim() === lessonDisplayTitle.trim()
 

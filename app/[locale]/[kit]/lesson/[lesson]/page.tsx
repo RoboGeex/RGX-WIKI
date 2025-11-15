@@ -42,8 +42,6 @@ export default async function LessonPage(
 
   const tocEntries: { id: string; text: string; level: number }[] = []
   let stepIndex = 0
-  let skippedTitleHeading = false
-
   const parseYouTubeTime = (value: string): number => {
     if (!value) return 0
     if (/^\d+$/.test(value)) {
@@ -154,14 +152,7 @@ export default async function LessonPage(
         level === 4 ? 'text-xl' :
         'text-lg'
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
-      const isTitleHeading = originalLevel === 1 && !skippedTitleHeading && textValue.trim() === lessonDisplayTitle.trim()
-
-      if (isTitleHeading) {
-        skippedTitleHeading = true
-        return null
-      } else {
-        tocEntries.push({ id, text: anchorText || textValue, level })
-      }
+      tocEntries.push({ id, text: anchorText || textValue, level })
 
       return (
         <Tag

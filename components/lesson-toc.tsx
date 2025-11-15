@@ -17,7 +17,8 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
   const [activeId, setActiveId] = useState<string>('')
   const [discoveredEntries, setDiscoveredEntries] = useState<TocEntry[]>([])
 
-  const tocEntries = useMemo(() => (entries.length > 0 ? entries : discoveredEntries), [entries, discoveredEntries])
+  const baseEntries = useMemo(() => (entries.length > 0 ? entries : discoveredEntries), [entries, discoveredEntries])
+  const tocEntries = useMemo(() => baseEntries.filter((entry) => entry.level === 1), [baseEntries])
 
   useEffect(() => {
     if (entries.length > 0) return

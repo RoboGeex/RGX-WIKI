@@ -836,7 +836,7 @@ export default function WikiEditor() {
     const preferred = (meta.title_en || meta.title_ar || meta.slug || meta.id || '').trim()
     if (!preferred) return
     const current = getFirstHeadingText(editorEn)
-    if (!current || current === 'Untitled' || current !== preferred) {
+    if (!current || current === 'Untitled') {
       applyTitleToDocument(editorEn, preferred)
     }
   }, [editorEn, meta.title_en, meta.title_ar, meta.slug, meta.id])
@@ -847,7 +847,7 @@ export default function WikiEditor() {
     const preferred = (meta.title_ar || meta.title_en || meta.slug || meta.id || '').trim()
     if (!preferred) return
     const current = getFirstHeadingText(editorAr)
-    if (!current || current === 'Untitled' || current !== preferred) {
+    if (!current || current === 'Untitled') {
       applyTitleToDocument(editorAr, preferred)
     }
   }, [editorAr, meta.title_ar, meta.title_en, meta.slug, meta.id])

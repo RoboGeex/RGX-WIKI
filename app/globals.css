@@ -73,6 +73,13 @@ html {
   text-align: right;
 }
 
+.tiptap a,
+.prose :where(a):not(:where(.not-prose *)) {
+  color: #2563eb;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
 /* Tiptap editor list styling */
 .tiptap ul,
 .tiptap ol {

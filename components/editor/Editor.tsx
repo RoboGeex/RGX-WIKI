@@ -41,7 +41,7 @@ function promptForLink(editor: any) {
   if (input === null) {
     return
   }
-  const url = input.trim()
+  const url = normalizeUrl(input)
   if (!url) {
     editor.chain().focus().unsetLink().run()
     return
@@ -52,6 +52,15 @@ function promptForLink(editor: any) {
     .extendMarkRange('link')
     .setLink({ href: url, target: '_blank', rel: 'noopener noreferrer' })
     .run()
+}
+
+function normalizeUrl(value: string): string {
+  const url = value.trim()
+  if (!url) return ''
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(url)) {
+    return url
+  }
+  return `https://${url}`
 }
 
 const bubbleIdEn = 'table-bubble-menu-en'

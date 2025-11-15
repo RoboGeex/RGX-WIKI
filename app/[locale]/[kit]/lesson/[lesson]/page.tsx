@@ -198,6 +198,10 @@ export default async function LessonPage(
       )
     }
 
+    if (block.type === 'horizontalRule') {
+      return <hr key={index} className="border-t border-gray-200 my-8" />
+    }
+
     if (block.type === 'image' && block.image) {
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (

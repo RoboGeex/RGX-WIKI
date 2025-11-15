@@ -503,13 +503,16 @@ export default function WikiEditor() {
         }
         const textValue = typeof item[textKey] === 'string' ? item[textKey] : ''
         switch (item.type) {
-          case 'heading':
-            nodes.push({
-              type: 'heading',
-              attrs: { level: Number(item.level) || 2 },
-              content: textValue ? [{ type: 'text', text: textValue }] : [],
-            })
-            break
+        case 'heading':
+          nodes.push({
+            type: 'heading',
+            attrs: { level: Number(item.level) || 2 },
+            content: textValue ? [{ type: 'text', text: textValue }] : [],
+          })
+          break
+        case 'horizontalRule':
+          nodes.push({ type: 'horizontalRule' })
+          break
           case 'paragraph': {
             const htmlValue = typeof item[htmlKey] === 'string' ? item[htmlKey] : ''
             const plain = htmlValue ? stripHtml(htmlValue) : textValue
@@ -936,22 +939,29 @@ export default function WikiEditor() {
           break
         }
         case 'heading': {
-          const { text, html } = serializeInline(node.content)
-          if (!text) {
+            const { text, html } = serializeInline(node.content)
+            if (!text) {
+              break
+            }
+            const block: any = {
+              type: 'heading',
+              level: Number(node.attrs?.level) || 2,
+              [textKey]: text.trim(),
+              [jsonKey]: cloneNode(node),
+            }
+            if (html && html !== escapeHtml(text.trim())) {
+              block[htmlKey] = html
+            }
+            blocks.push(block)
             break
           }
-          const block: any = {
-            type: 'heading',
-            level: Number(node.attrs?.level) || 2,
-            [textKey]: text.trim(),
-            [jsonKey]: cloneNode(node),
+          case 'horizontalRule': {
+            blocks.push({
+              type: 'horizontalRule',
+              [jsonKey]: cloneNode(node),
+            })
+            break
           }
-          if (html && html !== escapeHtml(text.trim())) {
-            block[htmlKey] = html
-          }
-          blocks.push(block)
-          break
-        }
         case 'bulletList':
         case 'orderedList': {
           const { htmlItems, textItems } = serializeListNode(node)

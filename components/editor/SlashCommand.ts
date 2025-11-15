@@ -126,6 +126,12 @@ const items: SlashItem[] = [
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setBlockquote().run(),
   },
   {
+    title: 'Separator',
+    shortcut: '---',
+    keywords: ['divider', 'line', 'rule'],
+    command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+  },
+  {
     title: 'Image Slider',
     shortcut: 'Slider',
     keywords: ['gallery', 'carousel', 'images', 'slider'],

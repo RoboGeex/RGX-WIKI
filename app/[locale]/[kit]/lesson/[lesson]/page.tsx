@@ -306,9 +306,9 @@ export default async function LessonPage(
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-primary font-medium uppercase tracking-wide text-xs">
                   {locale === 'ar' ? 'الدرس' : 'Lesson'}
                 </span>
-                <span>{kitData.title_en}</span>
+                <span className="text-base font-semibold text-gray-700">{kitData.title_en}</span>
               </div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-4xl md:text-[42px] font-extrabold text-gray-900 tracking-tight">
                 {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
               </h1>
             </header>

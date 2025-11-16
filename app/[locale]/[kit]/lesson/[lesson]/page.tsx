@@ -308,7 +308,7 @@ export default async function LessonPage(
                 </span>
                 <span className="text-base font-semibold text-gray-700">{kitData.title_en}</span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+              <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
                 {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
               </h1>
             </header>

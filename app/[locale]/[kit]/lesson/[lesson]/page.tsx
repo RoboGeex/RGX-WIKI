@@ -301,6 +301,16 @@ export default async function LessonPage(
         <div className="flex-1 space-y-6">
           <div className="bg-white border border-gray-200 rounded-3xl shadow-md p-6 md:p-10 xl:p-12 space-y-10">
             <Breadcrumbs locale={locale} kit={kitData} lesson={lesson} />
+            {lesson.coverImage ? (
+              <div className="overflow-hidden rounded-2xl border border-gray-200">
+                <img
+                  src={lesson.coverImage}
+                  alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
+                  className="w-full h-[260px] md:h-[340px] object-cover"
+                  loading="lazy"
+                />
+              </div>
+            ) : null}
             <header className="space-y-4 border-b border-gray-200 pb-6">
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-primary font-medium uppercase tracking-wide text-xs">
@@ -311,16 +321,6 @@ export default async function LessonPage(
               <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
                 {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
               </h1>
-              {lesson.coverImage ? (
-                <div className="overflow-hidden rounded-2xl border border-gray-200">
-                  <img
-                    src={lesson.coverImage}
-                    alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
-                    className="w-full h-[280px] object-cover"
-                    loading="lazy"
-                  />
-                </div>
-              ) : null}
             </header>
 
             <article className="tiptap prose prose-lg max-w-none space-y-6">

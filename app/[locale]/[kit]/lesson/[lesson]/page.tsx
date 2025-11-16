@@ -313,11 +313,6 @@ export default async function LessonPage(
                 className="w-full h-[260px] md:h-[340px] object-cover"
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                onError={(e) => {
-                  if (e.currentTarget.src !== placeholder) {
-                    e.currentTarget.src = placeholder
-                  }
-                }}
               />
             </div>
             <header className="space-y-4 border-b border-gray-200 pb-6">

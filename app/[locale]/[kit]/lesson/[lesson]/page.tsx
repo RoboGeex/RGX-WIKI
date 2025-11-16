@@ -289,6 +289,8 @@ export default async function LessonPage(
   const prevLesson = await getPrevLesson(kit, lesson.slug)
   const nextLesson = await getNextLesson(kit, lesson.slug)
 
+  const coverImage = lesson.coverImage || kitData.heroImage || ''
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
@@ -301,10 +303,10 @@ export default async function LessonPage(
         <div className="flex-1 space-y-6">
           <div className="bg-white border border-gray-200 rounded-3xl shadow-md p-6 md:p-10 xl:p-12 space-y-10">
             <Breadcrumbs locale={locale} kit={kitData} lesson={lesson} />
-            {lesson.coverImage ? (
+            {coverImage ? (
               <div className="overflow-hidden rounded-2xl border border-gray-200">
                 <img
-                  src={lesson.coverImage}
+                  src={coverImage}
                   alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
                   className="w-full h-[260px] md:h-[340px] object-cover"
                   loading="lazy"

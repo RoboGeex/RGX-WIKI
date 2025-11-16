@@ -44,12 +44,12 @@ html {
 /* Make heading levels visually distinct in lesson/editor content */
 .tiptap h1,
 .prose :where(h1):not(:where(.not-prose *)) {
-  font-size: clamp(2.4rem, 4vw, 3.2rem) !important;
-  line-height: 1.15 !important;
-  margin-top: 2.5rem !important;
-  margin-bottom: 1rem !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
+  font-size: clamp(2.7rem, 4.5vw, 3.8rem) !important;
+  line-height: 1.1 !important;
+  margin-top: 2.75rem !important;
+  margin-bottom: 1.2rem !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.015em !important;
 }
 .tiptap h2,
 .prose :where(h2):not(:where(.not-prose *)) {

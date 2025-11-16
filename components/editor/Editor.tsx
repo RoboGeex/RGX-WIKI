@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Markdown from '@tiptap/extension-markdown'
 import Placeholder from '@tiptap/extension-placeholder'
 import Heading from '@tiptap/extension-heading'
 import Image from '@tiptap/extension-image'
@@ -175,7 +176,12 @@ export default function WikiEditor() {
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
+        heading: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
+      }),
+      Markdown.configure({
+        transformPastedText: true,
+        transformCopiedText: true,
       }),
       Heading.configure({ 
         levels: [1, 2, 3],
@@ -238,7 +244,12 @@ export default function WikiEditor() {
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
+        heading: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
+      }),
+      Markdown.configure({
+        transformPastedText: true,
+        transformCopiedText: true,
       }),
       Heading.configure({ 
         levels: [1, 2, 3],

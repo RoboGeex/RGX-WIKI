@@ -193,6 +193,7 @@ export async function POST(req: Request) {
           slug: lesson.slug,
           title_en: lesson.title_en,
           title_ar: lesson.title_ar,
+          coverImage: lesson.coverImage || null,
           duration_min: lesson.duration_min,
           difficulty: lesson.difficulty,
           prerequisites_en: lesson.prerequisites_en as any,

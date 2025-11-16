@@ -47,22 +47,22 @@ module.exports = {
         DEFAULT: {
           css: {
             h1: {
-              fontSize: '3rem',
+              fontSize: '3.25rem',
               lineHeight: '1.1',
               marginTop: '3rem',
               marginBottom: '1.2rem',
-              fontWeight: '700',
+              fontWeight: '750',
               letterSpacing: '-0.02em',
             },
             h2: {
-              fontSize: '2.4rem',
+              fontSize: '2.35rem',
               lineHeight: '1.2',
-              marginTop: '2.5rem',
+              marginTop: '2.4rem',
               marginBottom: '1rem',
-              fontWeight: '600',
+              fontWeight: '650',
             },
             h3: {
-              fontSize: '1.6rem',
+              fontSize: '1.7rem',
               lineHeight: '1.35',
               marginTop: '1.8rem',
               marginBottom: '0.9rem',

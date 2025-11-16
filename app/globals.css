@@ -44,27 +44,27 @@ html {
 /* Make heading levels visually distinct in lesson/editor content */
 .tiptap h1,
 .prose :where(h1):not(:where(.not-prose *)) {
-  font-size: clamp(2rem, 3vw, 2.6rem) !important;
-  line-height: 1.15 !important;
-  margin-top: 2.4rem !important;
-  margin-bottom: 1rem !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
+  font-size: clamp(2.6rem, 4vw, 3.4rem) !important;
+  line-height: 1.12 !important;
+  margin-top: 2.75rem !important;
+  margin-bottom: 1.2rem !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.015em !important;
 }
 .tiptap h2,
 .prose :where(h2):not(:where(.not-prose *)) {
-  font-size: clamp(2.4rem, 3.6vw, 2.8rem) !important;
+  font-size: clamp(2.1rem, 3.2vw, 2.6rem) !important;
   line-height: 1.2 !important;
-  margin-top: 2.5rem !important;
-  margin-bottom: 1rem !important;
-  font-weight: 600 !important;
+  margin-top: 2.3rem !important;
+  margin-bottom: 0.95rem !important;
+  font-weight: 650 !important;
 }
 .tiptap h3,
 .prose :where(h3):not(:where(.not-prose *)) {
-  font-size: clamp(1.45rem, 2.1vw, 1.8rem) !important;
-  line-height: 1.35 !important;
+  font-size: clamp(1.55rem, 2.2vw, 1.95rem) !important;
+  line-height: 1.32 !important;
   margin-top: 1.8rem !important;
-  margin-bottom: 0.9rem !important;
+  margin-bottom: 0.85rem !important;
   font-weight: 600 !important;
 }
 .tiptap-rtl h1,

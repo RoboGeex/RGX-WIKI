@@ -291,8 +291,12 @@ export default async function LessonPage(
 
   const placeholder =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="Arial" font-size="32">Lesson cover</text></svg>'
-  const coverImage = (lesson.coverImage || '').trim() || (kitData.heroImage || '').trim()
-  const coverSrc = coverImage || placeholder
+  const coverCandidates = [
+    lesson.coverImage,
+    kitData.heroImage,
+    placeholder,
+  ]
+  const coverSrc = coverCandidates.find((c) => typeof c === 'string' && c.trim().length > 0)?.trim() || placeholder
 
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">

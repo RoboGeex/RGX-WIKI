@@ -16,6 +16,7 @@ type LessonMeta = {
   order: number
   title_en: string
   title_ar: string
+  coverImage?: string
   duration_min: number
   difficulty: string
   isNew?: boolean
@@ -30,6 +31,7 @@ type FallbackLesson = {
   order?: number
   title_en?: string
   title_ar?: string
+  coverImage?: string
   duration_min?: number
   difficulty?: string
 }
@@ -70,6 +72,7 @@ export default function PropertiesForm() {
       title_ar: '',
       duration_min: 30,
       difficulty: 'Beginner',
+      coverImage: '',
       isNew: isNewLesson,
     }
     
@@ -204,6 +207,7 @@ export default function PropertiesForm() {
         wikiSlug: lesson.wikiSlug || prev.wikiSlug,
         title_en: lesson.title_en || prev.title_en,
         title_ar: lesson.title_ar || prev.title_ar,
+        coverImage: lesson.coverImage || prev.coverImage || '',
         duration_min: lesson.duration_min ?? prev.duration_min,
         difficulty: lesson.difficulty || prev.difficulty,
         isNew: false,
@@ -306,6 +310,15 @@ export default function PropertiesForm() {
                 onChange={(e) => applyTitle(e.target.value, 'ar')}
               />
             </div>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Cover image URL</label>
+            <input
+              className="w-full border rounded px-2 py-1"
+              placeholder="https://example.com/cover.jpg"
+              value={meta.coverImage || ''}
+              onChange={(e) => updateMeta({ coverImage: e.target.value })}
+            />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Duration (min)</label>

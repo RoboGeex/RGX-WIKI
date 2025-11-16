@@ -78,6 +78,7 @@ export default function WikiEditor() {
       order: 0,
       title_en: '',
       title_ar: '',
+      coverImage: '',
       duration_min: 30,
       difficulty: 'Beginner',
       isNew: false,
@@ -98,6 +99,7 @@ export default function WikiEditor() {
           slug: urlSlug || (urlId ? slugify(urlId) : ''),
           id: urlId || (urlSlug ? slugify(urlSlug) : ''),
           title_en: urlTitle || '',
+          coverImage: '',
           isNew: searchParams.get('new') === 'true',
         }
         
@@ -121,6 +123,7 @@ export default function WikiEditor() {
             ...parsed,
             wikiSlug: parsed.wikiSlug || base.wikiSlug,
             isNew: typeof parsed.isNew === 'boolean' ? parsed.isNew : base.isNew,
+            coverImage: parsed.coverImage || '',
           }
         }
       } catch {}
@@ -1140,6 +1143,7 @@ export default function WikiEditor() {
       slug: generatedSlug,
       title_en: titleEn,
       title_ar: titleAr,
+      coverImage: meta.coverImage?.trim() || '',
       duration_min: Number(meta.duration_min) || 30,
       difficulty: meta.difficulty,
       prerequisites_en: [],

@@ -40,6 +40,7 @@ type NewLesson = {
   wikiSlug: string
   title_en: string
   title_ar: string
+  coverImage?: string
   duration_min: number
   difficulty: string
   prerequisites_en: string[]
@@ -100,6 +101,7 @@ export async function POST(req: Request) {
       wikiSlug: (rawLesson.wikiSlug || 'student-kit').trim(),
       title_en: (rawLesson.title_en || rawLesson.title_ar || '').trim(),
       title_ar: (rawLesson.title_ar || rawLesson.title_en || '').trim(),
+      coverImage: (rawLesson.coverImage || '').trim(),
       difficulty: (rawLesson.difficulty || 'Beginner').trim(),
     }
 

@@ -311,6 +311,16 @@ export default async function LessonPage(
               <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
                 {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
               </h1>
+              {lesson.coverImage ? (
+                <div className="overflow-hidden rounded-2xl border border-gray-200">
+                  <img
+                    src={lesson.coverImage}
+                    alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
+                    className="w-full h-[280px] object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              ) : null}
             </header>
 
             <article className="tiptap prose prose-lg max-w-none space-y-6">

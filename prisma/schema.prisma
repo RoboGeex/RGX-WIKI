@@ -19,6 +19,7 @@ model Lesson {
   wikiSlug         String
   title_en         String
   title_ar         String
+  coverImage       String?
   duration_min     Int
   difficulty       String
   prerequisites_en Json

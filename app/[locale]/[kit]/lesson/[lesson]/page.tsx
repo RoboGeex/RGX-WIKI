@@ -152,6 +152,12 @@ export default async function LessonPage(
         level === 4 ? 'text-xl' :
         'text-lg'
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
+      const normalizedHeading = textValue.trim()
+      const normalizedTitle = lessonDisplayTitle.trim()
+      if (level === 1 && normalizedHeading && normalizedHeading === normalizedTitle) {
+        // Skip duplicating the lesson title in the body; it's already shown in the header card
+        return null
+      }
       tocEntries.push({ id, text: anchorText || textValue, level })
 
       return (

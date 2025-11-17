@@ -1,19 +1,36 @@
+import fs from 'fs'
+import path from 'path'
 import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types';
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 
-const kits = kitsData as Kit[]
-const wikis = wikisData as Wiki[]
+function loadJsonFile<T>(file: string, fallback: T): T {
+  try {
+    const abs = path.join(process.cwd(), 'data', file)
+    const raw = fs.readFileSync(abs, 'utf-8')
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function loadWikis(): Wiki[] {
+  return loadJsonFile<Wiki[]>('wikis.json', wikisData as Wiki[])
+}
+
+function loadKits(): Kit[] {
+  return loadJsonFile<Kit[]>('kits.json', kitsData as Kit[])
+}
 
 function wikiSlugForKit(kitSlug: string): string {
-  const kit = kits.find(k => k.slug === kitSlug)
+  const kit = loadKits().find(k => k.slug === kitSlug)
   return kit?.wikiSlug || kitSlug
 }
 
-export function getWikis(): Wiki[] { return wikis }
+export function getWikis(): Wiki[] { return loadWikis() }
 
 export function getWiki(slug: string) {
-  const wiki = wikis.find(w => w.slug === slug);
+  const wiki = loadWikis().find(w => w.slug === slug);
   if (wiki) {
     return wiki;
   }
@@ -25,15 +42,17 @@ export function getWiki(slug: string) {
 export function getWikiByDomain(host?: string | null) {
   const normalised = host?.split(':')[0].toLowerCase()
   if (!normalised) return undefined
-  return wikis.find(w => (w.domains || []).map(d => d.toLowerCase()).includes(normalised))
+  return loadWikis().find(w => (w.domains || []).map(d => d.toLowerCase()).includes(normalised))
 }
 export function getKits(wikiSlug?: string): Kit[] {
+  const kits = loadKits()
   if (wikiSlug) return kits.filter(k => k.wikiSlug === wikiSlug)
   return kits
 }
 
 export function getKit(slug: string, wikiSlug?: string) {
   // If a wikiSlug is provided, find the exact kit for that wiki.
+  const kits = loadKits()
   if (wikiSlug) {
     return kits.find(k => k.slug === slug && k.wikiSlug === wikiSlug);
   }

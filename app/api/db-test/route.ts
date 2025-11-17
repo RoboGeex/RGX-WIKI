@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server";
+import { getPrisma } from "@/lib/prisma-multi";
 
 // This is a special test route to diagnose database connection issues.
 // Access it at /api/db-test after deploying.
@@ -7,16 +8,8 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  let prisma;
-
   try {
-    // Dynamically import prisma to ensure it's fresh for the test
-    const prismaModule = await import("@/lib/prisma");
-    prisma = prismaModule.prisma;
-
-    if (!prisma) {
-      throw new Error("Prisma client failed to initialize from @/lib/prisma.");
-    }
+    const prisma = getPrisma();
 
     // A simple, raw query to test the connection without relying on a specific model.
     // This sends a minimal "ping" to the database.

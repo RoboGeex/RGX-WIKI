@@ -44,8 +44,8 @@ export function getKit(slug: string, wikiSlug?: string) {
 export async function getLessons(kitSlug: string): Promise<Lesson[]> {
   const wikiSlug = wikiSlugForKit(kitSlug)
   try {
-    const { prisma } = await import('@/lib/prisma')
-    if (!prisma) return []
+    const { getPrisma } = await import('@/lib/prisma-multi')
+    const prisma = getPrisma(wikiSlug)
     const lessons = await prisma.lesson.findMany({
       where: { wikiSlug },
       orderBy: { order: 'asc' },

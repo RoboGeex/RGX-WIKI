@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
 import { getWiki } from '@/lib/data'
+import { getPrisma } from '@/lib/prisma-multi'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
 
     if (process.env.USE_DB === 'true') {
       try {
-        const { prisma } = await import('@/lib/prisma')
+        const prisma = getPrisma(lesson.wikiSlug)
 
         const existingRecord = await prisma.lesson.findUnique({
           where: { id: lesson.id },
@@ -279,7 +280,7 @@ export async function GET(req: Request) {
     const wikiSlug = searchParams.get('wiki') || searchParams.get('kit') || 'student-kit'
     if (process.env.USE_DB === 'true') {
       try {
-        const { prisma } = await import('@/lib/prisma')
+        const prisma = getPrisma(wikiSlug || undefined)
         const lessons = await prisma.lesson.findMany({
           where: { wikiSlug },
           orderBy: [{ order: 'asc' }],

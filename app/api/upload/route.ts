@@ -41,7 +41,8 @@ export async function POST(req: Request) {
 
     if (storeInDb) {
       try {
-        const { prisma } = await import('@/lib/prisma')
+        const { getPrisma } = await import('@/lib/prisma-multi')
+        const prisma = getPrisma()
         const saved = await prisma.asset.create({
           data: {
             filename,

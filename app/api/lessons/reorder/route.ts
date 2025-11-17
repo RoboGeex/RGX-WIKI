@@ -32,10 +32,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Reordering is only supported when USE_DB is true" }, { status: 400 });
     }
 
-    const { prisma } = await import("@/lib/prisma")
-    if (!prisma) {
-      return NextResponse.json({ error: "Database client unavailable" }, { status: 500 })
-    }
+    const { getPrisma } = await import("@/lib/prisma-multi")
+    const prisma = getPrisma(wikiSlug)
     
     const allLessons = await loadLessonsForKit(kitSlug, wikiSlug)
     if (!allLessons.length) {

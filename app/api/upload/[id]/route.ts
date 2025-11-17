@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
+import { getPrisma } from '@/lib/prisma-multi'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const { prisma } = await import('@/lib/prisma')
+    const prisma = getPrisma()
     const asset = await prisma.asset.findUnique({ where: { id: Number(params.id) } })
     if (!asset || !asset.data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return new NextResponse(asset.data as any, {

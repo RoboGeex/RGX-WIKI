@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { getPrisma } from '@/lib/prisma-multi';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,20 +11,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const lessons = await prisma.lesson.findMany({
+    const db = getPrisma(kit ?? undefined)
+    const lessons = await db.lesson.findMany({
       where: {
         ...(kit && { wikiSlug: kit }),
         OR: [
-          {
-            title_en: {
-              contains: query,
-            },
-          },
-          {
-            title_ar: {
-              contains: query,
-            },
-          },
+          { title_en: { contains: query } },
+          { title_ar: { contains: query } },
         ],
       },
     });

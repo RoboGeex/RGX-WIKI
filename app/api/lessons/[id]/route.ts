@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
+import { getPrisma } from '@/lib/prisma-multi'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -27,7 +28,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     
     if (process.env.USE_DB === 'true') {
       try {
-        const { prisma } = await import('@/lib/prisma')
+        const prisma = getPrisma(wikiSlug || undefined)
         const lesson = await prisma.lesson.findFirst({
           where: {
             AND: [

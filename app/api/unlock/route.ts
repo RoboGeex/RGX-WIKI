@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getWiki } from '@/lib/data'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma-multi'
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365
 
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (process.env.USE_DB === 'true') {
-    const matchedCode = await prisma.accessCode.findFirst({
+    const db = getPrisma(wiki.slug)
+    const matchedCode = await db.accessCode.findFirst({
       where: {
         code: rawCode,
         wikiSlug: wiki.slug,

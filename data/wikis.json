@@ -25,4 +25,17 @@
     "resourcesUrl": "/resources",
     "createdAt": "2025-01-01T00:00:00.000Z"
   }
+  {
+    "slug": "Mechano",
+    "displayName": "Mechano",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [
+      "clicky2.robogeex.com"
+    ],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  }
 ]

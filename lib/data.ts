@@ -1,17 +1,22 @@
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types';
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 
 function loadJsonFile<T>(file: string, fallback: T): T {
-  try {
-    const abs = path.join(process.cwd(), 'data', file)
-    const raw = fs.readFileSync(abs, 'utf-8')
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
+  const tmpPath = path.join(os.tmpdir(), file)
+  const repoPath = path.join(process.cwd(), 'data', file)
+  for (const p of [tmpPath, repoPath]) {
+    try {
+      const raw = fs.readFileSync(p, 'utf-8')
+      return JSON.parse(raw) as T
+    } catch {
+      // ignore and fall through
+    }
   }
+  return fallback
 }
 
 function loadWikis(): Wiki[] {

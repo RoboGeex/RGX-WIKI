@@ -1,34 +1,11 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { getWikis } from '@/lib/data'
 import path from 'path'
-import os from 'os'
 import { promises as fs } from 'fs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const dataDir = path.join(os.tmpdir(), 'rgx-wiki-data')
-
-async function readJson<T>(file: string, fallback: T): Promise<T> {
-  const tmpPath = path.join(dataDir, file)
-  const repoPath = path.join(process.cwd(), 'data', file)
-  for (const p of [tmpPath, repoPath]) {
-    try {
-      const raw = await fs.readFile(p, 'utf-8')
-      return JSON.parse(raw) as T
-    } catch {
-      // continue
-    }
-  }
-  return fallback
-}
-
-async function writeJson(file: string, payload: any): Promise<void> {
-  const filePath = path.join(dataDir, file)
-  const dir = path.dirname(filePath)
-  await fs.mkdir(dir, { recursive: true })
-  await fs.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf-8')
-}
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -38,19 +15,37 @@ function slugify(value: string) {
 }
 
 async function readWikisFromFile(): Promise<any[]> {
-  return readJson('wikis.json', [])
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'wikis.json')
+    const raw = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
 }
 
 async function writeWikisToFile(wikis: any[]): Promise<void> {
-  await writeJson('wikis.json', wikis)
+  const filePath = path.join(process.cwd(), 'data', 'wikis.json')
+  const dir = path.dirname(filePath)
+  await fs.mkdir(dir, { recursive: true })
+  await fs.writeFile(filePath, JSON.stringify(wikis, null, 2), 'utf-8')
 }
 
 async function readKitsFromFile(): Promise<any[]> {
-  return readJson('kits.json', [])
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'kits.json')
+    const raw = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
 }
 
 async function writeKitsToFile(kits: any[]): Promise<void> {
-  await writeJson('kits.json', kits)
+  const filePath = path.join(process.cwd(), 'data', 'kits.json')
+  const dir = path.dirname(filePath)
+  await fs.mkdir(dir, { recursive: true })
+  await fs.writeFile(filePath, JSON.stringify(kits, null, 2), 'utf-8')
 }
 
 async function createKitForWiki(wiki: any): Promise<void> {
@@ -76,7 +71,7 @@ async function createKitForWiki(wiki: any): Promise<void> {
 }
 
 async function createLessonFilesForWiki(wiki: any): Promise<void> {
-  const lessonsPath = path.join(dataDir, `lessons.${wiki.slug}.json`)
+  const lessonsPath = path.join(process.cwd(), 'data', `lessons.${wiki.slug}.json`)
   
   // Check if file already exists
   try {
@@ -136,7 +131,7 @@ async function createLessonFilesForWiki(wiki: any): Promise<void> {
 }
 
 async function createModuleFilesForWiki(wiki: any): Promise<void> {
-  const modulesPath = path.join(dataDir, `modules.${wiki.slug}.json`)
+  const modulesPath = path.join(process.cwd(), 'data', `modules.${wiki.slug}.json`)
   
   // Check if file already exists
   try {
@@ -199,13 +194,18 @@ export async function POST(req: Request) {
     }
 
     let pictureUrl = ''
-    // Convert uploaded image to data URL to avoid filesystem writes
+    
+    // Handle picture upload if provided
     if (picture) {
       const bytes = await picture.arrayBuffer()
       const buf = Buffer.from(bytes)
-      const base64 = buf.toString('base64')
-      const mime = picture.type || 'image/png'
-      pictureUrl = `data:${mime};base64,${base64}`
+      const safeName = (picture.name || 'wiki-picture').replace(/[^a-zA-Z0-9._-]/g, '_')
+      const ts = Date.now()
+      const outDir = path.join(process.cwd(), 'public', 'uploads', 'wikis')
+      await fs.mkdir(outDir, { recursive: true })
+      const outPath = path.join(outDir, `${ts}-${safeName}`)
+      await fs.writeFile(outPath, buf)
+      pictureUrl = `/uploads/wikis/${path.basename(outPath)}`
     }
 
     // Create new wiki object

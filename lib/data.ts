@@ -41,7 +41,7 @@ export function getWiki(slug: string) {
   }
   // If no wiki is found by slug, try to find by kit slug
   const wikiSlug = wikiSlugForKit(slug);
-  return wikis.find(w => w.slug === wikiSlug);
+  return loadWikis().find(w => w.slug === wikiSlug);
 }
 
 export function getWikiByDomain(host?: string | null) {

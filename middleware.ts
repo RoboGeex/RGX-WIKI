@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getWikiByDomain } from '@/lib/data'
+import wikisData from '@/data/wikis.json'
+
+function getWikiByDomain(host?: string | null) {
+  const normalised = host?.split(':')[0].toLowerCase()
+  if (!normalised) return undefined
+  return (wikisData as any[]).find((w) =>
+    (w.domains || []).map((d: string) => d.toLowerCase()).includes(normalised)
+  )
+}
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()

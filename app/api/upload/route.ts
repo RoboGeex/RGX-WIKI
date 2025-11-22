@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     if (storeInDb) {
       try {
         const { getPrisma } = await import('@/lib/prisma-multi')
-        const prisma = getPrisma(wikiSlugRaw || undefined)
+        const prisma = getPrisma()
         const saved = await prisma.asset.create({
           data: {
             filename,
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         })
         publicUrl = `/api/upload/${saved.id}`
       } catch (e) {
-        return NextResponse.json({ error: e?.message || 'DB storage not configured' }, { status: 500 })
+        return NextResponse.json({ error: 'DB storage not configured' }, { status: 500 })
       }
     } else if (uploadStrategy === 'sftp') {
       const host = process.env.SFTP_HOST

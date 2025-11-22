@@ -25,7 +25,7 @@ async function uploadVideoToVimeo(buffer: Buffer, opts: { fileName: string; mime
     },
     body: JSON.stringify({
       upload: {
-        approach: 'streaming',
+        approach: 'tus',
         size: buffer.length,
       },
       name: opts.fileName,
@@ -44,9 +44,11 @@ async function uploadVideoToVimeo(buffer: Buffer, opts: { fileName: string; mime
   }
 
   const uploadResp = await fetch(uploadLink, {
-    method: 'PUT',
+    method: 'PATCH',
     headers: {
-      'Content-Type': opts.mimeType || 'video/mp4',
+      'Tus-Resumable': '1.0.0',
+      'Upload-Offset': '0',
+      'Content-Type': 'application/offset+octet-stream',
       'Content-Length': String(buffer.length),
     },
     body: buffer as any,

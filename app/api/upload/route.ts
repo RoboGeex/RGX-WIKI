@@ -49,7 +49,7 @@ async function uploadVideoToVimeo(buffer: Buffer, opts: { fileName: string; mime
       'Content-Type': opts.mimeType || 'video/mp4',
       'Content-Length': String(buffer.length),
     },
-    body: buffer,
+    body: buffer as any,
   })
 
   if (!uploadResp.ok) {

@@ -52,8 +52,8 @@ export async function POST(req: Request) {
           },
         })
         publicUrl = `/api/upload/${saved.id}`
-      } catch (e: any) {
-        return NextResponse.json({ error: (e && e.message) || 'DB storage not configured' }, { status: 500 })
+      } catch (e) {
+        return NextResponse.json({ error: e?.message || 'DB storage not configured' }, { status: 500 })
       }
     } else if (uploadStrategy === 'sftp') {
       const host = process.env.SFTP_HOST

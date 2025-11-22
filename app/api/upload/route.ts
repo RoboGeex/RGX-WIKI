@@ -6,7 +6,14 @@ import Client from 'ssh2-sftp-client'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-async function uploadVideoToVimeo(buffer: Buffer, opts: { fileName: string; mimeType: string }) {
+function getVimeoFolderUri(wikiSlug?: string) {
+  if (!wikiSlug) return process.env.VIMEO_FOLDER_DEFAULT
+  const normalized = wikiSlug.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+  const envKey = `VIMEO_FOLDER_${normalized}`
+  return process.env[envKey] || process.env.VIMEO_FOLDER_DEFAULT
+}
+
+async function uploadVideoToVimeo(buffer: Buffer, opts: { fileName: string; mimeType: string; wikiSlug?: string }) {
   const token = process.env.VIMEO_ACCESS_TOKEN
   if (!token) {
     throw new Error('Vimeo access token is not configured')
@@ -17,19 +24,25 @@ async function uploadVideoToVimeo(buffer: Buffer, opts: { fileName: string; mime
     Accept: 'application/vnd.vimeo.*+json;version=3.4',
   }
 
+  const folderUri = getVimeoFolderUri(opts.wikiSlug)
+  const createPayload: Record<string, any> = {
+    upload: {
+      approach: 'tus',
+      size: buffer.length,
+    },
+    name: opts.fileName,
+  }
+  if (folderUri) {
+    createPayload.folder_uri = folderUri
+  }
+
   const createResp = await fetch('https://api.vimeo.com/me/videos', {
     method: 'POST',
     headers: {
       ...baseHeaders,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      upload: {
-        approach: 'tus',
-        size: buffer.length,
-      },
-      name: opts.fileName,
-    }),
+    body: JSON.stringify(createPayload),
   })
 
   if (!createResp.ok) {
@@ -112,6 +125,7 @@ export async function POST(req: Request) {
         const uploaded = await uploadVideoToVimeo(buf, {
           fileName: safeName,
           mimeType: file.type || 'video/mp4',
+          wikiSlug: normalizedWikiSlug,
         })
         if (!uploaded.playbackUrl) {
           throw new Error('Vimeo did not return a playback URL')

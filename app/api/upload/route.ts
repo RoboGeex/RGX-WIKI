@@ -11,7 +11,8 @@ export async function POST(req: Request) {
     const form = await req.formData()
     const file = form.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 })
-    const wikiSlugRaw = (form.get('wikiSlug') as string | null) || undefined
+    const wikiSlugRaw = ((form.get('wikiSlug') as string | null) || undefined)?.trim()
+    const normalizedWikiSlug = wikiSlugRaw?.toLowerCase()
     const mediaTypeRaw = (form.get('mediaType') as string | null) || undefined
 
     // Generate filename
@@ -20,7 +21,9 @@ export async function POST(req: Request) {
     const safeName = (file.name || 'upload').replace(/[^a-zA-Z0-9._-]/g, '_')
     const ts = Date.now()
     const filename = `${ts}-${safeName}`
-    const sanitizedWikiSegment = wikiSlugRaw ? wikiSlugRaw.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase() : 'global'
+    const sanitizedWikiSegment = normalizedWikiSlug
+      ? normalizedWikiSlug.replace(/[^a-z0-9_-]/g, '')
+      : 'global'
     const inferredType = file.type?.startsWith('video/')
       ? 'video'
       : file.type?.startsWith('image/')
@@ -42,7 +45,7 @@ export async function POST(req: Request) {
     if (storeInDb) {
       try {
         const { getPrisma } = await import('@/lib/prisma-multi')
-        const prisma = getPrisma(wikiSlugRaw || undefined)
+        const prisma = getPrisma(normalizedWikiSlug || undefined)
         const saved = await prisma.asset.create({
           data: {
             filename,
@@ -51,7 +54,8 @@ export async function POST(req: Request) {
             data: buf,
           },
         })
-        publicUrl = `/api/upload/${saved.id}`
+        const slugForUrl = sanitizedWikiSegment && sanitizedWikiSegment !== 'global' ? sanitizedWikiSegment : undefined
+        publicUrl = slugForUrl ? `/api/upload/${saved.id}?wiki=${encodeURIComponent(slugForUrl)}` : `/api/upload/${saved.id}`
       } catch (e: any) {
         return NextResponse.json({ error: e?.message || 'DB storage not configured' }, { status: 500 })
       }

@@ -637,19 +637,21 @@ export default function WikiEditor() {
               })
             }
             break
-          case 'video':
-            if (item.url) {
-              nodes.push({
-                type: 'video',
-                attrs: {
-                  src: item.url,
-                  poster: item.poster || null,
-                  title: item[titleKey] || item[captionKey] || null,
-                  controls: true,
-                },
-              })
-            }
-            break
+        case 'video':
+          if (item.url) {
+            const provider = item.provider || (item.url.includes('vimeo.com') ? 'vimeo' : null)
+            nodes.push({
+              type: 'video',
+              attrs: {
+                src: item.url,
+                poster: item.poster || null,
+                title: item[titleKey] || item[captionKey] || null,
+                controls: provider === 'vimeo' ? false : true,
+                provider,
+              },
+            })
+          }
+          break
           default:
             if (textValue) {
               nodes.push({
@@ -1075,11 +1077,13 @@ export default function WikiEditor() {
         case 'video': {
           const url = node.attrs?.src
           if (!url) break
+          const provider = node.attrs?.provider || (typeof url === 'string' && url.includes('vimeo.com') ? 'vimeo' : undefined)
           const block: any = {
             type: 'video',
             url,
             poster: node.attrs?.poster || undefined,
             [titleKey]: node.attrs?.title ? String(node.attrs.title) : undefined,
+            provider,
             [jsonKey]: cloneNode(node),
           }
           blocks.push(block)

@@ -249,6 +249,26 @@ export default async function LessonPage(
         locale === 'ar'
           ? block.caption_ar || block.title_ar || ''
           : block.caption_en || block.title_en || ''
+      const provider =
+        block.provider ||
+        (typeof block.url === 'string' && block.url.includes('vimeo.com') ? 'vimeo' : undefined)
+      if (provider === 'vimeo') {
+        return (
+          <figure key={index} className="space-y-3">
+            <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+              <iframe
+                src={block.url}
+                title={caption || lessonDisplayTitle}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                className="h-full w-full"
+                data-video-provider="vimeo"
+              />
+            </div>
+            {caption ? <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption> : null}
+          </figure>
+        )
+      }
       return (
         <figure key={index} className="space-y-3">
           <video

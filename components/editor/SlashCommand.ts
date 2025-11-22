@@ -251,9 +251,21 @@ const items: SlashItem[] = [
           const res = await fetch('/api/upload', { method: 'POST', body: fd })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || 'Upload failed')
-          // Insert as simple HTML video node placeholder via paragraph
-          const url = data.url
-          editor.chain().focus().insertVideo({ src: url }).run()
+          const url = data.url as string | undefined
+          if (!url) throw new Error('Upload failed')
+          const provider = (data.provider as string | undefined) || (url.includes('vimeo.com') ? 'vimeo' : undefined)
+          editor
+            .chain()
+            .focus()
+            .insertVideo({
+              src: url,
+              provider,
+              controls: provider === 'vimeo' ? false : true,
+            })
+            .run()
+          if (provider === 'vimeo') {
+            alert('Uploaded to Vimeo. It may take a moment before the video becomes playable.')
+          }
         } catch (e: any) {
           alert('Upload error: ' + (e?.message || 'unknown'))
         }

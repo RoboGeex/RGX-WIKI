@@ -7,7 +7,13 @@ export interface VideoOptions {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     video: {
-      insertVideo: (options: { src: string; poster?: string | null; title?: string | null; controls?: boolean }) => ReturnType
+      insertVideo: (options: {
+        src: string
+        poster?: string | null
+        title?: string | null
+        controls?: boolean
+        provider?: string | null
+      }) => ReturnType
     }
   }
 }
@@ -41,19 +47,52 @@ const Video = Node.create<VideoOptions>({
       controls: {
         default: true,
       },
+      provider: {
+        default: null,
+      },
     }
   },
 
   parseHTML() {
     return [
       {
-        tag: 'video[src]'
+        tag: 'video[src]',
+      },
+      {
+        tag: 'iframe[data-video-provider="vimeo"]',
+        getAttrs: (element) => {
+          const el = element as HTMLElement
+          return {
+            src: el.getAttribute('src'),
+            provider: 'vimeo',
+            controls: false,
+          }
+        },
       },
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['video', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)]
+    const provider = HTMLAttributes.provider || (typeof HTMLAttributes.src === 'string' && HTMLAttributes.src.includes('vimeo.com') ? 'vimeo' : null)
+    if (provider === 'vimeo') {
+      return [
+        'div',
+        { class: 'tiptap-video-embed aspect-video w-full rounded-xl overflow-hidden bg-black' },
+        [
+          'iframe',
+          {
+            src: HTMLAttributes.src,
+            title: HTMLAttributes.title || 'Vimeo video',
+            allow: 'autoplay; fullscreen; picture-in-picture',
+            allowfullscreen: 'true',
+            'data-video-provider': 'vimeo',
+            class: 'h-full w-full',
+          },
+        ],
+      ]
+    }
+    const { provider: _provider, ...videoAttrs } = HTMLAttributes
+    return ['video', mergeAttributes(this.options.HTMLAttributes, videoAttrs)]
   },
 
   addCommands() {
@@ -62,12 +101,15 @@ const Video = Node.create<VideoOptions>({
         if (!attrs?.src) {
           return false
         }
+        const src = typeof attrs.src === 'string' ? attrs.src : ''
+        const provider = attrs.provider || (src.includes('vimeo.com') ? 'vimeo' : null)
         return chain()
           .insertContent({
             type: this.name,
             attrs: {
               ...attrs,
-              controls: true,
+              provider,
+              controls: provider === 'vimeo' ? false : true,
             },
           })
           .run()

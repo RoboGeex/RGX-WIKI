@@ -70,6 +70,8 @@ export interface Lesson {
   slug: string;
   title_en: string;
   title_ar: string;
+  ownerId?: string;
+  lastModifiedBy?: string;
   coverImage?: string;
   duration_min: number;
   difficulty: string;

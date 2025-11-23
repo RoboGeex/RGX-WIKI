@@ -20,6 +20,8 @@ model Lesson {
   title_en         String
   title_ar         String
   coverImage       String?
+  ownerId          String?
+  lastModifiedBy   String?
   duration_min     Int
   difficulty       String
   prerequisites_en Json

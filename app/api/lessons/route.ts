@@ -4,6 +4,7 @@ import path from 'path'
 import { promises as fs } from 'fs'
 import { getWiki } from '@/lib/data'
 import { getPrisma } from '@/lib/prisma-multi'
+import { canManageLesson, canManageWiki, getDeveloperById } from '@/lib/assignments'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -42,6 +43,8 @@ type NewLesson = {
   title_en: string
   title_ar: string
   coverImage?: string
+  ownerId?: string
+  lastModifiedBy?: string
   duration_min: number
   difficulty: string
   prerequisites_en: string[]
@@ -90,6 +93,19 @@ function generateUniqueId(baseId: string, existingLessons: NewLesson[]): string 
   return candidate
 }
 
+const SHOULD_ENFORCE_DEV_OWNERSHIP = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
+
+function getActorIdFromRequest(req: Request): string | undefined {
+  const headers = (req as any)?.headers as Headers | undefined
+  if (!headers) return undefined
+  const raw =
+    headers.get('x-user-id') ||
+    headers.get('x-actor-id') ||
+    headers.get('x-developer-id') ||
+    headers.get('x-dev-id')
+  return raw ? raw.trim() || undefined : undefined
+}
+
 export async function POST(req: Request) {
   try {
     const incoming = (await req.json()) as LessonPayload
@@ -103,6 +119,8 @@ export async function POST(req: Request) {
       title_en: (rawLesson.title_en || rawLesson.title_ar || '').trim(),
       title_ar: (rawLesson.title_ar || rawLesson.title_en || '').trim(),
       coverImage: (rawLesson.coverImage || '').trim(),
+      ownerId: rawLesson.ownerId?.trim() || undefined,
+      lastModifiedBy: rawLesson.lastModifiedBy?.trim() || undefined,
       difficulty: (rawLesson.difficulty || 'Beginner').trim(),
     }
 
@@ -135,6 +153,27 @@ export async function POST(req: Request) {
 
     if (!getWiki(lesson.wikiSlug)) {
       return NextResponse.json({ error: 'Unknown wiki' }, { status: 400 })
+    }
+
+    const actorId = getActorIdFromRequest(req)
+    const developer = actorId ? getDeveloperById(actorId) : undefined
+
+    if (SHOULD_ENFORCE_DEV_OWNERSHIP && !developer) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (
+      SHOULD_ENFORCE_DEV_OWNERSHIP &&
+      !canManageLesson(developer, lesson.wikiSlug, lesson.id || lesson.slug)
+    ) {
+      return NextResponse.json({ error: 'Forbidden for this wiki/lesson' }, { status: 403 })
+    }
+
+    if (!lesson.ownerId && developer?.id) {
+      lesson.ownerId = developer.id
+    }
+    if (developer?.id) {
+      lesson.lastModifiedBy = developer.id
     }
 
     if (process.env.USE_DB === 'true') {
@@ -195,6 +234,8 @@ export async function POST(req: Request) {
           title_en: lesson.title_en,
           title_ar: lesson.title_ar,
           coverImage: lesson.coverImage || null,
+          ownerId: lesson.ownerId || null,
+          lastModifiedBy: lesson.lastModifiedBy || null,
           duration_min: lesson.duration_min,
           difficulty: lesson.difficulty,
           prerequisites_en: lesson.prerequisites_en as any,
@@ -244,13 +285,22 @@ export async function POST(req: Request) {
       const list = existingLessons
       if (isUpdate) {
         const existingLesson = list[existingLessonIndex]
-        list[existingLessonIndex] = { ...existingLesson, ...lesson }
+        list[existingLessonIndex] = {
+          ...existingLesson,
+          ...lesson,
+          lastModifiedBy: developer?.id || lesson.lastModifiedBy || existingLesson.lastModifiedBy,
+          ownerId: existingLesson.ownerId || lesson.ownerId || developer?.id,
+        }
       } else {
         const maxOrder = list.reduce((max, item) => Math.max(max, item.order || 0), 0)
         if (!Number.isFinite(lesson.order) || lesson.order < 1) {
           lesson.order = maxOrder + 1
         }
-        list.push(lesson)
+        list.push({
+          ...lesson,
+          ownerId: lesson.ownerId || developer?.id,
+          lastModifiedBy: developer?.id || lesson.lastModifiedBy,
+        })
       }
 
       try {
@@ -278,6 +328,18 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const wikiSlug = searchParams.get('wiki') || searchParams.get('kit') || 'student-kit'
+
+    const actorId = getActorIdFromRequest(req)
+    const developer = actorId ? getDeveloperById(actorId) : undefined
+    if (SHOULD_ENFORCE_DEV_OWNERSHIP) {
+      if (!developer) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (!canManageWiki(developer, wikiSlug)) {
+        return NextResponse.json({ error: 'Forbidden for this wiki' }, { status: 403 })
+      }
+    }
+
     if (process.env.USE_DB === 'true') {
       try {
         const prisma = getPrisma(wikiSlug || undefined)

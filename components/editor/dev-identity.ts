@@ -39,15 +39,7 @@ export function rememberDeveloperId(value: string) {
   window.localStorage.setItem(STORAGE_KEY, value.trim())
 }
 
-export function ensureDeveloperId(promptIfMissing = true): string | undefined {
-  const existing = getDeveloperId()
-  if (existing) return existing
-  if (!promptIfMissing || typeof window === 'undefined') return undefined
-  const prompted = window.prompt('Enter your developer ID (saved locally for future edits):')
-  if (prompted && prompted.trim()) {
-    const normalized = prompted.trim()
-    rememberDeveloperId(normalized)
-    return normalized
-  }
-  return undefined
+export function clearDeveloperId() {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(STORAGE_KEY)
 }

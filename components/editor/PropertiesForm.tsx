@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { applyDeveloperHeader, ensureDeveloperId } from './dev-identity'
+import { applyDeveloperHeader } from './dev-identity'
 // Removed static import - will use dynamic loading instead
 
 type WikiOption = {
@@ -193,7 +193,6 @@ export default function PropertiesForm() {
     try {
       let lesson: any | undefined = fallbackLessonMap.get(key)
       if (!lesson) {
-        ensureDeveloperId()
         const res = await fetch(`/api/lessons?kit=${encodeURIComponent(kitSlug)}`, { headers: applyDeveloperHeader() })
         if (res.ok) {
           const list = await res.json()

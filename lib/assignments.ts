@@ -11,6 +11,7 @@ export interface DeveloperAssignment {
   role?: DeveloperRole
   wikiSlugs?: string[]
   lessonIds?: string[]
+  password?: string
 }
 
 function loadJsonFile<T>(file: string, fallback: T): T {
@@ -63,4 +64,15 @@ export function ensureCanManageLesson(
     ;(err as any).status = 403
     throw err
   }
+}
+
+export function findDeveloperByCredentials(email: string, password: string): DeveloperAssignment | undefined {
+  const normalizedEmail = (email || '').trim().toLowerCase()
+  const normalizedPassword = (password || '').trim()
+  if (!normalizedEmail || !normalizedPassword) return undefined
+  return getDevelopers().find((dev) => {
+    const devEmail = (dev.email || '').trim().toLowerCase()
+    const devPassword = (dev.password || '').trim()
+    return devEmail === normalizedEmail && devPassword && devPassword === normalizedPassword
+  })
 }

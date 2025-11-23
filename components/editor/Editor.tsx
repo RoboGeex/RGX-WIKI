@@ -25,7 +25,8 @@ import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
 import ImageSlider from './extensions/ImageSlider'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { applyDeveloperHeader, ensureDeveloperId } from './dev-identity'
+import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
+import DeveloperLogin from './DeveloperLogin'
 
 function slugify(value: string) {
   return value
@@ -70,6 +71,7 @@ const textBubbleIdEn = 'text-bubble-menu-en'
 export default function WikiEditor() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [developerId, setDeveloperId] = useState<string | undefined>(() => getDeveloperId())
   
   const [meta, setMeta] = useState(() => {
     const base = {
@@ -156,6 +158,22 @@ export default function WikiEditor() {
   const textBubbleElementEnRef = useRef<HTMLElement | null>(null)
   const [bubbleElementEn, setBubbleElementEn] = useState<HTMLElement | null>(null)
   const [textBubbleElementEn, setTextBubbleElementEn] = useState<HTMLElement | null>(null)
+  const [isSigningIn, setIsSigningIn] = useState(!developerId)
+
+  useEffect(() => {
+    if (developerId) {
+      rememberDeveloperId(developerId)
+      setIsSigningIn(false)
+    } else {
+      setIsSigningIn(true)
+    }
+  }, [developerId])
+
+  const handleDeveloperSignedIn = (id: string) => {
+    rememberDeveloperId(id)
+    setDeveloperId(id)
+    setIsSigningIn(false)
+  }
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -686,6 +704,7 @@ export default function WikiEditor() {
       return
     }
     if (!editorEn || !editorAr) return
+    if (!developerId) return
 
     const identifier = (meta.slug || meta.id || '').trim()
     if (!identifier) return
@@ -697,8 +716,7 @@ export default function WikiEditor() {
 
     const loadLesson = async () => {
       try {
-        const devId = ensureDeveloperId()
-        const headers = devId ? applyDeveloperHeader() : undefined
+        const headers = applyDeveloperHeader()
         const res = await fetch(
           `/api/lessons/${encodeURIComponent(identifier)}?kit=${encodeURIComponent(wikiSlug)}`,
           { cache: 'no-store', headers }
@@ -777,7 +795,7 @@ export default function WikiEditor() {
     return () => {
       cancelled = true
     }
-  }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug])
+  }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1179,8 +1197,11 @@ export default function WikiEditor() {
       forceNew: meta.isNew === true,
     }
     try {
+      if (!developerId) {
+        setStatus('Please sign in as a content developer before publishing.')
+        return
+      }
       console.log('Publishing lesson with payload:', payload)
-      const devId = ensureDeveloperId()
       const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
       const res = await fetch('/api/lessons', { method: 'POST', headers, body: JSON.stringify(payload) })
       const data = await res.json()
@@ -1222,10 +1243,14 @@ export default function WikiEditor() {
       } else {
         setStatus(isUpdate ? 'Changes saved!' : 'Lesson published!')
       }
-    } catch (e: any) {
-      console.error('Publish error:', e)
-      setStatus(`Error: ${e.message}`)
-    }
+  } catch (e: any) {
+    console.error('Publish error:', e)
+    setStatus(`Error: ${e.message}`)
+  }
+}
+
+  if (isSigningIn) {
+    return <DeveloperLogin onSignedIn={handleDeveloperSignedIn} />
   }
 
   return (

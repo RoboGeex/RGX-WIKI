@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, type DragEvent } from "react"
 import Link from "next/link"
-import { applyDeveloperHeader, ensureDeveloperId } from "./dev-identity"
+import { applyDeveloperHeader } from "./dev-identity"
 
 type LessonSummary = {
   id?: string
@@ -125,7 +125,6 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     console.log('Persisting order:', { wikiSlug, kitSlug, sequence })
     
     const headers = applyDeveloperHeader({ "Content-Type": "application/json" })
-    ensureDeveloperId()
 
     fetch("/api/lessons/reorder", {
       method: "POST",

@@ -93,13 +93,22 @@ export default function WikiEditor() {
       const urlTitle = searchParams.get('title')?.trim()
       
       if (urlWiki || urlKit || urlSlug || urlId || urlTitle) {
+        let storedMeta: any = null
+        try {
+          const rawStored = sessionStorage.getItem('lessonMeta')
+          if (rawStored) {
+            storedMeta = JSON.parse(rawStored)
+          }
+        } catch {}
+
         const urlMeta = {
           ...base,
-          wikiSlug: urlWiki || urlKit || base.wikiSlug,
-          slug: urlSlug || (urlId ? slugify(urlId) : ''),
-          id: urlId || (urlSlug ? slugify(urlSlug) : ''),
-          title_en: urlTitle || '',
-          coverImage: '',
+          ...(storedMeta || {}),
+          wikiSlug: urlWiki || urlKit || storedMeta?.wikiSlug || base.wikiSlug,
+          slug: urlSlug || (urlId ? slugify(urlId) : storedMeta?.slug || ''),
+          id: urlId || (urlSlug ? slugify(urlSlug) : storedMeta?.id || ''),
+          title_en: urlTitle || storedMeta?.title_en || '',
+          coverImage: storedMeta?.coverImage || '',
           isNew: searchParams.get('new') === 'true',
         }
         

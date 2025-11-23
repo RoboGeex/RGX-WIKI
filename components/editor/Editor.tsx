@@ -733,15 +733,12 @@ export default function WikiEditor() {
             next.difficulty = lesson.difficulty
             changed = true
           }
-          if (typeof lesson?.coverImage === 'string') {
+          if (typeof lesson?.coverImage === 'string' && lesson.coverImage.trim()) {
             const trimmedCover = lesson.coverImage.trim()
             if (trimmedCover !== prev.coverImage) {
               next.coverImage = trimmedCover
               changed = true
             }
-          } else if (!lesson?.coverImage && prev.coverImage) {
-            next.coverImage = ''
-            changed = true
           }
           if (typeof lesson?.order === 'number' && lesson.order !== prev.order) {
             next.order = lesson.order

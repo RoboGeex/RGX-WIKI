@@ -337,8 +337,8 @@ export default async function LessonPage(
                 referrerPolicy="no-referrer"
               />
             </div>
-            <div className="p-6 md:p-10 xl:p-12 space-y-10">
-            <header className="space-y-4 border-b border-gray-200 pb-6">
+            <div className="p-6 md:p-10 xl:p-12 space-y-8">
+              <header className="space-y-3 border-b border-gray-200 pb-5">
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-primary font-medium uppercase tracking-wide text-xs">
                   {locale === 'ar' ? 'الدرس' : 'Lesson'}

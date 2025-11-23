@@ -205,7 +205,7 @@ export default async function LessonPage(
           <img
             src={block.image}
             alt={caption || ''}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 object-contain"
+            className="w-full max-h-64 md:max-h-72 rounded-xl border border-gray-200 bg-gray-50 object-contain"
           />
           {caption ? (
             <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>

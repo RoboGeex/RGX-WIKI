@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 // Removed static import - will use dynamic loading instead
 
@@ -59,6 +59,9 @@ export default function PropertiesForm() {
   const [hydrating, setHydrating] = useState(false)
   const [loadInput, setLoadInput] = useState('')
   const [autoHydrateDone, setAutoHydrateDone] = useState(false)
+  const [coverUploadStatus, setCoverUploadStatus] = useState('')
+  const [coverUploading, setCoverUploading] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement | null>(null)
 
   const initialWikiSlug = wikiFromQuery || DEFAULT_WIKI
 
@@ -269,6 +272,43 @@ export default function PropertiesForm() {
     router.push(editorUrl)
   }
 
+  const triggerCoverUpload = () => {
+    coverInputRef.current?.click()
+  }
+
+  const handleCoverFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setCoverUploadStatus('Uploading cover image...')
+    setCoverUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('mediaType', file.type.startsWith('image/') ? 'image' : 'file')
+      if (meta.wikiSlug) {
+        formData.append('wikiSlug', meta.wikiSlug)
+      }
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || 'Upload failed')
+      }
+      updateMeta({ coverImage: data.url })
+      setCoverUploadStatus('Cover image uploaded successfully.')
+    } catch (error: any) {
+      console.error('Cover upload failed', error)
+      setCoverUploadStatus(error?.message ? `Upload failed: ${error.message}` : 'Upload failed')
+    } finally {
+      setCoverUploading(false)
+      if (event.target) {
+        event.target.value = ''
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#eef2f1]">
       <div className="mx-auto max-w-3xl px-6 py-8">
@@ -311,13 +351,51 @@ export default function PropertiesForm() {
               />
             </div>
           </div>
-          <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">Cover image URL</label>
+          <div className="sm:col-span-2 space-y-2">
+            <label className="block text-xs text-gray-500 mb-1">Cover image</label>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 border rounded px-2 py-1"
+                  placeholder="https://example.com/cover.jpg"
+                  value={meta.coverImage || ''}
+                  onChange={(e) => updateMeta({ coverImage: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={triggerCoverUpload}
+                  disabled={coverUploading}
+                  className="px-3 py-1.5 rounded-md border text-sm"
+                >
+                  {coverUploading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+              {coverUploadStatus && (
+                <div className="text-xs text-gray-500">{coverUploadStatus}</div>
+              )}
+              {meta.coverImage ? (
+                <div className="relative">
+                  <img
+                    src={meta.coverImage}
+                    alt="Cover preview"
+                    className="w-full h-40 object-cover rounded-lg border border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow"
+                    onClick={() => updateMeta({ coverImage: '' })}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <input
-              className="w-full border rounded px-2 py-1"
-              placeholder="https://example.com/cover.jpg"
-              value={meta.coverImage || ''}
-              onChange={(e) => updateMeta({ coverImage: e.target.value })}
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverFileChange}
             />
           </div>
           <div>

@@ -29,7 +29,7 @@ export function LessonImageSlider({ images }: Props) {
             onClick={goPrev}
             className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
           >
-            <- Prev
+            Prev
           </button>
           <div className="text-xs text-gray-500">
             {current + 1} / {images.length}
@@ -39,7 +39,7 @@ export function LessonImageSlider({ images }: Props) {
             onClick={goNext}
             className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
           >
-            Next ->
+            Next
           </button>
         </div>
       )}

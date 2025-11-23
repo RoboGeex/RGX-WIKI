@@ -25,6 +25,7 @@ import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
 import ImageSlider from './extensions/ImageSlider'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { applyDeveloperHeader, ensureDeveloperId } from './dev-identity'
 
 function slugify(value: string) {
   return value
@@ -696,7 +697,12 @@ export default function WikiEditor() {
 
     const loadLesson = async () => {
       try {
-        const res = await fetch(`/api/lessons/${encodeURIComponent(identifier)}?kit=${encodeURIComponent(wikiSlug)}`, { cache: 'no-store' })
+        const devId = ensureDeveloperId()
+        const headers = devId ? applyDeveloperHeader() : undefined
+        const res = await fetch(
+          `/api/lessons/${encodeURIComponent(identifier)}?kit=${encodeURIComponent(wikiSlug)}`,
+          { cache: 'no-store', headers }
+        )
         if (!res.ok) {
           console.error('Failed to load lesson content', res.status)
           setStatus('Failed to load lesson content.')
@@ -1174,7 +1180,9 @@ export default function WikiEditor() {
     }
     try {
       console.log('Publishing lesson with payload:', payload)
-      const res = await fetch('/api/lessons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const devId = ensureDeveloperId()
+      const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
+      const res = await fetch('/api/lessons', { method: 'POST', headers, body: JSON.stringify(payload) })
       const data = await res.json()
 
       if (!res.ok) {

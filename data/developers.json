@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": "dev-osama",
+    "email": "info@robogeex.com",
+    "name": "Osama",
+    "role": "admin",
+    "wikiSlugs": ["ziggy", "clicky"]
+  }
+]

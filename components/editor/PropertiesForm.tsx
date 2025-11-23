@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { applyDeveloperHeader, ensureDeveloperId } from './dev-identity'
 // Removed static import - will use dynamic loading instead
 
 type WikiOption = {
@@ -107,7 +108,7 @@ export default function PropertiesForm() {
   useEffect(() => {
     ;(async () => {
       try {
-        const res = await fetch('/api/wikis', { cache: 'no-store' })
+        const res = await fetch('/api/wikis', { cache: 'no-store', headers: applyDeveloperHeader() })
         if (!res.ok) throw new Error('Failed to fetch wikis')
         const data = await res.json()
         setWikis(data)
@@ -192,7 +193,8 @@ export default function PropertiesForm() {
     try {
       let lesson: any | undefined = fallbackLessonMap.get(key)
       if (!lesson) {
-        const res = await fetch(`/api/lessons?kit=${encodeURIComponent(kitSlug)}`)
+        ensureDeveloperId()
+        const res = await fetch(`/api/lessons?kit=${encodeURIComponent(kitSlug)}`, { headers: applyDeveloperHeader() })
         if (res.ok) {
           const list = await res.json()
           lesson = list.find((item: any) => item.slug === key || item.id === key)

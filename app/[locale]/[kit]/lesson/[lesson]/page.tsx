@@ -332,7 +332,7 @@ export default async function LessonPage(
               <img
                 src={coverSrc}
                 alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
-                className="w-full h-[260px] md:h-[380px] object-cover"
+                className="w-full h-[220px] md:h-[320px] object-cover"
                 loading="lazy"
                 referrerPolicy="no-referrer"
               />

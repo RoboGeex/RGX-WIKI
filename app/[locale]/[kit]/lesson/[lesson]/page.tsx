@@ -8,6 +8,7 @@ import type { Locale } from '@/lib/i18n'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
 import PrevNextNav from '@/components/prev-next-nav'
+import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import Step from '@/components/step'
 import LessonToc from '@/components/lesson-toc'
 
@@ -188,19 +189,9 @@ export default async function LessonPage(
     }
 
     if (block.type === 'imageSlider') {
-      const images = Array.isArray(block.images) ? block.images : []
+      const images = Array.isArray(block.images) ? block.images.filter(Boolean) : []
       if (!images.length) return null
-      return (
-        <div key={index} className="tiptap-image-slider overflow-x-auto">
-          <div className="tiptap-image-slider-track">
-            {images.map((src: string, slideIndex: number) => (
-              <div key={slideIndex} className="tiptap-image-slide">
-                <img src={src} alt={`Slide ${slideIndex + 1}`} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )
+      return <LessonImageSlider key={index} images={images} />
     }
 
     if (block.type === 'horizontalRule') {

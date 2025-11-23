@@ -337,14 +337,14 @@ export default async function LessonPage(
                 referrerPolicy="no-referrer"
               />
             </div>
-            <div className="p-6 md:p-10 xl:p-12 space-y-8">
-              <header className="space-y-3 border-b border-gray-200 pb-5">
-              <div className="flex items-center gap-3 text-sm text-gray-500">
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-primary font-medium uppercase tracking-wide text-xs">
-                  {locale === 'ar' ? 'الدرس' : 'Lesson'}
-                </span>
-                <span className="text-base font-semibold text-gray-700">{kitData.title_en}</span>
-              </div>
+            <div className="p-5 md:p-8 xl:p-10 space-y-6">
+              <header className="space-y-2 border-b border-gray-200 pb-4">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-primary font-medium uppercase tracking-wide text-[11px]">
+                    {locale === 'ar' ? 'الدرس' : 'Lesson'}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-700">{kitData.title_en}</span>
+                </div>
               <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
                 {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
               </h1>

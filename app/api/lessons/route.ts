@@ -212,7 +212,8 @@ export async function POST(req: Request) {
           isUpdate &&
           SHOULD_ENFORCE_DEV_OWNERSHIP &&
           !isAdmin &&
-          (!existingRecord?.ownerId || existingRecord.ownerId !== developer?.id)
+          existingRecord?.ownerId &&
+          existingRecord.ownerId !== developer?.id
         ) {
           return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
         }
@@ -263,8 +264,8 @@ export async function POST(req: Request) {
           title_en: lesson.title_en,
           title_ar: lesson.title_ar,
           coverImage: lesson.coverImage || null,
-          ownerId: lesson.ownerId || null,
-          lastModifiedBy: lesson.lastModifiedBy || null,
+          ownerId: lesson.ownerId || existingRecord?.ownerId || developer?.id || null,
+          lastModifiedBy: lesson.lastModifiedBy || developer?.id || null,
           status: lesson.status || 'draft',
           publishedAt: lesson.publishedAt ? new Date(lesson.publishedAt) : null,
           duration_min: lesson.duration_min,
@@ -310,8 +311,8 @@ export async function POST(req: Request) {
         SHOULD_ENFORCE_DEV_OWNERSHIP &&
         isUpdate &&
         !isAdmin &&
-        (!existingLessons[existingLessonIndex]?.ownerId ||
-          existingLessons[existingLessonIndex]?.ownerId !== developer?.id)
+        existingLessons[existingLessonIndex]?.ownerId &&
+        existingLessons[existingLessonIndex]?.ownerId !== developer?.id
       ) {
         return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
       }

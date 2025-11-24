@@ -92,6 +92,18 @@ html {
 .tiptap ol {
   list-style-type: decimal;
 }
+.tiptap ul ul {
+  list-style-type: circle;
+}
+.tiptap ul ul ul {
+  list-style-type: square;
+}
+.tiptap ol ol {
+  list-style-type: lower-alpha;
+}
+.tiptap ol ol ol {
+  list-style-type: lower-roman;
+}
 .tiptap li {
   margin: 0.25rem 0;
 }

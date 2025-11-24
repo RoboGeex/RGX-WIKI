@@ -41,7 +41,7 @@ export default function DeveloperLogin({ onSignedIn }: Props) {
     <div className="min-h-screen bg-[#eef2f1] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-6">
         <div className="space-y-2 text-center">
-          <img src="/images/robogeex-logo.png" alt="RoboGeex" className="mx-auto h-10 w-auto" />
+          <img src="/images/robogeex-logo-wordmark.png" alt="RoboGeex" className="mx-auto h-10 w-auto" />
           <h1 className="text-xl font-semibold text-gray-900">Developer Sign In</h1>
           <p className="text-sm text-gray-600">Use your assigned email and password to continue.</p>
         </div>

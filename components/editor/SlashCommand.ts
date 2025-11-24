@@ -76,12 +76,6 @@ const items: SlashItem[] = [
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHeading({ level: 3 }).run(),
   },
   {
-    title: 'Paragraph',
-    shortcut: 'P',
-    keywords: ['text'],
-    command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setParagraph().run(),
-  },
-  {
     title: 'Link',
     shortcut: 'Ctrl+K',
     keywords: ['url', 'hyperlink'],

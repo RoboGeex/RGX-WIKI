@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import CreateWikiModal from '@/components/create-wiki-modal'
+import { applyDeveloperHeader } from '@/components/editor/dev-identity'
 
 interface WikiSummary {
   wiki: {
@@ -21,6 +22,41 @@ interface EditorDashboardClientProps {
 
 export default function EditorDashboardClient({ initialSummaries }: EditorDashboardClientProps) {
   const [summaries, setSummaries] = useState(initialSummaries)
+  const [wikiAccess, setWikiAccess] = useState<string[] | null>(null)
+  const [loadingAccess, setLoadingAccess] = useState(true)
+  const [accessError, setAccessError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadAccess = async () => {
+      setLoadingAccess(true)
+      setAccessError(null)
+      try {
+        const res = await fetch('/api/developers/me', { headers: applyDeveloperHeader() })
+        const data = await res.json()
+        if (!res.ok || !data?.developer) {
+          throw new Error(data?.error || 'Failed to load developer')
+        }
+        if (cancelled) return
+        setWikiAccess(Array.isArray(data.developer.wikiSlugs) ? data.developer.wikiSlugs : [])
+      } catch (err: any) {
+        if (cancelled) return
+        setAccessError(err?.message || 'Failed to load developer access')
+        setWikiAccess(null)
+      } finally {
+        if (!cancelled) setLoadingAccess(false)
+      }
+    }
+    loadAccess()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filteredSummaries = useMemo(() => {
+    if (!wikiAccess || wikiAccess.length === 0) return summaries
+    return summaries.filter(({ wiki }) => wikiAccess.includes(wiki.slug))
+  }, [summaries, wikiAccess])
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleWikiCreated = async (data: { name: string; grade: string; picture: File | null }) => {
@@ -30,6 +66,13 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
 
   return (
     <>
+      {accessError ? (
+        <div className="mb-4 text-sm text-red-600">{accessError}</div>
+      ) : null}
+      {loadingAccess ? (
+        <div className="mb-4 text-sm text-gray-600">Loading your access...</div>
+      ) : null}
+
       <div className="grid gap-6 sm:grid-cols-2">
         {/* Create New Wiki Tile - First */}
         <button
@@ -50,7 +93,7 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
         </button>
 
         {/* Existing Wiki Tiles */}
-        {summaries.map(({ wiki, lessonCount }) => (
+        {filteredSummaries.map(({ wiki, lessonCount }) => (
           <Link
             key={wiki.slug}
             href={`/editor/dashboard/${wiki.slug}`}

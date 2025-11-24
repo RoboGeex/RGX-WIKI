@@ -86,6 +86,7 @@ export default function WikiEditor() {
       duration_min: 30,
       difficulty: 'Beginner',
       isNew: false,
+      ownerId: '',
     }
     
     // Check for URL parameters first
@@ -172,6 +173,7 @@ export default function WikiEditor() {
       cancelled = true
     }
   }, [developerId])
+  const isOwner = Boolean(meta.ownerId && developerId && meta.ownerId === developerId)
   const displayTitle = useMemo(() => {
     const english = typeof meta.title_en === 'string' ? meta.title_en.trim() : ''
     const arabic = typeof meta.title_ar === 'string' ? meta.title_ar.trim() : ''
@@ -803,6 +805,10 @@ export default function WikiEditor() {
             next.order = lesson.order
             changed = true
           }
+          if (typeof lesson?.ownerId === 'string' && lesson.ownerId.trim() && lesson.ownerId !== prev.ownerId) {
+            next.ownerId = lesson.ownerId.trim()
+            changed = true
+          }
           if (next.isNew) {
             next.isNew = false
             changed = true
@@ -1230,6 +1236,11 @@ export default function WikiEditor() {
 
       const desiredStatus = statusOverride && isAdmin ? statusOverride : 'draft'
 
+      if (!isAdmin && !isOwner && !meta.isNew) {
+        setStatus('You can only edit lessons you own (or admin).')
+        return
+      }
+
       const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
       const res = await fetch('/api/lessons', {
         method: 'POST',
@@ -1253,6 +1264,9 @@ export default function WikiEditor() {
         slug: typeof savedLesson.slug === 'string' && savedLesson.slug.trim() ? savedLesson.slug : generatedSlug,
         order: typeof savedLesson.order === 'number' ? savedLesson.order : meta.order,
         isNew: false,
+        ownerId: typeof savedLesson.ownerId === 'string' && savedLesson.ownerId.trim()
+          ? savedLesson.ownerId
+          : meta.ownerId || developerId || '',
       }
 
       setMeta(updatedMeta)
@@ -1306,6 +1320,8 @@ export default function WikiEditor() {
             <button
               className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300"
               onClick={() => publish('draft')}
+              disabled={!isAdmin && !isOwner && !meta.isNew}
+              title={!isAdmin && !isOwner && !meta.isNew ? 'Only the owner or admin can save this lesson' : undefined}
             >
               Save (Draft)
             </button>

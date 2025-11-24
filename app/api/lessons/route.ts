@@ -46,6 +46,8 @@ type NewLesson = {
   coverImage?: string
   ownerId?: string
   lastModifiedBy?: string
+  status?: string
+  publishedAt?: string
   duration_min: number
   difficulty: string
   prerequisites_en: string[]
@@ -122,6 +124,8 @@ export async function POST(req: Request) {
       coverImage: (rawLesson.coverImage || '').trim(),
       ownerId: rawLesson.ownerId?.trim() || undefined,
       lastModifiedBy: rawLesson.lastModifiedBy?.trim() || undefined,
+      status: (rawLesson.status || '').trim() || 'draft',
+      publishedAt: rawLesson.publishedAt || undefined,
       difficulty: (rawLesson.difficulty || 'Beginner').trim(),
     }
 
@@ -176,6 +180,20 @@ export async function POST(req: Request) {
     }
     if (developer?.id) {
       lesson.lastModifiedBy = developer.id
+    }
+
+    // Enforce publish rules: non-admins cannot publish
+    if (!isAdmin) {
+      lesson.status = 'draft'
+      lesson.publishedAt = undefined
+    } else {
+      // Admin can publish; if status is published and no publishedAt, set it
+      if (lesson.status === 'published' && !lesson.publishedAt) {
+        lesson.publishedAt = new Date().toISOString()
+      }
+      if (lesson.status !== 'published') {
+        lesson.publishedAt = undefined
+      }
     }
 
     if (process.env.USE_DB === 'true') {
@@ -247,6 +265,8 @@ export async function POST(req: Request) {
           coverImage: lesson.coverImage || null,
           ownerId: lesson.ownerId || null,
           lastModifiedBy: lesson.lastModifiedBy || null,
+          status: lesson.status || 'draft',
+          publishedAt: lesson.publishedAt ? new Date(lesson.publishedAt) : null,
           duration_min: lesson.duration_min,
           difficulty: lesson.difficulty,
           prerequisites_en: lesson.prerequisites_en as any,
@@ -309,6 +329,12 @@ export async function POST(req: Request) {
         list[existingLessonIndex] = {
           ...existingLesson,
           ...lesson,
+          status: isAdmin ? lesson.status || existingLesson.status || 'draft' : 'draft',
+          publishedAt: isAdmin
+            ? lesson.status === 'published'
+              ? lesson.publishedAt || existingLesson.publishedAt || new Date().toISOString()
+              : null
+            : null,
           lastModifiedBy: developer?.id || lesson.lastModifiedBy || existingLesson.lastModifiedBy,
           ownerId: existingLesson.ownerId || lesson.ownerId || developer?.id,
         }
@@ -319,6 +345,10 @@ export async function POST(req: Request) {
         }
         list.push({
           ...lesson,
+          status: isAdmin ? lesson.status || 'draft' : 'draft',
+          publishedAt: isAdmin && lesson.status === 'published'
+            ? lesson.publishedAt || new Date().toISOString()
+            : null,
           ownerId: lesson.ownerId || developer?.id,
           lastModifiedBy: developer?.id || lesson.lastModifiedBy,
         })

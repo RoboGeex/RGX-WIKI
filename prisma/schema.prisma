@@ -22,6 +22,8 @@ model Lesson {
   coverImage       String?
   ownerId          String?
   lastModifiedBy   String?
+  status           String   @default("draft")
+  publishedAt      DateTime?
   duration_min     Int
   difficulty       String
   prerequisites_en Json

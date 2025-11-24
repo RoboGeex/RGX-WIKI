@@ -72,6 +72,8 @@ export interface Lesson {
   title_ar: string;
   ownerId?: string;
   lastModifiedBy?: string;
+  status?: string;
+  publishedAt?: string;
   coverImage?: string;
   duration_min: number;
   difficulty: string;

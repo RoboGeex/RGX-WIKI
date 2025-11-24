@@ -72,6 +72,7 @@ export default function WikiEditor() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [developerId, setDeveloperId] = useState<string | undefined>(() => getDeveloperId())
+  const [isAdmin, setIsAdmin] = useState(false)
   
   const [meta, setMeta] = useState(() => {
     const base = {
@@ -146,6 +147,31 @@ export default function WikiEditor() {
   useEffect(() => {
     metaRef.current = meta
   }, [meta])
+  useEffect(() => {
+    let cancelled = false
+    const loadRole = async () => {
+      if (!developerId) {
+        setIsAdmin(false)
+        return
+      }
+      try {
+        const res = await fetch('/api/developers/me', { headers: applyDeveloperHeader() })
+        const data = await res.json()
+        if (cancelled) return
+        if (res.ok && data?.developer?.role) {
+          setIsAdmin(data.developer.role === 'admin')
+        } else {
+          setIsAdmin(false)
+        }
+      } catch {
+        if (!cancelled) setIsAdmin(false)
+      }
+    }
+    loadRole()
+    return () => {
+      cancelled = true
+    }
+  }, [developerId])
   const displayTitle = useMemo(() => {
     const english = typeof meta.title_en === 'string' ? meta.title_en.trim() : ''
     const arabic = typeof meta.title_ar === 'string' ? meta.title_ar.trim() : ''
@@ -1202,7 +1228,6 @@ export default function WikiEditor() {
         return
       }
 
-      const isAdmin = (window as any).__devRole === 'admin' || false
       const desiredStatus = statusOverride && isAdmin ? statusOverride : 'draft'
 
       const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
@@ -1287,7 +1312,7 @@ export default function WikiEditor() {
             <button
               className="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm hover:opacity-90 disabled:opacity-50"
               onClick={() => publish('published')}
-              disabled={typeof window !== 'undefined' && (window as any).__devRole !== 'admin'}
+              disabled={!isAdmin}
               title="Only admins can publish"
             >
               Publish to Wiki

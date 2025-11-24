@@ -141,27 +141,6 @@ const items: SlashItem[] = [
     },
   },
   {
-    title: 'Image',
-    shortcut: 'Img',
-    keywords: ['picture', 'photo'],
-    command: ({ editor, range }: any) => {
-      editor.chain().focus().deleteRange(range).run()
-      const url = window.prompt('Image URL')
-      if (url) editor.chain().focus().setImage({ src: url }).run()
-    },
-  },
-  {
-    title: 'YouTube',
-    shortcut: 'YT',
-    keywords: ['video', 'embed'],
-    command: ({ editor, range }: any) => {
-      editor.chain().focus().deleteRange(range).run()
-      const url = window.prompt('YouTube URL')
-      if (!url) return
-      editor.commands.setYoutubeVideo({ src: url, width: 640, height: 360 })
-    },
-  },
-  {
     title: 'Table',
     shortcut: 'tbl',
     keywords: ['grid'],

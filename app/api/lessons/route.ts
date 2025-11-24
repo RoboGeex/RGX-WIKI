@@ -292,7 +292,13 @@ export async function POST(req: Request) {
         return NextResponse.json({
           ok: true,
           isUpdate,
-          lesson: { id: saved.id, slug: saved.slug, order: saved.order },
+          lesson: {
+            id: saved.id,
+            slug: saved.slug,
+            order: saved.order,
+            ownerId: saved.ownerId || lesson.ownerId || developer?.id || null,
+            status: saved.status,
+          },
         })
       } catch (e: any) {
         if (e?.code === 'P2002') {
@@ -362,7 +368,17 @@ export async function POST(req: Request) {
         await fs.mkdir(dir, { recursive: true })
         await fs.writeFile(filePath, JSON.stringify(ordered, null, 2), 'utf-8')
 
-        return NextResponse.json({ ok: true, isUpdate, lesson: { id: lesson.id, slug: lesson.slug, order: lesson.order } })
+        return NextResponse.json({
+          ok: true,
+          isUpdate,
+          lesson: {
+            id: lesson.id,
+            slug: lesson.slug,
+            order: lesson.order,
+            ownerId: lesson.ownerId || developer?.id || null,
+            status: lesson.status || 'draft',
+          },
+        })
       } catch (error) {
         console.error('Error saving lessons to file:', error)
         return NextResponse.json({ 

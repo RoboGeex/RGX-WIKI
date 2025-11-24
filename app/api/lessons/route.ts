@@ -346,7 +346,7 @@ export async function GET(req: Request) {
     const wikiSlug = searchParams.get('wiki') || searchParams.get('kit') || 'student-kit'
 
     const actorId = getActorIdFromRequest(req)
-    const developer = actorId ? getDeveloperById(actorId) : undefined
+    const developer = actorId ? await findDeveloperById(actorId) : undefined
     if (SHOULD_ENFORCE_DEV_OWNERSHIP) {
       if (!developer) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -1244,7 +1244,7 @@ export default function WikiEditor() {
       const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
       const payloadWithOwner = {
         ...payload,
-        ownerId: payload.ownerId || meta.ownerId || developerId || '',
+        ownerId: meta.ownerId || developerId || '',
         status: desiredStatus,
       }
       const res = await fetch('/api/lessons', {

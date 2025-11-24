@@ -190,7 +190,12 @@ export async function POST(req: Request) {
         const isSameWiki = existingRecord?.wikiSlug === lesson.wikiSlug
         let isUpdate = !forceNew && !!existingRecord && isSameWiki
 
-        if (isUpdate && SHOULD_ENFORCE_DEV_OWNERSHIP && !isAdmin && existingRecord?.ownerId && existingRecord.ownerId !== developer?.id) {
+        if (
+          isUpdate &&
+          SHOULD_ENFORCE_DEV_OWNERSHIP &&
+          !isAdmin &&
+          (!existingRecord?.ownerId || existingRecord.ownerId !== developer?.id)
+        ) {
           return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
         }
 
@@ -285,8 +290,8 @@ export async function POST(req: Request) {
         SHOULD_ENFORCE_DEV_OWNERSHIP &&
         isUpdate &&
         !isAdmin &&
-        existingLessons[existingLessonIndex]?.ownerId &&
-        existingLessons[existingLessonIndex]?.ownerId !== developer?.id
+        (!existingLessons[existingLessonIndex]?.ownerId ||
+          existingLessons[existingLessonIndex]?.ownerId !== developer?.id)
       ) {
         return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
       }

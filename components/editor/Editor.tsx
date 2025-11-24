@@ -174,6 +174,7 @@ export default function WikiEditor() {
     }
   }, [developerId])
   const isOwner = Boolean(meta.ownerId && developerId && meta.ownerId === developerId)
+  const saveDisabled = !isAdmin && !isOwner && !meta.isNew && Boolean(meta.ownerId)
   const displayTitle = useMemo(() => {
     const english = typeof meta.title_en === 'string' ? meta.title_en.trim() : ''
     const arabic = typeof meta.title_ar === 'string' ? meta.title_ar.trim() : ''
@@ -1236,7 +1237,7 @@ export default function WikiEditor() {
 
       const desiredStatus = statusOverride && isAdmin ? statusOverride : 'draft'
 
-      if (!isAdmin && !isOwner && !meta.isNew) {
+      if (saveDisabled) {
         setStatus('You can only edit lessons you own (or admin).')
         return
       }
@@ -1323,10 +1324,11 @@ export default function WikiEditor() {
           </div>
           <div className="flex gap-2">
             <button
-              className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300"
+              className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 disabled:opacity-50"
               onClick={() => publish('draft')}
-              disabled={!isAdmin && !isOwner && !meta.isNew}
-              title={!isAdmin && !isOwner && !meta.isNew ? 'Only the owner or admin can save this lesson' : undefined}
+              disabled={saveDisabled}
+              title={saveDisabled ? 'Only the owner or admin can save this lesson' : undefined}
+              type="button"
             >
               Save (Draft)
             </button>
@@ -1335,6 +1337,7 @@ export default function WikiEditor() {
               onClick={() => publish('published')}
               disabled={!isAdmin}
               title="Only admins can publish"
+              type="button"
             >
               Publish to Wiki
             </button>

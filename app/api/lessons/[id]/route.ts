@@ -42,7 +42,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const existing = await prisma.lesson.findUnique({
       where: { id },
-      select: { ownerId: true, wikiSlug: true },
+      select: { ownerId: true, wikiSlug: true, status: true, publishedAt: true },
     })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -52,10 +52,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const updateData = {
       ...payload,
-      status: isAdmin ? payload.status || existing['status'] || 'draft' : 'draft',
+      status: isAdmin ? payload.status || existing.status || 'draft' : 'draft',
       publishedAt:
         isAdmin && payload.status === 'published'
-          ? payload.publishedAt || new Date().toISOString()
+          ? payload.publishedAt || existing.publishedAt || new Date().toISOString()
           : null,
       lastModifiedBy: developer?.id || payload.lastModifiedBy,
     }

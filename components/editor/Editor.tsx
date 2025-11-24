@@ -1145,7 +1145,7 @@ export default function WikiEditor() {
     return blocks
   }
 
-  async function publish() {
+  async function publish(statusOverride?: 'draft' | 'published') {
     if (!editorEn || !editorAr) return
     if (!meta.wikiSlug) {
       setStatus('Missing wiki selection. Open the properties panel to choose a wiki.')
@@ -1198,12 +1198,19 @@ export default function WikiEditor() {
     }
     try {
       if (!developerId) {
-        setStatus('Please sign in as a content developer before publishing.')
+        setStatus('Please sign in as a content developer before saving.')
         return
       }
-      console.log('Publishing lesson with payload:', payload)
+
+      const isAdmin = (window as any).__devRole === 'admin' || false
+      const desiredStatus = statusOverride && isAdmin ? statusOverride : 'draft'
+
       const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
-      const res = await fetch('/api/lessons', { method: 'POST', headers, body: JSON.stringify(payload) })
+      const res = await fetch('/api/lessons', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...payload, status: desiredStatus }),
+      })
       const data = await res.json()
 
       if (!res.ok) {
@@ -1239,9 +1246,9 @@ export default function WikiEditor() {
 
       const slugOrIdChanged = updatedMeta.slug !== generatedSlug || updatedMeta.id !== generatedId
       if (!isUpdate && slugOrIdChanged) {
-        setStatus(`Lesson published! Saved as "${updatedMeta.slug}".`)
+        setStatus(desiredStatus === 'published' ? `Lesson published! Saved as "${updatedMeta.slug}".` : 'Changes saved!')
       } else {
-        setStatus(isUpdate ? 'Changes saved!' : 'Lesson published!')
+        setStatus(desiredStatus === 'published' ? 'Lesson published!' : isUpdate ? 'Changes saved!' : 'Lesson saved!')
       }
   } catch (e: any) {
     console.error('Publish error:', e)
@@ -1271,7 +1278,20 @@ export default function WikiEditor() {
             )}
           </div>
           <div className="flex gap-2">
-            <button className="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm hover:opacity-90" onClick={publish}>Publish to Wiki</button>
+            <button
+              className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300"
+              onClick={() => publish('draft')}
+            >
+              Save (Draft)
+            </button>
+            <button
+              className="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm hover:opacity-90 disabled:opacity-50"
+              onClick={() => publish('published')}
+              disabled={typeof window !== 'undefined' && (window as any).__devRole !== 'admin'}
+              title="Only admins can publish"
+            >
+              Publish to Wiki
+            </button>
           </div>
         </div>
 

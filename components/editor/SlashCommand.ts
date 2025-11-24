@@ -100,17 +100,6 @@ const items: SlashItem[] = [
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
   },
   {
-    title: 'Emoji',
-    shortcut: '😀',
-    keywords: ['emoji', 'icon', 'smile'],
-    command: ({ editor, range }: any) => {
-      const value = window.prompt('Pick an emoji to insert (e.g., 😀):', '😀')
-      if (!value || !value.trim()) return
-      const emoji = value.trim()
-      editor.chain().focus().deleteRange(range).insertContent(emoji).run()
-    },
-  },
-  {
     title: 'Image Slider',
     shortcut: 'Slider',
     keywords: ['gallery', 'carousel', 'images', 'slider'],

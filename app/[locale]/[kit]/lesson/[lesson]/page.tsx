@@ -148,9 +148,9 @@ export default async function LessonPage(
       const sizeClass =
         level === 1 ? 'text-4xl' :
         level === 2 ? 'text-3xl' :
-        level === 3 ? 'text-2xl' :
-        level === 4 ? 'text-xl' :
-        'text-lg'
+        level === 3 ? 'text-xl' :
+        level === 4 ? 'text-lg' :
+        'text-base'
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
       const normalizedHeading = textValue.trim()
       const normalizedTitle = lessonDisplayTitle.trim()

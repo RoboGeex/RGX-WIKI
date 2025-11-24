@@ -332,9 +332,9 @@ export async function POST(req: Request) {
           status: isAdmin ? lesson.status || existingLesson.status || 'draft' : 'draft',
           publishedAt: isAdmin
             ? lesson.status === 'published'
-              ? lesson.publishedAt || existingLesson.publishedAt || new Date().toISOString()
-              : null
-            : null,
+              ? (lesson.publishedAt || existingLesson.publishedAt || new Date().toISOString())
+              : undefined
+            : undefined,
           lastModifiedBy: developer?.id || lesson.lastModifiedBy || existingLesson.lastModifiedBy,
           ownerId: existingLesson.ownerId || lesson.ownerId || developer?.id,
         }
@@ -348,7 +348,7 @@ export async function POST(req: Request) {
           status: isAdmin ? lesson.status || 'draft' : 'draft',
           publishedAt: isAdmin && lesson.status === 'published'
             ? lesson.publishedAt || new Date().toISOString()
-            : null,
+            : undefined,
           ownerId: lesson.ownerId || developer?.id,
           lastModifiedBy: developer?.id || lesson.lastModifiedBy,
         })

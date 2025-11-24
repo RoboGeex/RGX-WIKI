@@ -22,7 +22,9 @@ export async function GET(
     const id = params.id
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
     const prisma = getPrisma()
-    const lesson = await prisma.lesson.findUnique({ where: { id } })
+    const lesson =
+      (await prisma.lesson.findUnique({ where: { id } })) ||
+      (await prisma.lesson.findFirst({ where: { slug: id } }))
     if (!lesson) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(lesson)
   } catch (e: any) {

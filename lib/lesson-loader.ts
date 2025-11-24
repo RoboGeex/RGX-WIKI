@@ -9,7 +9,7 @@ export type LessonGroup = {
 }
 
 export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Promise<Lesson[]> {
-  const fileLessons = await getLessons(kitSlug)
+  const fileLessons = await getLessons(kitSlug, { includeDrafts: true })
   let dbLessons: Lesson[] = []
   if (process.env.USE_DB === 'true') {
     try {

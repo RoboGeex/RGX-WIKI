@@ -65,13 +65,14 @@ export function getKit(slug: string, wikiSlug?: string) {
   return kits.find(k => k.slug === slug);
 }
 
-export async function getLessons(kitSlug: string): Promise<Lesson[]> {
+export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boolean }): Promise<Lesson[]> {
   const wikiSlug = wikiSlugForKit(kitSlug)
+  const includeDrafts = opts?.includeDrafts === true
   try {
     const { getPrisma } = await import('@/lib/prisma-multi')
     const prisma = getPrisma(wikiSlug)
     const lessons = await prisma.lesson.findMany({
-      where: { wikiSlug },
+      where: { wikiSlug, ...(includeDrafts ? {} : { status: 'published' }) },
       orderBy: { order: 'asc' },
     })
     return lessons as unknown as Lesson[]

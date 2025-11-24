@@ -4,7 +4,8 @@ import path from 'path'
 import { promises as fs } from 'fs'
 import { getWiki } from '@/lib/data'
 import { getPrisma } from '@/lib/prisma-multi'
-import { canManageLesson, canManageWiki, getDeveloperById } from '@/lib/assignments'
+import { canManageLesson, canManageWiki } from '@/lib/assignments'
+import { findDeveloperById } from '@/lib/developers'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -156,7 +157,8 @@ export async function POST(req: Request) {
     }
 
     const actorId = getActorIdFromRequest(req)
-    const developer = actorId ? getDeveloperById(actorId) : undefined
+    const developer = actorId ? await findDeveloperById(actorId) : undefined
+    const isAdmin = developer?.role === 'admin'
 
     if (SHOULD_ENFORCE_DEV_OWNERSHIP && !developer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -182,11 +184,15 @@ export async function POST(req: Request) {
 
         const existingRecord = await prisma.lesson.findUnique({
           where: { id: lesson.id },
-          select: { order: true, wikiSlug: true },
+          select: { order: true, wikiSlug: true, ownerId: true },
         })
 
         const isSameWiki = existingRecord?.wikiSlug === lesson.wikiSlug
         let isUpdate = !forceNew && !!existingRecord && isSameWiki
+
+        if (isUpdate && SHOULD_ENFORCE_DEV_OWNERSHIP && !isAdmin && existingRecord?.ownerId && existingRecord.ownerId !== developer?.id) {
+          return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
+        }
 
         if (!Number.isFinite(lesson.order) || lesson.order < 1) {
           if (isUpdate && existingRecord) {
@@ -274,6 +280,16 @@ export async function POST(req: Request) {
       const existingLessons = await readLessonsFromFile(lesson.wikiSlug)
       const existingLessonIndex = existingLessons.findIndex(l => l.id === lesson.id)
       const isUpdate = !forceNew && existingLessonIndex !== -1
+
+      if (
+        SHOULD_ENFORCE_DEV_OWNERSHIP &&
+        isUpdate &&
+        !isAdmin &&
+        existingLessons[existingLessonIndex]?.ownerId &&
+        existingLessons[existingLessonIndex]?.ownerId !== developer?.id
+      ) {
+        return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
+      }
 
       if (!isUpdate) {
         lesson.id = generateUniqueId(lesson.id, existingLessons)

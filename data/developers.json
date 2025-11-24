@@ -6,5 +6,21 @@
     "password": "ChangeMe123!",
     "role": "admin",
     "wikiSlugs": ["ziggy", "clicky"]
+  },
+  {
+    "id": "dev-alice",
+    "email": "alice@example.com",
+    "name": "Alice",
+    "password": "ChangeMe123!",
+    "role": "editor",
+    "wikiSlugs": ["ziggy"]
+  },
+  {
+    "id": "dev-bob",
+    "email": "bob@robogeex.com",
+    "name": "Bob",
+    "password": "kkkaaa",
+    "role": "editor",
+    "wikiSlugs": ["clicky"]
   }
 ]

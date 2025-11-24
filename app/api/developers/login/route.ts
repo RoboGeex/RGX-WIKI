@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { findDeveloperByCredentials } from '@/lib/assignments'
+import { findDeveloperByCredentials } from '@/lib/developers'
 
 export async function POST(request: Request) {
   try {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
-    const dev = findDeveloperByCredentials(email, password)
+    const dev = await findDeveloperByCredentials(email, password)
     if (!dev) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }

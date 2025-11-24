@@ -15,16 +15,21 @@ function getActorIdFromRequest(req: Request): string | undefined {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
     const id = params.id
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
-    const prisma = getPrisma()
-    const lesson =
-      (await prisma.lesson.findUnique({ where: { id } })) ||
-      (await prisma.lesson.findFirst({ where: { slug: id } }))
+    const { searchParams } = new URL(req.url)
+    const wikiSlug = searchParams.get('kit') || searchParams.get('wiki') || undefined
+    const prisma = getPrisma(wikiSlug)
+    const lesson = await prisma.lesson.findFirst({
+      where: {
+        ...(wikiSlug ? { wikiSlug } : {}),
+        OR: [{ id }, { slug: id }],
+      },
+    })
     if (!lesson) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(lesson)
   } catch (e: any) {
@@ -36,14 +41,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   try {
     const id = params.id
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
-    const prisma = getPrisma()
     const payload = await req.json()
     const actorId = getActorIdFromRequest(req)
     const developer = actorId ? await findDeveloperById(actorId) : undefined
     const isAdmin = developer?.role === 'admin'
 
-    const existing = await prisma.lesson.findUnique({
-      where: { id },
+    // Fetch lesson to know wikiSlug and owner
+    const prismaForLookup = getPrisma()
+    const existing = await prismaForLookup.lesson.findFirst({
+      where: {
+        OR: [{ id }, { slug: id }],
+      },
       select: { ownerId: true, wikiSlug: true, status: true, publishedAt: true },
     })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -51,6 +59,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!isAdmin && (!existing.ownerId || existing.ownerId !== developer?.id)) {
       return NextResponse.json({ error: 'Only owner or admin can edit this lesson' }, { status: 403 })
     }
+
+    const prisma = getPrisma(existing.wikiSlug)
 
     const updateData = {
       ...payload,

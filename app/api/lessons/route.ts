@@ -382,20 +382,17 @@ export async function GET(req: Request) {
 
     const actorId = getActorIdFromRequest(req)
     const developer = actorId ? await findDeveloperById(actorId) : undefined
-    if (SHOULD_ENFORCE_DEV_OWNERSHIP) {
-      if (!developer) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (!canManageWiki(developer, wikiSlug)) {
-        return NextResponse.json({ error: 'Forbidden for this wiki' }, { status: 403 })
-      }
-    }
+    const canSeeDrafts = !!developer && canManageWiki(developer, wikiSlug)
+    const publishedOnly = !canSeeDrafts
 
     if (process.env.USE_DB === 'true') {
       try {
         const prisma = getPrisma(wikiSlug || undefined)
         const lessons = await prisma.lesson.findMany({
-          where: { wikiSlug },
+          where: {
+            wikiSlug,
+            ...(publishedOnly ? { status: 'published' } : {}),
+          },
           orderBy: [{ order: 'asc' }],
         })
         return NextResponse.json(lessons)
@@ -404,7 +401,8 @@ export async function GET(req: Request) {
       }
     } else {
       const list = await readLessonsFromFile(wikiSlug)
-      return NextResponse.json(sortLessons(list))
+      const filtered = publishedOnly ? list.filter((l) => l.status === 'published') : list
+      return NextResponse.json(sortLessons(filtered))
     }
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to load lessons' }, { status: 500 })

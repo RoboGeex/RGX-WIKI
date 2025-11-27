@@ -15,11 +15,11 @@ export function LessonImageSlider({ images }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="relative w-full h-64 md:h-72 overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center">
+      <div className="relative w-full min-h-[260px] overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center px-4 py-4">
         <img
           src={images[current]}
           alt="Lesson slide"
-          className="h-full w-full object-contain"
+          className="max-h-96 w-auto h-auto max-w-full object-contain"
         />
         {images.length > 1 ? (
           <>

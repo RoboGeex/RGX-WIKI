@@ -21,28 +21,32 @@ export function LessonImageSlider({ images }: Props) {
           alt="Lesson slide"
           className="max-h-full max-w-full object-contain"
         />
+        {images.length > 1 ? (
+          <>
+            <button
+              type="button"
+              aria-label="Previous image"
+              onClick={goPrev}
+              className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white"
+            >
+              <span className="text-lg leading-none text-gray-700">‹</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Next image"
+              onClick={goNext}
+              className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white"
+            >
+              <span className="text-lg leading-none text-gray-700">›</span>
+            </button>
+          </>
+        ) : null}
       </div>
-      {images.length > 1 && (
-        <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={goPrev}
-            className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-          >
-            Prev
-          </button>
-          <div className="text-xs text-gray-500">
-            {current + 1} / {images.length}
-          </div>
-          <button
-            type="button"
-            onClick={goNext}
-            className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-          >
-            Next
-          </button>
+      {images.length > 1 ? (
+        <div className="flex items-center justify-center gap-3 text-xs text-gray-500">
+          {current + 1} / {images.length}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

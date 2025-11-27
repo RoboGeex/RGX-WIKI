@@ -15,11 +15,14 @@ export function LessonImageSlider({ images }: Props) {
 
   return (
     <div className="space-y-3 flex flex-col items-center">
-      <div className="relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div
+        className="relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white"
+        style={{ width: '1938px', height: '1098px', maxWidth: '100%' }}
+      >
         <img
           src={images[current]}
           alt="Lesson slide"
-          className="block max-w-full h-auto max-h-[480px] object-contain"
+          className="block w-full h-full object-contain"
         />
         {images.length > 1 ? (
           <>

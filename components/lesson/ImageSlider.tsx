@@ -17,7 +17,7 @@ export function LessonImageSlider({ images }: Props) {
     <div className="space-y-3 flex flex-col items-center">
       <div
         className="relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white"
-        style={{ width: '1938px', height: '1098px', maxWidth: '100%' }}
+        style={{ width: '1920px', height: '1080px', maxWidth: '100%' }}
       >
         <img
           src={images[current]}

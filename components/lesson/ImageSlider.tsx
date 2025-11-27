@@ -14,12 +14,12 @@ export function LessonImageSlider({ images }: Props) {
   const goNext = () => setIndex((prev) => (prev + 1) % images.length)
 
   return (
-    <div className="space-y-3">
-      <div className="relative w-full min-h-[260px] overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center px-4 py-4">
+    <div className="space-y-3 flex flex-col items-center">
+      <div className="relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white">
         <img
           src={images[current]}
           alt="Lesson slide"
-          className="max-h-96 w-auto h-auto max-w-full object-contain"
+          className="block max-w-full h-auto max-h-[480px] object-contain"
         />
         {images.length > 1 ? (
           <>

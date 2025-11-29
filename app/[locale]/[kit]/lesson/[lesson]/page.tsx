@@ -201,12 +201,16 @@ export default async function LessonPage(
     if (block.type === 'image' && block.image) {
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (
-        <figure key={index} className="space-y-3">
-          <img
-            src={block.image}
-            alt={caption || ''}
-            className="w-full max-h-64 md:max-h-72 rounded-xl border border-gray-200 bg-gray-50 object-contain"
-          />
+        <figure key={index} className="space-y-3 flex flex-col items-center">
+          <div className="w-full max-w-[720px]">
+            <div className="relative w-full h-[462px] overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center">
+              <img
+                src={block.image}
+                alt={caption || ''}
+                className="h-full w-full object-contain"
+              />
+            </div>
+          </div>
           {caption ? (
             <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>
           ) : null}

@@ -16,7 +16,7 @@ export function LessonImageSlider({ images }: Props) {
 
   const activeSrc = images[current]
   const measuredWidth = imageSizes[activeSrc]?.width || 0
-  const containerWidth = measuredWidth ? Math.min(measuredWidth, 1200) : undefined
+  const containerWidth = measuredWidth ? Math.min(measuredWidth, 720) : 720
   const containerStyle = useMemo<CSSProperties>(() => ({
     width: containerWidth,
     maxWidth: '100%',

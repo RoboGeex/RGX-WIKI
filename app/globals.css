@@ -177,12 +177,11 @@ html {
   border: 1px solid hsl(var(--border));
   box-shadow: 0 18px 35px -20px rgba(15, 23, 42, 0.35);
   width: 100%;
-  height: auto;
+  height: 462px;
 }
 .tiptap-image-slider .tiptap-image-slide img {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
-  max-height: 75vh;
   object-fit: contain;
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 
 type Props = {
   images: string[]
@@ -8,19 +8,31 @@ type Props = {
 
 export function LessonImageSlider({ images }: Props) {
   const [index, setIndex] = useState(0)
+  const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
   if (!images.length) return null
   const current = Math.min(index, images.length - 1)
   const goPrev = () => setIndex((prev) => (prev - 1 + images.length) % images.length)
   const goNext = () => setIndex((prev) => (prev + 1) % images.length)
 
+  const measuredWidth = naturalSize.width || 0
+  const containerWidth = measuredWidth ? Math.min(measuredWidth, 1200) : undefined
+  const containerStyle = useMemo<CSSProperties>(() => ({
+    width: containerWidth,
+    maxWidth: '100%',
+  }), [containerWidth])
+
   return (
     <div className="space-y-3 flex flex-col items-center">
-      <div className="inline-flex max-w-full">
-        <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center">
+      <div className="inline-flex max-w-full" style={containerStyle}>
+        <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center">
           <img
             src={images[current]}
             alt="Lesson slide"
             className="block max-w-full h-auto max-h-[75vh] object-contain"
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget
+              setNaturalSize({ width: naturalWidth, height: naturalHeight })
+            }}
           />
           {images.length > 1 ? (
             <>

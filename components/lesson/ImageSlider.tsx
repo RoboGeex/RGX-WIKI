@@ -15,7 +15,7 @@ export function LessonImageSlider({ images }: Props) {
 
   return (
     <div className="space-y-3 flex flex-col items-center">
-      <div className="w-full max-w-[1920px]">
+      <div className="w-full max-w-[1200px]">
         <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center">
           <img
             src={images[current]}

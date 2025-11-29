@@ -15,18 +15,21 @@ export function LessonImageSlider({ images }: Props) {
 
   const activeSrc = images[current]
   const containerStyle = useMemo<CSSProperties>(() => ({
-    width: '720px',
-    maxWidth: '100%',
+    width: '100%',
+    maxWidth: '720px',
   }), [])
 
   return (
     <div className="space-y-3 flex flex-col items-center">
       <div className="inline-flex max-w-full" style={containerStyle}>
-        <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center">
+        <div
+          className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center"
+          style={{ height: '462px' }}
+        >
           <img
             src={activeSrc}
             alt="Lesson slide"
-            className="block max-w-full h-auto max-h-[75vh] object-contain"
+            className="block h-full w-full object-contain"
           />
           {images.length > 1 ? (
             <>

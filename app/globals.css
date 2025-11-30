@@ -148,7 +148,7 @@ html {
 }
 .tiptap th,
 .tiptap td {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid #000000;
   padding: 1rem 1.25rem;
   vertical-align: middle;
   text-align: center;

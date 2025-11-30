@@ -330,27 +330,15 @@ export default function PropertiesForm() {
               ))}
             </select>
           </div>
-          <div className="sm:col-span-2 grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Title (EN)
-              </label>
-              <input
-                className="w-full border rounded px-2 py-1"
-                value={meta.title_en}
-                onChange={(e) => applyTitle(e.target.value, 'en')}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Title (AR)
-              </label>
-              <input
-                className="w-full border rounded px-2 py-1"
-                value={meta.title_ar}
-                onChange={(e) => applyTitle(e.target.value, 'ar')}
-              />
-            </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">
+              Title (EN)
+            </label>
+            <input
+              className="w-full border rounded px-2 py-1"
+              value={meta.title_en}
+              onChange={(e) => applyTitle(e.target.value, 'en')}
+            />
           </div>
           <div className="sm:col-span-2 space-y-2">
             <label className="block text-xs text-gray-500 mb-1">Cover image</label>
@@ -397,23 +385,6 @@ export default function PropertiesForm() {
               accept="image/*"
               className="hidden"
               onChange={handleCoverFileChange}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Duration (min)</label>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1"
-              value={meta.duration_min}
-              onChange={(e) => updateMeta({ duration_min: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Difficulty</label>
-            <input
-              className="w-full border rounded px-2 py-1"
-              value={meta.difficulty}
-              onChange={(e) => updateMeta({ difficulty: e.target.value })}
             />
           </div>
           <div className="sm:col-span-2">

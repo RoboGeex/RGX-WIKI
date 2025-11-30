@@ -132,6 +132,9 @@ html {
   background: hsl(var(--card));
   box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.25);
 }
+.tiptap table colgroup col {
+  width: auto !important;
+}
 .tiptap thead th {
   background: rgba(240, 93, 78, 0.12);
   color: hsl(var(--foreground));

@@ -123,6 +123,7 @@ html {
 
 .tiptap table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin: 1.5rem 0;
   border: 1px solid hsl(var(--border));

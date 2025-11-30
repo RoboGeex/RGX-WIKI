@@ -183,10 +183,12 @@ export default async function LessonPage(
       if (!html) return null
       return (
         <div key={index} className="overflow-x-auto">
-          <article
-            className="tiptap max-w-none"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <div className="border-2 border-black rounded-[0.75rem] overflow-hidden">
+            <article
+              className="tiptap max-w-none"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          </div>
         </div>
       )
     }

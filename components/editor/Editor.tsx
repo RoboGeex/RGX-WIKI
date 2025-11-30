@@ -24,9 +24,95 @@ import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
 import ImageSlider from './extensions/ImageSlider'
+import { CellSelection } from '@tiptap/pm/tables'
+import type { EditorView } from '@tiptap/pm/view'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
 import DeveloperLogin from './DeveloperLogin'
+
+const CELL_DRAG_THRESHOLD = 4
+
+function getCellPos(view: EditorView, cell: HTMLElement): number | null {
+  if (!cell || !view.dom.contains(cell)) return null
+  try {
+    return view.posAtDOM(cell, 0)
+  } catch {
+    return null
+  }
+}
+
+function setCellSelection(view: EditorView, anchorPos: number, headPos: number) {
+  const { state, dispatch } = view
+  const selection = CellSelection.create(state.doc, anchorPos, headPos)
+  if (
+    state.selection instanceof CellSelection &&
+    state.selection.$anchorCell.pos === selection.$anchorCell.pos &&
+    state.selection.$headCell.pos === selection.$headCell.pos
+  ) {
+    return
+  }
+  dispatch(state.tr.setSelection(selection))
+}
+
+function handleTableMouseDown(view: EditorView, event: MouseEvent): boolean {
+  if (event.button !== 0) return false
+  const targetCell = (event.target as HTMLElement | null)?.closest('td, th')
+  if (!targetCell) return false
+  if (event.detail >= 2) {
+    // Allow double-clicks to edit the text inside the cell
+    return false
+  }
+  const anchorPos = getCellPos(view, targetCell as HTMLElement)
+  if (anchorPos == null) return false
+
+  let dragging = false
+  const startX = event.clientX
+  const startY = event.clientY
+  let lastHeadPos = anchorPos
+
+  const onMouseMove = (moveEvent: MouseEvent) => {
+    const distanceX = Math.abs(moveEvent.clientX - startX)
+    const distanceY = Math.abs(moveEvent.clientY - startY)
+    if (!dragging && (distanceX >= CELL_DRAG_THRESHOLD || distanceY >= CELL_DRAG_THRESHOLD)) {
+      dragging = true
+      window.getSelection()?.removeAllRanges()
+      setCellSelection(view, anchorPos, anchorPos)
+    }
+
+    if (!dragging) return
+    moveEvent.preventDefault()
+    const hovered = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest('td, th')
+    if (!hovered) return
+    const headPos = getCellPos(view, hovered as HTMLElement)
+    if (headPos == null || headPos === lastHeadPos) return
+    setCellSelection(view, anchorPos, headPos)
+    lastHeadPos = headPos
+  }
+
+  const onMouseUp = (upEvent: MouseEvent) => {
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+    if (dragging) {
+      upEvent.preventDefault()
+      view.focus()
+    }
+  }
+
+  event.preventDefault()
+  view.focus()
+  setCellSelection(view, anchorPos, anchorPos)
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+  return true
+}
+
+function handleTableDragStart(_view: EditorView, event: Event): boolean {
+  if ((event.target as HTMLElement | null)?.closest('table')) {
+    event.preventDefault()
+    return true
+  }
+  return false
+}
 
 function slugify(value: string) {
   return value
@@ -293,13 +379,8 @@ export default function WikiEditor() {
     editorProps: {
       attributes: { class: 'tiptap max-w-none focus:outline-none', lang: 'en' },
       handleDOMEvents: {
-        dragstart: (_view, event) => {
-          if ((event.target as HTMLElement | null)?.closest('table')) {
-            event.preventDefault()
-            return true
-          }
-          return false
-        },
+        mousedown: handleTableMouseDown,
+        dragstart: handleTableDragStart,
       },
     },
   }, [bubbleElementEn, textBubbleElementEn])
@@ -347,13 +428,8 @@ export default function WikiEditor() {
     editorProps: {
       attributes: { class: 'tiptap tiptap-rtl max-w-none focus:outline-none', lang: 'ar', dir: 'rtl' },
       handleDOMEvents: {
-        dragstart: (_view, event) => {
-          if ((event.target as HTMLElement | null)?.closest('table')) {
-            event.preventDefault()
-            return true
-          }
-          return false
-        },
+        mousedown: handleTableMouseDown,
+        dragstart: handleTableDragStart,
       },
     },
   }, [])

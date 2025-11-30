@@ -292,6 +292,15 @@ export default function WikiEditor() {
     content: initialContentRef.current,
     editorProps: {
       attributes: { class: 'tiptap max-w-none focus:outline-none', lang: 'en' },
+      handleDOMEvents: {
+        dragstart: (_view, event) => {
+          if ((event.target as HTMLElement | null)?.closest('table')) {
+            event.preventDefault()
+            return true
+          }
+          return false
+        },
+      },
     },
   }, [bubbleElementEn, textBubbleElementEn])
 
@@ -337,6 +346,15 @@ export default function WikiEditor() {
     content: initialContentRef.current,
     editorProps: {
       attributes: { class: 'tiptap tiptap-rtl max-w-none focus:outline-none', lang: 'ar', dir: 'rtl' },
+      handleDOMEvents: {
+        dragstart: (_view, event) => {
+          if ((event.target as HTMLElement | null)?.closest('table')) {
+            event.preventDefault()
+            return true
+          }
+          return false
+        },
+      },
     },
   }, [])
 

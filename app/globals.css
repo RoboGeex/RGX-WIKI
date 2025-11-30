@@ -139,10 +139,16 @@ html {
 .tiptap th,
 .tiptap td {
   border: 1px solid hsl(var(--border));
-  padding: 0.75rem 0.9rem;
+  padding: 1rem 1.25rem;
   vertical-align: middle;
   text-align: center;
   background: hsl(var(--card));
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+.tiptap thead th {
+  font-size: 1.1rem;
+  letter-spacing: 0.01em;
 }
 .tiptap tbody tr:nth-child(even) td {
   background: rgba(148, 163, 184, 0.08);

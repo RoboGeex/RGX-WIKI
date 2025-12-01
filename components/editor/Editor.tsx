@@ -855,6 +855,17 @@ export default function WikiEditor() {
         loadedLessonKeyRef.current = cacheKey
 
         const body = Array.isArray(lesson?.body) ? lesson.body : []
+        const hasArabicContent = body.some((block: any) => {
+          if (!block || typeof block !== 'object') return false
+          return Boolean(
+            (typeof block.title_ar === 'string' && block.title_ar.trim()) ||
+            (typeof block.caption_ar === 'string' && block.caption_ar.trim()) ||
+            (typeof block.html_ar === 'string' && block.html_ar.trim()) ||
+            (typeof block.ar === 'string' && block.ar.trim()) ||
+            (Array.isArray(block.items_ar) && block.items_ar.length > 0) ||
+            block.json_ar
+          )
+        })
         const docEn = bodyToDocument(body, 'en')
         const docAr = bodyToDocument(body, 'ar')
 
@@ -866,7 +877,7 @@ export default function WikiEditor() {
         editorAr.commands.setContent(docAr, { emitUpdate: false })
         setTimeout(() => { syncingArRef.current = false }, 0)
 
-        arabicDirtyRef.current = false
+        arabicDirtyRef.current = hasArabicContent
         forceArabicDirtyRender((prev) => !prev)
         setStatus((prev) => prev === 'Failed to load lesson content.' ? '' : prev)
 

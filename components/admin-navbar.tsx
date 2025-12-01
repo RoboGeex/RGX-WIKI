@@ -1,8 +1,9 @@
 "use client";
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
-import { Layout, Edit3 } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Layout, Edit3, LogOut } from 'lucide-react'
+import { clearDeveloperId } from '@/components/editor/dev-identity'
 // Note: We can't import server-side functions in client components
 
 interface AdminNavbarProps {
@@ -12,10 +13,17 @@ interface AdminNavbarProps {
 
 export default function AdminNavbar({ currentWikiSlug, currentKitSlug }: AdminNavbarProps) {
   const pathname = usePathname()
-  
+  const router = useRouter()
+
   const isDashboard = pathname === '/dashboard'
   const isEditor = pathname.startsWith('/editor')
-  
+
+  const handleLogout = () => {
+    clearDeveloperId()
+    router.push('/dashboard')
+    router.refresh()
+  }
+
   return (
     <nav className="bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur">
       <div className="relative max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -60,6 +68,14 @@ export default function AdminNavbar({ currentWikiSlug, currentKitSlug }: AdminNa
             <span className="text-sm font-medium">Editor</span>
           </Link>
 
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <LogOut size={16} />
+            <span className="text-sm font-medium">Log out</span>
+          </button>
         </div>
       </div>
     </nav>

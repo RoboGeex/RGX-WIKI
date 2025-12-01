@@ -182,7 +182,7 @@ export default async function LessonPage(
       const html = locale === 'ar' ? (block.html_ar || block.html_en || '') : (block.html_en || block.html_ar || '')
       if (!html) return null
       return (
-        <div key={index} className="overflow-x-auto">
+        <div key={index} className="overflow-x-auto my-6">
           <article
             className="tiptap max-w-none"
             dangerouslySetInnerHTML={{ __html: html }}

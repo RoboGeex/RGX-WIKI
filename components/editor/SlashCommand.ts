@@ -296,9 +296,11 @@ function renderList(container: HTMLDivElement, { items, command, clientRect }: a
   container.appendChild(list)
   const rect = clientRect?.()
   if (rect) {
+    const scrollX = typeof window !== 'undefined' ? window.scrollX : 0
+    const scrollY = typeof window !== 'undefined' ? window.scrollY : 0
     container.style.position = 'absolute'
-    container.style.left = rect.left + 'px'
-    container.style.top = rect.bottom + 6 + 'px'
+    container.style.left = scrollX + rect.left + 'px'
+    container.style.top = scrollY + rect.bottom + 6 + 'px'
     container.style.zIndex = '90'
   }
 }

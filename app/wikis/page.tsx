@@ -44,7 +44,11 @@ export default function WikisLandingPage() {
                   <div className="space-y-1">
                     <p className="text-xs uppercase tracking-[0.4em] text-white/60">Wiki</p>
                     <h2 className="text-2xl font-bold">{displayName}</h2>
-                    <p className="text-sm text-white/70">{wiki.grade || 'All grades'}</p>
+                    <p className="text-sm text-white/70">
+                      {'grade' in wiki && typeof (wiki as any).grade === 'string'
+                        ? (wiki as any).grade
+                        : 'All grades'}
+                    </p>
                   </div>
                   <div className="pt-4 text-sm text-white/80 flex items-center justify-between">
                     <span>{hasDedicatedDomain ? normalizedDomain : `${wiki.slug}.hub`}</span>

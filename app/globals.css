@@ -129,6 +129,7 @@ html {
   margin: 0;
   border: 2px solid #000000;
   border-radius: 0.75rem;
+  overflow: hidden;
   background: hsl(var(--card));
   box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.25);
 }

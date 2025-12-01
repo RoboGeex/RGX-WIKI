@@ -73,9 +73,19 @@ export function middleware(request: NextRequest) {
     const locale = wiki.defaultLocale || 'en'
     if (rest.length === 0) {
       url.pathname = `/${locale}/${slug}`
-    } else {
-      url.pathname = `/${locale}/${slug}/${rest.join('/')}`
+      return NextResponse.rewrite(url)
     }
+    const pathLocale = rest[0]
+    if (pathLocale === 'en' || pathLocale === 'ar') {
+      const remainder = rest.slice(1).join('/')
+      if (remainder) {
+        url.pathname = `/${pathLocale}/${slug}/${remainder}`
+      } else {
+        url.pathname = `/${pathLocale}/${slug}`
+      }
+      return NextResponse.rewrite(url)
+    }
+    url.pathname = `/${locale}/${slug}/${rest.join('/')}`
     return NextResponse.rewrite(url)
   }
 

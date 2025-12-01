@@ -19,6 +19,11 @@ export default async function EditorWikiDashboardPage({
   const wiki = getWiki(wikiSlug)
   if (!wiki) notFound()
 
+  const primaryDomain = (wiki.domains || []).find((domain) => typeof domain === 'string' && domain.trim().length > 0)
+  const sanitizedDomain = primaryDomain?.replace(/^https?:\/\//, '').replace(/\/$/, '')
+  const fallbackDomain = `${wiki.slug}.robogeex.com`
+  const viewBaseUrl = `https://${sanitizedDomain || fallbackDomain}`
+
   const kits = getKits(wiki.slug)
   const kitSummaries = kits.length
     ? kits.map((kit) => ({ slug: kit.slug, title: kit.title_en }))
@@ -90,6 +95,7 @@ export default async function EditorWikiDashboardPage({
               difficulty,
               order,
             }))}
+            viewBaseUrl={viewBaseUrl}
           />
         </section>
       ))}

@@ -19,6 +19,7 @@ type Props = {
   kitSlug: string
   defaultLocale: string
   lessons: LessonSummary[]
+  viewBaseUrl?: string
 }
 
 function assignSequentialOrder(list: LessonSummary[]): LessonSummary[] {
@@ -66,7 +67,7 @@ function ordersMatch(a: LessonSummary[], b: LessonSummary[]): boolean {
   return true
 }
 
-export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, lessons }: Props) {
+export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, lessons, viewBaseUrl }: Props) {
   const [items, setItems] = useState(() => normalizeLessons(lessons))
   const [draggingSlug, setDraggingSlug] = useState<string | null>(null)
   const [indicator, setIndicator] = useState<{ slug: string | null; position: "before" | "after" | "end" } | null>(null)
@@ -375,7 +376,9 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
                 Edit
               </Link>
               <Link
-                href={`/${defaultLocale}/${kitSlug}/lesson/${lesson.slug}`}
+                href={viewBaseUrl
+                  ? `${viewBaseUrl.replace(/\/$/, '')}/${defaultLocale}/${lesson.slug}`
+                  : `/${defaultLocale}/${kitSlug}/lesson/${lesson.slug}`}
                 target="_blank"
                 className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
               >

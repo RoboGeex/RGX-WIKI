@@ -10,6 +10,15 @@ function getWikiByDomain(host?: string | null) {
   )
 }
 
+function getWikiBySlug(slug?: string | null) {
+  if (!slug) return undefined
+  const trimmed = slug.trim()
+  if (!trimmed) return undefined
+  return (wikisData as any[]).find((w) => w.slug === trimmed)
+}
+
+const HUB_DOMAIN = 'wiki.robogeex.com'
+
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
@@ -38,6 +47,35 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
     url.pathname = `/editor${pathname}`
+    return NextResponse.rewrite(url)
+  }
+
+  if (host === HUB_DOMAIN) {
+    const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads']
+    if (passthroughPaths.some((p) => pathname.startsWith(p))) {
+      return NextResponse.next()
+    }
+
+    const segments = pathname.split('/').filter(Boolean)
+    if (segments.length === 0) {
+      url.pathname = '/wikis'
+      return NextResponse.rewrite(url)
+    }
+
+    const slug = segments[0]
+    const wiki = getWikiBySlug(slug)
+    if (!wiki) {
+      url.pathname = '/wikis'
+      return NextResponse.rewrite(url)
+    }
+
+    const rest = segments.slice(1)
+    const locale = wiki.defaultLocale || 'en'
+    if (rest.length === 0) {
+      url.pathname = `/${locale}/${slug}`
+    } else {
+      url.pathname = `/${locale}/${slug}/${rest.join('/')}`
+    }
     return NextResponse.rewrite(url)
   }
 

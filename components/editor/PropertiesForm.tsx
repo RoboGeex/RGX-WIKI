@@ -318,17 +318,9 @@ export default function PropertiesForm() {
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Wiki</label>
-            <select
-              className="w-full border rounded px-2 py-1"
-              value={meta.wikiSlug}
-              onChange={(e) => updateMeta({ wikiSlug: e.target.value })}
-            >
-              {wikis.map((wiki) => (
-                <option key={wiki.slug} value={wiki.slug}>
-                  {wiki.displayName || wiki.slug}
-                </option>
-              ))}
-            </select>
+            <div className="w-full border rounded px-3 py-2 bg-gray-50 text-sm text-gray-800 cursor-not-allowed select-none">
+              {wikis.find((wiki) => wiki.slug === meta.wikiSlug)?.displayName || meta.wikiSlug}
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs text-gray-500 mb-1">

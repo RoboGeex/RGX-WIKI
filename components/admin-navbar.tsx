@@ -20,8 +20,12 @@ export default function AdminNavbar({ currentWikiSlug, currentKitSlug }: AdminNa
 
   const handleLogout = () => {
     clearDeveloperId()
-    router.push('/dashboard')
-    router.refresh()
+    if (typeof window !== 'undefined') {
+      window.location.href = '/editor'
+    } else {
+      router.push('/editor')
+      router.refresh()
+    }
   }
 
   return (

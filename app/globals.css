@@ -141,11 +141,6 @@ html {
 .tiptap table colgroup col {
   width: auto !important;
 }
-.tiptap-table-wrapper {
-  border: 2px solid #000000;
-  border-radius: 0.75rem;
-  overflow: hidden;
-}
 .tiptap thead th {
   background: rgba(240, 93, 78, 0.12);
   color: hsl(var(--foreground));

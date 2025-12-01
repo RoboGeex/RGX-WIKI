@@ -27,6 +27,22 @@ function loadKits(): Kit[] {
   return loadJsonFile<Kit[]>('kits.json', kitsData as Kit[])
 }
 
+function createKitFromWiki(wiki: Wiki): Kit {
+  const displayName = wiki.displayName || wiki.slug
+  const overview = wiki.grade
+    ? `${wiki.grade} level learning content for ${displayName}.`
+    : `Learning content for ${displayName}.`
+  return {
+    slug: wiki.slug,
+    wikiSlug: wiki.slug,
+    title_en: displayName,
+    title_ar: displayName,
+    heroImage: wiki.picture || '/images/robogeex-logo.png',
+    overview_en: overview,
+    overview_ar: overview,
+  }
+}
+
 function wikiSlugForKit(kitSlug: string): string {
   const kit = loadKits().find(k => k.slug === kitSlug)
   return kit?.wikiSlug || kitSlug
@@ -51,7 +67,13 @@ export function getWikiByDomain(host?: string | null) {
 }
 export function getKits(wikiSlug?: string): Kit[] {
   const kits = loadKits()
-  if (wikiSlug) return kits.filter(k => k.wikiSlug === wikiSlug)
+  if (wikiSlug) {
+    const matches = kits.filter(k => k.wikiSlug === wikiSlug)
+    if (matches.length > 0) return matches
+    const wiki = getWiki(wikiSlug)
+    if (wiki) return [createKitFromWiki(wiki)]
+    return []
+  }
   return kits
 }
 
@@ -62,7 +84,11 @@ export function getKit(slug: string, wikiSlug?: string) {
     return kits.find(k => k.slug === slug && k.wikiSlug === wikiSlug);
   }
   // Otherwise, just find the first kit with the given slug.
-  return kits.find(k => k.slug === slug);
+  const found = kits.find(k => k.slug === slug);
+  if (found) return found
+  const wiki = getWiki(slug) || (wikiSlug ? getWiki(wikiSlug) : undefined)
+  if (wiki) return createKitFromWiki(wiki)
+  return undefined;
 }
 
 export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boolean }): Promise<Lesson[]> {

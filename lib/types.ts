@@ -2,6 +2,8 @@ export interface Wiki {
   slug: string;
   displayName: string;
   domains?: string[];
+  grade?: string;
+  picture?: string;
   defaultLocale?: string;
   defaultLessonSlug?: string;
   resourcesUrl?: string;

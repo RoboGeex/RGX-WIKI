@@ -24,7 +24,7 @@ export default function WikisLandingPage() {
                 className="mx-auto h-24 md:h-28 drop-shadow-[0_20px_60px_rgba(240,93,78,0.45)]"
               />
               <p className="mt-4 text-sm uppercase tracking-[0.4em] text-white/60 opacity-80 animate-[pulse_6s_ease-in-out_infinite]">
-                Digital Learning Universe
+                Innovation In Your Hand
               </p>
             </div>
           </div>

@@ -30,12 +30,12 @@ export default function WikiCard({ href, displayName, gradeLabel, domainLabel, i
       href={href}
       onMouseMove={handlePointerMove}
       onMouseLeave={handlePointerLeave}
-      className="group relative overflow-hidden rounded-3xl border border-white/5 bg-white/5 px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition duration-300 hover:border-[#f05d4e]/60 hover:bg-[#f05d4e]/10 hover:-translate-y-1"
+      className="group relative overflow-hidden rounded-3xl border border-white/5 bg-white/5 px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition duration-300 hover:border-[#f05d4e]/50 hover:bg-white/10 hover:-translate-y-1"
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{
-          background: `radial-gradient(350px circle at ${blob.x}% ${blob.y}%, rgba(255,255,255,0.25), transparent 70%)`,
+          background: `radial-gradient(200px circle at ${blob.x}% ${blob.y}%, rgba(240,93,78,0.35), transparent 70%)`,
           opacity: blob.active ? 1 : 0,
         }}
       />

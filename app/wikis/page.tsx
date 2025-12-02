@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { getWikis } from '@/lib/data'
+import WikiCard from '@/components/wiki-card'
 
 const gradient = 'bg-[radial-gradient(circle_at_top,_#f05d4e_0%,_#3b0500_45%,_#060505_100%)]'
 
@@ -49,33 +49,18 @@ export default function WikisLandingPage() {
               : `/${wiki.slug}/${locale}/${defaultLessonSlug}`
 
             return (
-              <Link
+              <WikiCard
                 key={wiki.slug}
                 href={href}
-                className="group relative overflow-hidden rounded-3xl border border-white/5 bg-white/5 px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition duration-300 hover:border-[#f05d4e]/60 hover:bg-[#f05d4e]/10 hover:-translate-y-1"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition" />
-                <div className="relative space-y-4">
-                  <div className="h-12 w-12 rounded-2xl bg-[#f05d4e]/20 text-[#f05d4e] flex items-center justify-center text-lg font-semibold animate-[pulse_6s_ease-in-out_infinite]">
-                    {displayName.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-[0.4em] text-white/60">Wiki</p>
-                    <h2 className="text-2xl font-bold text-white">{displayName}</h2>
-                    <p className="text-sm text-white/70">
-                      {'grade' in wiki && typeof (wiki as any).grade === 'string'
-                        ? (wiki as any).grade
-                        : 'All grades'}
-                    </p>
-                  </div>
-                  <div className="pt-4 text-sm text-white/80 flex items-center justify-between">
-                    <span className="font-mono text-xs tracking-wider text-white/60">
-                      {hasDedicatedDomain ? normalizedDomain : `${wiki.slug}.hub`}
-                    </span>
-                    <span className="text-[#f05d4e] font-semibold group-hover:translate-x-1 transition">Visit →</span>
-                  </div>
-                </div>
-              </Link>
+                displayName={displayName}
+                gradeLabel={
+                  'grade' in wiki && typeof (wiki as any).grade === 'string'
+                    ? (wiki as any).grade
+                    : 'All grades'
+                }
+                domainLabel={hasDedicatedDomain ? normalizedDomain || '' : `${wiki.slug}.hub`}
+                initials={displayName.slice(0, 2).toUpperCase()}
+              />
             )
           })}
         </div>

@@ -62,21 +62,31 @@ export function middleware(request: NextRequest) {
       return NextResponse.rewrite(url)
     }
 
-    const slug = segments[0]
-    const wiki = getWikiBySlug(slug)
+    let localeSegment: string | undefined
+    let slug = segments[0]
+    let rest = segments.slice(1)
+    let wiki = getWikiBySlug(slug)
+
+    if (!wiki && (slug === 'en' || slug === 'ar') && rest.length > 0) {
+      localeSegment = slug
+      slug = rest[0]
+      rest = rest.slice(1)
+      wiki = getWikiBySlug(slug)
+    }
+
     if (!wiki) {
       url.pathname = '/wikis'
       return NextResponse.rewrite(url)
     }
 
-    const rest = segments.slice(1)
-    const locale = wiki.defaultLocale || 'en'
+    const locale = localeSegment || wiki.defaultLocale || 'en'
     if (rest.length === 0) {
       url.pathname = `/${locale}/${slug}`
       return NextResponse.rewrite(url)
     }
+
     const pathLocale = rest[0]
-    if (pathLocale === 'en' || pathLocale === 'ar') {
+    if (!localeSegment && (pathLocale === 'en' || pathLocale === 'ar')) {
       const remainder = rest.slice(1).join('/')
       if (remainder) {
         url.pathname = `/${pathLocale}/${slug}/${remainder}`
@@ -85,6 +95,7 @@ export function middleware(request: NextRequest) {
       }
       return NextResponse.rewrite(url)
     }
+
     url.pathname = `/${locale}/${slug}/${rest.join('/')}`
     return NextResponse.rewrite(url)
   }

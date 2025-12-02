@@ -18,6 +18,7 @@ function getWikiBySlug(slug?: string | null) {
 }
 
 const HUB_DOMAIN = 'wiki.robogeex.com'
+const hasDedicatedDomain = (wiki: any) => Array.isArray(wiki?.domains) && wiki.domains.length > 0
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
@@ -77,6 +78,14 @@ export function middleware(request: NextRequest) {
     if (!wiki) {
       url.pathname = '/wikis'
       return NextResponse.rewrite(url)
+    }
+
+    if (hasDedicatedDomain(wiki)) {
+      const targetDomain = wiki.domains[0]
+      const locale = localeSegment || wiki.defaultLocale || 'en'
+      const remainder = rest.join('/')
+      const destinationPath = remainder ? `${locale}/${remainder}` : `${locale}/getting-started`
+      return NextResponse.redirect(`https://${targetDomain}/${destinationPath}`)
     }
 
     const locale = localeSegment || wiki.defaultLocale || 'en'

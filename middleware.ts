@@ -58,6 +58,14 @@ export function middleware(request: NextRequest) {
     }
 
     const segments = pathname.split('/').filter(Boolean)
+
+    const firstSegment = segments[0]
+    const secondSegment = segments[1]
+    const isLocale = firstSegment === 'en' || firstSegment === 'ar'
+    if (isLocale && secondSegment === 'unlock') {
+      return NextResponse.next()
+    }
+
     if (segments.length === 0) {
       url.pathname = '/wikis'
       return NextResponse.rewrite(url)
@@ -76,6 +84,9 @@ export function middleware(request: NextRequest) {
     }
 
     if (!wiki) {
+      if (localeSegment) {
+        return NextResponse.next()
+      }
       url.pathname = '/wikis'
       return NextResponse.rewrite(url)
     }

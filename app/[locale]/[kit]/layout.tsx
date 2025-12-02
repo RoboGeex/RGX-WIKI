@@ -2,6 +2,8 @@ import KitNavbar from '@/components/kit-navbar'
 import { getKit, getLessons, getWiki } from '@/lib/data'
 import { redirect } from 'next/navigation'
 import type { Locale } from '@/lib/i18n'
+import { headers } from 'next/headers'
+import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
 
 export default async function KitLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale; kit: string } }
@@ -16,6 +18,8 @@ export default async function KitLayout(
   }
 
   const lessons = await getLessons(kit)
+  const hostHeader = headers().get('host')
+  const isHubDomain = normalizeHost(hostHeader) === HUB_DOMAIN
 
   return (
     <div className="min-h-screen bg-[#eef2f1]">
@@ -25,6 +29,7 @@ export default async function KitLayout(
         lessons={lessons}
         defaultLessonSlug={wiki?.defaultLessonSlug}
         resourcesUrl={wiki?.resourcesUrl}
+        isHubDomain={isHubDomain}
       />
       <div className="mx-auto w-full max-w-[1920px] px-6 sm:px-10 lg:px-16 pt-16 pb-12 lg:pt-20">
         {children}

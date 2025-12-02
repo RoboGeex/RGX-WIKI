@@ -51,6 +51,7 @@ export default function KitShell({ locale, kitSlug, modules, lessons, defaultLes
           lessons={lessons}
           defaultLessonSlug={defaultLessonSlug}
           resourcesUrl={resourcesUrl}
+          isHubDomain={false}
           onLocaleChange={handleLocaleChange}
           onMenuClick={() => setSidebarOpen(true)}
         />

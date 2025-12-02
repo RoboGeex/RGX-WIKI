@@ -26,9 +26,11 @@ export default function WikisLandingPage() {
             const primaryDomain = (wiki.domains || []).find((domain) => domain && domain.trim())
             const hasDedicatedDomain = Boolean(primaryDomain && primaryDomain.trim().length)
             const normalizedDomain = primaryDomain?.replace(/https?:\/\//i, '').replace(/\/$/, '')
+            const locale = wiki.defaultLocale || 'en'
+            const defaultLessonSlug = wiki.defaultLessonSlug || 'getting-started'
             const href = hasDedicatedDomain
               ? `https://${normalizedDomain}`
-              : `/${(wiki.defaultLocale || 'en')}/${wiki.slug}`
+              : `/${wiki.slug}/${locale}/${defaultLessonSlug}`
 
             return (
               <Link

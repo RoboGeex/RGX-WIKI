@@ -8,6 +8,7 @@ import { Locale, t } from '../lib/i18n'
 import { setStoredLocale } from '../lib/unlock'
 import SearchPanel from './search-panel'
 import type { Lesson } from '../lib/types'
+import { buildDefaultLessonHref, buildKitHomeHref, buildLessonHref, buildResourcesHref } from '@/lib/wikiPaths'
 
 interface Props {
   locale: Locale
@@ -15,6 +16,7 @@ interface Props {
   lessons: Lesson[]
   defaultLessonSlug?: string
   resourcesUrl?: string
+  isHubDomain?: boolean
   onLocaleChange: (l: Locale) => void
   onMenuClick: () => void
 }
@@ -25,6 +27,7 @@ export default function Navbar({
   lessons,
   defaultLessonSlug,
   resourcesUrl,
+  isHubDomain = false,
   onLocaleChange,
   onMenuClick,
 }: Props) {
@@ -53,13 +56,21 @@ export default function Navbar({
 
   const sortedLessons = useMemo(() => {
     return lessons
-      .filter(lesson => lesson.slug !== 'getting-started')
+      .filter((lesson) => lesson.slug !== 'getting-started')
       .sort((a, b) => a.order - b.order)
   }, [lessons])
 
-  const gettingStartedHref = `/${safeLocale}/getting-started`
-  const resourcesHref = resourcesUrl || `/${safeLocale}/${kitSlug}/resources`
+  const gettingStartedHref = buildDefaultLessonHref({
+    locale: safeLocale,
+    kitSlug,
+    defaultLessonSlug,
+    isHubDomain,
+  })
+  const kitHomeHref = buildKitHomeHref({ locale: safeLocale, kitSlug, isHubDomain })
+  const resourcesHref = resourcesUrl || buildResourcesHref({ locale: safeLocale, kitSlug, isHubDomain })
   const isLessonsPage = pathname?.includes(`/lesson/`) && pathname !== gettingStartedHref
+  const buildLessonLink = (slug: string) =>
+    buildLessonHref({ locale: safeLocale, kitSlug, lessonSlug: slug, isHubDomain })
 
   return (
     <nav className="bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur">
@@ -72,7 +83,7 @@ export default function Navbar({
           >
             <Menu size={18} />
           </button>
-          <Link href={`/${safeLocale}/${kitSlug}`} className="flex items-center gap-2">
+          <Link href={kitHomeHref} className="flex items-center gap-2">
             <img src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} />
             <span className="sr-only">RoboGeex Academy</span>
           </Link>
@@ -100,7 +111,7 @@ export default function Navbar({
                   {sortedLessons.map((lesson) => (
                     <Link
                       key={lesson.id}
-                      href={`/${safeLocale}/${lesson.slug}`}
+                      href={buildLessonLink(lesson.slug)}
                       className="block px-3 py-2 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition"
                       onClick={() => setLessonsOpen(false)}
                     >
@@ -136,6 +147,7 @@ export default function Navbar({
                 query={query}
                 locale={safeLocale}
                 kitSlug={kitSlug}
+                isHubDomain={isHubDomain}
                 onClose={() => setSearchOpen(false)}
               />
             )}
@@ -170,6 +182,7 @@ export default function Navbar({
               query={query}
               locale={safeLocale}
               kitSlug={kitSlug}
+              isHubDomain={isHubDomain}
               onClose={() => setSearchOpen(false)}
             />
           </div>

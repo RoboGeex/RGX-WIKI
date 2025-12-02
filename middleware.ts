@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import wikisData from '@/data/wikis.json'
+import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
 
 function getWikiByDomain(host?: string | null) {
   const normalised = host?.split(':')[0].toLowerCase()
@@ -17,13 +18,12 @@ function getWikiBySlug(slug?: string | null) {
   return (wikisData as any[]).find((w) => w.slug === trimmed)
 }
 
-const HUB_DOMAIN = 'wiki.robogeex.com'
 const hasDedicatedDomain = (wiki: any) => Array.isArray(wiki?.domains) && wiki.domains.length > 0
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
-  const host = hostname.split(':')[0].toLowerCase()
+  const host = normalizeHost(hostname)
   const { pathname } = request.nextUrl
 
   if ((pathname.startsWith('/editor') || pathname.startsWith('/dashboard')) && host !== 'admin.robogeex.com') {
@@ -99,23 +99,60 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(`https://${targetDomain}/${destinationPath}`)
     }
 
-    const locale = localeSegment || wiki.defaultLocale || 'en'
-    if (rest.length === 0) {
-      url.pathname = `/${locale}/${slug}`
-      return NextResponse.rewrite(url)
-    }
+    const defaultLocale = wiki.defaultLocale || 'en'
+    const defaultLesson = wiki.defaultLessonSlug || 'getting-started'
+    const isLocaleSegment = localeSegment === 'en' || localeSegment === 'ar'
 
-    const pathLocale = rest[0]
-    if (!localeSegment && (pathLocale === 'en' || pathLocale === 'ar')) {
-      const remainder = rest.slice(1).join('/')
-      if (remainder) {
-        url.pathname = `/${pathLocale}/${slug}/${remainder}`
-      } else {
-        url.pathname = `/${pathLocale}/${slug}`
+    if (!localeSegment) {
+      if (rest.length === 0) {
+        url.pathname = `/${slug}/${defaultLocale}/${defaultLesson}`
+        return NextResponse.redirect(url)
       }
-      return NextResponse.rewrite(url)
+
+      const potentialLocale = rest[0]
+      if (potentialLocale === 'en' || potentialLocale === 'ar') {
+        const remainderSegments = rest.slice(1)
+        if (remainderSegments.length === 0) {
+          url.pathname = `/${slug}/${potentialLocale}/${defaultLesson}`
+          return NextResponse.redirect(url)
+        }
+        const firstRemainder = remainderSegments[0]
+        if (firstRemainder === 'resources') {
+          url.pathname = `/${potentialLocale}/${slug}/resources`
+          return NextResponse.rewrite(url)
+        }
+        const lessonPath =
+          firstRemainder === 'lesson' ? remainderSegments.slice(1).join('/') : remainderSegments.join('/')
+        url.pathname = `/${potentialLocale}/${slug}/lesson/${lessonPath || defaultLesson}`
+        return NextResponse.rewrite(url)
+      }
+
+      const normalizedRemainder = rest.join('/')
+      url.pathname = `/${slug}/${defaultLocale}/${normalizedRemainder || defaultLesson}`
+      return NextResponse.redirect(url)
     }
 
+    if (isLocaleSegment) {
+      const safeLocale = localeSegment
+      if (rest.length === 0) {
+        url.pathname = `/${slug}/${safeLocale}/${defaultLesson}`
+        return NextResponse.redirect(url)
+      }
+      const firstSegment = rest[0]
+      if (firstSegment === 'lesson') {
+        const lessonPath = rest.slice(1).join('/') || defaultLesson
+        url.pathname = `/${slug}/${safeLocale}/${lessonPath}`
+        return NextResponse.redirect(url)
+      }
+      if (firstSegment === 'resources') {
+        url.pathname = `/${slug}/${safeLocale}/resources`
+        return NextResponse.redirect(url)
+      }
+      url.pathname = `/${slug}/${safeLocale}/${rest.join('/')}`
+      return NextResponse.redirect(url)
+    }
+
+    const locale = defaultLocale
     url.pathname = `/${locale}/${slug}/${rest.join('/')}`
     return NextResponse.rewrite(url)
   }

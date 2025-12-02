@@ -3,14 +3,16 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { Lesson } from '@/lib/types'
 import type { Locale } from '@/lib/i18n'
+import { buildLessonHref } from '@/lib/wikiPaths'
 
 export default function SearchPanel(
-  { query, locale, onClose, kitSlug }: 
+  { query, locale, onClose, kitSlug, isHubDomain }: 
   {
     query: string; 
     locale: Locale; 
     onClose: () => void; 
     kitSlug: string; 
+    isHubDomain?: boolean;
   }
 ) {
   const [results, setResults] = useState<Lesson[]>([]);
@@ -41,7 +43,7 @@ export default function SearchPanel(
         <div className="p-4 text-sm text-gray-500">No results</div>
       )}
       {results.map(l => {
-        const href = `/${locale}/${l.slug}`;
+        const href = buildLessonHref({ locale, kitSlug, lessonSlug: l.slug, isHubDomain });
         return (
           <Link
             key={l.id}

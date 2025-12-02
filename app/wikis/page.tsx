@@ -14,10 +14,6 @@ export default function WikisLandingPage() {
         <header className="space-y-6 text-center">
           <div className="relative flex justify-center">
             <div className="absolute w-60 h-60 bg-[#f05d4e]/30 blur-3xl rounded-full -translate-y-6 animate-[spin_25s_linear_infinite]" />
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/30 px-5 py-2 backdrop-blur-2xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
-              <span className="text-sm uppercase tracking-[0.4em] text-white/70">RoboGeex</span>
-              <span className="text-xs font-semibold text-white/60">Academy Hub</span>
-            </div>
           </div>
           <div className="relative mx-auto w-full max-w-xl">
             <div className="absolute inset-0 bg-gradient-to-r from-[#f05d4e]/30 to-transparent blur-2xl rounded-[36px] animate-[pulse_8s_ease-in-out_infinite]" />
@@ -25,7 +21,7 @@ export default function WikisLandingPage() {
               <img
                 src="/images/robogeex-logo.png"
                 alt="RoboGeex Academy Logo"
-                className="mx-auto h-32 md:h-36 drop-shadow-[0_20px_60px_rgba(240,93,78,0.45)]"
+                className="mx-auto h-24 md:h-28 drop-shadow-[0_20px_60px_rgba(240,93,78,0.45)]"
               />
               <p className="mt-4 text-sm uppercase tracking-[0.4em] text-white/60 opacity-80 animate-[pulse_6s_ease-in-out_infinite]">
                 Digital Learning Universe
@@ -36,16 +32,8 @@ export default function WikisLandingPage() {
             Discover every <span className="text-[#f05d4e]">Learning Wiki</span>
           </h1>
           <p className="text-lg text-white/70 max-w-3xl mx-auto">
-            Choose a kit to explore lessons, activities, and teacher resources. Ziggy & Clicky have dedicated domains; everything else lives here on the hub.
+            Choose a kit to explore lessons, activities, and teacher resources across the RoboGeex universe.
           </p>
-          <div className="flex justify-center gap-4 text-sm">
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur">
-              <span className="text-white/70">Primary</span> <span className="font-semibold text-white">#f05d4e</span>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur">
-              <span className="text-white/70">Secondary</span> <span className="font-semibold text-white">#1f1f1f</span>
-            </div>
-          </div>
         </header>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -1,21 +1,35 @@
 import Link from 'next/link'
 import { getWikis } from '@/lib/data'
 
-const gradient = 'bg-[radial-gradient(circle_at_top,_#f05d4e_0%,_#ff9a8f_40%,_#1f1f1f_100%)]'
+const gradient = 'bg-[radial-gradient(circle_at_top,_#f05d4e_0%,_#3b0500_45%,_#060505_100%)]'
 
 export default function WikisLandingPage() {
   const wikis = getWikis()
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white relative overflow-hidden">
-      <div className={`absolute inset-0 opacity-60 blur-3xl ${gradient}`} />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#1f1f1f]/60 via-transparent to-[#0c0c0c]" />
+    <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden">
+      <div className={`absolute inset-0 opacity-80 blur-[160px] ${gradient} animate-[pulse_9s_ease-in-out_infinite]`} />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-[#090909]/80 to-black" />
       <div className="relative mx-auto max-w-6xl px-6 py-16 space-y-16">
         <header className="space-y-6 text-center">
-          <div className="flex justify-center">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/5 px-5 py-2 backdrop-blur">
-              <img src="/images/robogeex-logo.png" alt="RoboGeex Academy" className="h-8 w-auto" />
+          <div className="relative flex justify-center">
+            <div className="absolute w-60 h-60 bg-[#f05d4e]/30 blur-3xl rounded-full -translate-y-6 animate-[spin_25s_linear_infinite]" />
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/30 px-5 py-2 backdrop-blur-2xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
               <span className="text-sm uppercase tracking-[0.4em] text-white/70">RoboGeex</span>
+              <span className="text-xs font-semibold text-white/60">Academy Hub</span>
+            </div>
+          </div>
+          <div className="relative mx-auto w-full max-w-xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-[#f05d4e]/30 to-transparent blur-2xl rounded-[36px] animate-[pulse_8s_ease-in-out_infinite]" />
+            <div className="relative rounded-[36px] border border-white/10 bg-black/40 px-10 py-8 backdrop-blur-2xl shadow-[0_25px_80px_rgba(0,0,0,0.6)]">
+              <img
+                src="/images/robogeex-logo.png"
+                alt="RoboGeex Academy Logo"
+                className="mx-auto h-32 md:h-36 drop-shadow-[0_20px_60px_rgba(240,93,78,0.45)]"
+              />
+              <p className="mt-4 text-sm uppercase tracking-[0.4em] text-white/60 opacity-80 animate-[pulse_6s_ease-in-out_infinite]">
+                Digital Learning Universe
+              </p>
             </div>
           </div>
           <h1 className="text-5xl md:text-6xl font-black tracking-tight">
@@ -50,11 +64,11 @@ export default function WikisLandingPage() {
               <Link
                 key={wiki.slug}
                 href={href}
-                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/10 px-6 py-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl transition hover:border-[#f05d4e]/50 hover:bg-white/15"
+                className="group relative overflow-hidden rounded-3xl border border-white/5 bg-white/5 px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition duration-300 hover:border-[#f05d4e]/60 hover:bg-[#f05d4e]/10 hover:-translate-y-1"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition" />
+                <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition" />
                 <div className="relative space-y-4">
-                  <div className="h-12 w-12 rounded-2xl bg-[#f05d4e]/20 text-[#f05d4e] flex items-center justify-center text-lg font-semibold">
+                  <div className="h-12 w-12 rounded-2xl bg-[#f05d4e]/20 text-[#f05d4e] flex items-center justify-center text-lg font-semibold animate-[pulse_6s_ease-in-out_infinite]">
                     {displayName.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="space-y-1">

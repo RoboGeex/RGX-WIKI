@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/navbar'
 import Sidebar from '@/components/sidebar'
 import type { Locale } from '@/lib/i18n'
@@ -22,6 +22,7 @@ export default function KitShell({ locale, kitSlug, modules, lessons, defaultLes
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (!pathname) return
@@ -39,7 +40,9 @@ export default function KitShell({ locale, kitSlug, modules, lessons, defaultLes
 
   const handleLocaleChange = (l: Locale) => {
     setStoredLocale(l)
-    router.push(pathname.replace(`/${locale}/`, `/${l}/`))
+    const updated = pathname.replace(`/${locale}/`, `/${l}/`)
+    const query = searchParams?.toString()
+    router.push(query ? `${updated}?${query}` : updated)
   }
 
   return (

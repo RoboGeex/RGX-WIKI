@@ -25,8 +25,7 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const host = normalizeHost(hostname)
   const { pathname } = request.nextUrl
-  const allowLocalAdmin =
-    process.env.LOCAL_ADMIN === '1' && (host === 'localhost' || host === '127.0.0.1')
+  const allowLocalAdmin = host === 'localhost' || host === '127.0.0.1' || host === '::1'
 
   if ((pathname.startsWith('/editor') || pathname.startsWith('/dashboard')) && host !== 'admin.robogeex.com' && !allowLocalAdmin) {
     const adminUrl = new URL(pathname, 'https://admin.robogeex.com')

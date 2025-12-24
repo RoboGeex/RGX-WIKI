@@ -78,42 +78,48 @@ export default async function WikiDashboardPage({ params }: Params) {
                 No lessons yet for this wiki.
               </div>
             )}
-            {lessons.map((lesson) => (
-              <div
-                key={lesson.slug}
-                className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between shadow-sm"
-              >
-                <div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {lesson.title_en || lesson.title_ar || lesson.slug}
+            {lessons.map((lesson) => {
+              const isDraft = lesson.status && lesson.status !== 'published'
+              const viewPath = `/${wiki.defaultLocale || 'en'}/${kit.slug}/lesson/${lesson.slug}`
+              const previewSuffix = isDraft ? (viewPath.includes('?') ? '&preview=1' : '?preview=1') : ''
+              const viewHref = `${viewPath}${previewSuffix}`
+              return (
+                <div
+                  key={lesson.slug}
+                  className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between shadow-sm"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {lesson.title_en || lesson.title_ar || lesson.slug}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {lesson.duration_min} min · {lesson.difficulty}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {lesson.duration_min} min · {lesson.difficulty}
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/editor/lesson?wiki=${wiki.slug}&kit=${kit.slug}&slug=${lesson.slug}&id=${lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.title_ar || lesson.slug)}`}
+                      className="px-3 py-1.5 text-sm rounded-md border border-primary/40 text-primary hover:bg-primary/10"
+                    >
+                      Edit
+                    </Link>
+                    <Link
+                      href={`/editor/properties?wiki=${wiki.slug}&kit=${kit.slug}&slug=${lesson.slug}`}
+                      className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    >
+                      Properties
+                    </Link>
+                    <Link
+                      href={viewHref}
+                      className="px-3 py-1.5 text-sm rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
+                      target="_blank"
+                    >
+                      View
+                    </Link>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/editor/lesson?wiki=${wiki.slug}&kit=${kit.slug}&slug=${lesson.slug}&id=${lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.title_ar || lesson.slug)}`}
-                    className="px-3 py-1.5 text-sm rounded-md border border-primary/40 text-primary hover:bg-primary/10"
-                  >
-                    Edit
-                  </Link>
-                  <Link
-                    href={`/editor/properties?wiki=${wiki.slug}&kit=${kit.slug}&slug=${lesson.slug}`}
-                    className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                  >
-                    Properties
-                  </Link>
-                  <Link
-                    href={`/${wiki.defaultLocale || 'en'}/${kit.slug}/lesson/${lesson.slug}`}
-                    className="px-3 py-1.5 text-sm rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
-                    target="_blank"
-                  >
-                    View
-                  </Link>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
       ))}

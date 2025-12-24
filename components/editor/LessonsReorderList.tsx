@@ -12,6 +12,7 @@ type LessonSummary = {
   duration_min?: number
   difficulty?: string
   order?: number
+  status?: string
 }
 
 type Props = {
@@ -317,6 +318,12 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
         const isIndicatorBefore = indicator?.slug === lesson.slug && indicator.position === "before"
         const isIndicatorAfter = indicator?.slug === lesson.slug && indicator.position === "after"
         const isHovered = indicator?.slug === lesson.slug
+        const isDraft = lesson.status && lesson.status !== 'published'
+        const viewPath = viewBaseUrl
+          ? `${viewBaseUrl.replace(/\/$/, '')}/${defaultLocale}/${lesson.slug}`
+          : `/${defaultLocale}/${kitSlug}/lesson/${lesson.slug}`
+        const previewSuffix = isDraft ? (viewPath.includes('?') ? '&preview=1' : '?preview=1') : ''
+        const viewHref = `${viewPath}${previewSuffix}`
         
         const tileClasses = isDragging
           ? "border-primary/60 opacity-50 scale-95 ring-2 ring-primary/40 transform-gpu"
@@ -376,9 +383,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
                 Edit
               </Link>
               <Link
-                href={viewBaseUrl
-                  ? `${viewBaseUrl.replace(/\/$/, '')}/${defaultLocale}/${lesson.slug}`
-                  : `/${defaultLocale}/${kitSlug}/lesson/${lesson.slug}`}
+                href={viewHref}
                 target="_blank"
                 className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
               >

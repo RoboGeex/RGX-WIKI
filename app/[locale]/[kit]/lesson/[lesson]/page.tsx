@@ -15,16 +15,23 @@ import LessonToc from '@/components/lesson-toc'
 export const dynamic = 'force-dynamic'
 
 export default async function LessonPage(
-  { params }: { params: { locale: Locale; kit: string; lesson: string } }
+  {
+    params,
+    searchParams,
+  }: {
+    params: { locale: Locale; kit: string; lesson: string }
+    searchParams?: { preview?: string }
+  }
 ) {
   const { locale, kit, lesson: lessonSlug } = params
+  const preview = searchParams?.preview === '1' || searchParams?.preview === 'true'
 
   const kitData = getKit(kit)
   if (!kitData) {
     notFound()
   }
 
-  const lesson = await getLesson(kit, lessonSlug)
+  const lesson = await getLesson(kit, lessonSlug, { includeDrafts: preview })
 
   if (!lesson) {
     notFound()
@@ -303,8 +310,8 @@ export default async function LessonPage(
 
   const clientTocEntries = tocEntries.map((entry) => ({ ...entry }))
 
-  const prevLesson = await getPrevLesson(kit, lesson.slug)
-  const nextLesson = await getNextLesson(kit, lesson.slug)
+  const prevLesson = await getPrevLesson(kit, lesson.slug, { includeDrafts: preview })
+  const nextLesson = await getNextLesson(kit, lesson.slug, { includeDrafts: preview })
 
   const placeholder =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="Arial" font-size="32">Lesson cover</text></svg>'

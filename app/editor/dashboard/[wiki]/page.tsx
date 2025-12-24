@@ -86,7 +86,7 @@ export default async function EditorWikiDashboardPage({
             wikiSlug={wiki.slug}
             kitSlug={kit.slug}
             defaultLocale={wiki.defaultLocale || 'en'}
-            lessons={lessons.map(({ id, slug, title_en, title_ar, duration_min, difficulty, order }) => ({
+            lessons={lessons.map(({ id, slug, title_en, title_ar, duration_min, difficulty, order, status }) => ({
               id,
               slug,
               title_en,
@@ -94,6 +94,7 @@ export default async function EditorWikiDashboardPage({
               duration_min,
               difficulty,
               order,
+              status,
             }))}
             viewBaseUrl={viewBaseUrl}
           />

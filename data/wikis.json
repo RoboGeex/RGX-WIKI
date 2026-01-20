@@ -123,5 +123,16 @@
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
     "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "3d-design-using-pictoblox",
+    "displayName": "3D Design using Pictoblox",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
   }
 ]

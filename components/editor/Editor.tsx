@@ -1423,8 +1423,9 @@ export default function WikiEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef2f1]">
-      <div className="mx-auto max-w-7xl px-6 py-8">
+    <>
+      <div className="min-h-screen bg-[#eef2f1]">
+        <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
@@ -1567,9 +1568,9 @@ export default function WikiEditor() {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
-    {confirmAction && (
+      {confirmAction && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -1608,6 +1609,7 @@ export default function WikiEditor() {
         </div>
       </div>
     )}
+    </>
   )
 }
 

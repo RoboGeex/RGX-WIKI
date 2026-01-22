@@ -435,6 +435,7 @@ export default function WikiEditor() {
   }, [])
 
   const [status, setStatus] = useState<string>('')
+  const [translationPhase, setTranslationPhase] = useState<'english' | 'arabic'>('english')
 
 
 
@@ -879,6 +880,7 @@ export default function WikiEditor() {
 
         arabicDirtyRef.current = hasArabicContent
         forceArabicDirtyRender((prev) => !prev)
+        setTranslationPhase(hasArabicContent ? 'arabic' : 'english')
         setStatus((prev) => prev === 'Failed to load lesson content.' ? '' : prev)
 
         setMeta((prev: typeof meta) => {
@@ -934,6 +936,15 @@ export default function WikiEditor() {
       cancelled = true
     }
   }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId])
+
+  useEffect(() => {
+    if (editorEn) {
+      editorEn.setEditable(translationPhase === 'english')
+    }
+    if (editorAr) {
+      editorAr.setEditable(translationPhase === 'arabic')
+    }
+  }, [editorEn, editorAr, translationPhase])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1427,7 +1438,34 @@ export default function WikiEditor() {
               </div>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {translationPhase === 'english' ? (
+              <button
+                className="px-3 py-1.5 rounded-md border border-primary/40 text-primary text-sm hover:bg-primary/10"
+                onClick={() => {
+                  if (confirm('Lock English editing and unlock Arabic?')) {
+                    setTranslationPhase('arabic')
+                    setStatus('Arabic editing unlocked. English is now locked.')
+                  }
+                }}
+                type="button"
+              >
+                Finalize English & Unlock Arabic
+              </button>
+            ) : (
+              <button
+                className="px-3 py-1.5 rounded-md border border-amber-400/60 text-amber-700 text-sm hover:bg-amber-50"
+                onClick={() => {
+                  if (confirm('Return to English editing? Arabic will be locked.')) {
+                    setTranslationPhase('english')
+                    setStatus('English editing unlocked. Arabic is now locked.')
+                  }
+                }}
+                type="button"
+              >
+                Return to English Editing
+              </button>
+            )}
             <button
               className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 disabled:opacity-50"
               onClick={() => publish('draft')}
@@ -1452,7 +1490,7 @@ export default function WikiEditor() {
         <div className="grid lg:grid-cols-2 gap-8">
 
           {/* English Editor Pane */}
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div className={`bg-white border border-gray-200 rounded-xl shadow-sm ${translationPhase === 'arabic' ? 'opacity-60' : ''}`}>
             <div className="px-6 pt-6 pb-4 border-b text-sm text-gray-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1462,6 +1500,11 @@ export default function WikiEditor() {
               </div>
             </div>
             <div className="px-6 py-6 space-y-4">
+              {translationPhase === 'arabic' && (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  English is locked while Arabic translation is in progress.
+                </div>
+              )}
               <div id={bubbleIdEn} className="rounded-lg border bg-white shadow p-1 flex items-center gap-1 text-xs" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
                 <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().addRowBefore().run()}>Row +</button>
                 <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().addRowAfter().run()}>Row -</button>
@@ -1511,7 +1554,7 @@ export default function WikiEditor() {
           </div>
 
           {/* Arabic Editor Pane */}
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div className={`bg-white border border-gray-200 rounded-xl shadow-sm ${translationPhase === 'english' ? 'opacity-60' : ''}`}>
             <div className="px-6 pt-6 pb-4 border-b text-sm text-gray-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1521,6 +1564,11 @@ export default function WikiEditor() {
               </div>
             </div>
             <div className="px-6 py-6 space-y-4">
+              {translationPhase === 'english' && (
+                <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                  Arabic is locked. Finalize the English draft to enable Arabic editing.
+                </div>
+              )}
               {arabicDirtyRef.current && (
                 <div className="text-xs text-amber-600">Arabic content has diverged from the English draft.</div>
               )}

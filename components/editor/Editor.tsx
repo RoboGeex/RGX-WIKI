@@ -436,6 +436,7 @@ export default function WikiEditor() {
 
   const [status, setStatus] = useState<string>('')
   const [translationPhase, setTranslationPhase] = useState<'english' | 'arabic'>('english')
+  const [confirmAction, setConfirmAction] = useState<'unlockArabic' | 'returnEnglish' | null>(null)
 
 
 
@@ -1442,12 +1443,7 @@ export default function WikiEditor() {
             {translationPhase === 'english' ? (
               <button
                 className="px-3 py-1.5 rounded-md border border-primary/40 text-primary text-sm hover:bg-primary/10"
-                onClick={() => {
-                  if (confirm('Lock English editing and unlock Arabic?')) {
-                    setTranslationPhase('arabic')
-                    setStatus('Arabic editing unlocked. English is now locked.')
-                  }
-                }}
+                onClick={() => setConfirmAction('unlockArabic')}
                 type="button"
               >
                 Finalize English & Unlock Arabic
@@ -1455,12 +1451,7 @@ export default function WikiEditor() {
             ) : (
               <button
                 className="px-3 py-1.5 rounded-md border border-amber-400/60 text-amber-700 text-sm hover:bg-amber-50"
-                onClick={() => {
-                  if (confirm('Return to English editing? Arabic will be locked.')) {
-                    setTranslationPhase('english')
-                    setStatus('English editing unlocked. Arabic is now locked.')
-                  }
-                }}
+                onClick={() => setConfirmAction('returnEnglish')}
                 type="button"
               >
                 Return to English Editing
@@ -1578,6 +1569,45 @@ export default function WikiEditor() {
         </div>
       </div>
     </div>
+    {confirmAction && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {confirmAction === 'unlockArabic' ? 'Unlock Arabic editing?' : 'Return to English editing?'}
+          </h3>
+          <p className="mt-2 text-sm text-gray-600">
+            {confirmAction === 'unlockArabic'
+              ? 'This will lock English editing and unlock Arabic for translation.'
+              : 'This will lock Arabic editing and unlock English changes.'}
+          </p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button
+              className="px-3 py-1.5 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
+              onClick={() => setConfirmAction(null)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="px-3 py-1.5 rounded-md bg-primary text-white hover:opacity-90"
+              onClick={() => {
+                if (confirmAction === 'unlockArabic') {
+                  setTranslationPhase('arabic')
+                  setStatus('Arabic editing unlocked. English is now locked.')
+                } else {
+                  setTranslationPhase('english')
+                  setStatus('English editing unlocked. Arabic is now locked.')
+                }
+                setConfirmAction(null)
+              }}
+              type="button"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   )
 }
 

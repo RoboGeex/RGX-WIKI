@@ -269,7 +269,7 @@ export default function PropertiesForm() {
     } catch {}
     
     // Navigate to the editor with lesson parameters
-    const editorUrl = `/editor/lesson?wiki=${encodeURIComponent(nextMeta.wikiSlug)}&kit=${encodeURIComponent(kitSlug)}&slug=${encodeURIComponent(nextMeta.slug)}&id=${encodeURIComponent(nextMeta.id)}&title=${encodeURIComponent(nextMeta.title_en || nextMeta.title_ar || '')}`
+    const editorUrl = `/editor/segment?wiki=${encodeURIComponent(nextMeta.wikiSlug)}&kit=${encodeURIComponent(kitSlug)}&slug=${encodeURIComponent(nextMeta.slug)}&id=${encodeURIComponent(nextMeta.id)}&title=${encodeURIComponent(nextMeta.title_en || nextMeta.title_ar || '')}`
     router.push(editorUrl)
   }
 

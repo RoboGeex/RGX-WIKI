@@ -117,10 +117,13 @@ export default function SegmentEditorPage() {
     }
   }
 
+  const [publishStatus, setPublishStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
   const handlePublish = async () => {
     if (!lesson) return
     try {
       // Create a payload that sets status to published
+      // IMPORTANT: Preserve the current body to prevent editor wipe
       const payload = {
         ...lesson,
         status: 'published',
@@ -139,12 +142,20 @@ export default function SegmentEditorPage() {
       }
 
       const result = await res.json()
-      alert('Lesson published successfully!')
-      // Update local state
-      setLesson(result.lesson)
+      
+      // Update local state but preserve body from current state if API doesn't return it fully populated
+      setLesson((prev: any) => ({
+        ...prev,
+        ...result.lesson,
+        body: prev.body // Keep existing body
+      }))
+      
+      setPublishStatus('success')
+      setTimeout(() => setPublishStatus('idle'), 3000)
     } catch (err) {
       console.error('Publish error:', err)
-      alert('Failed to publish lesson')
+      setPublishStatus('error')
+      setTimeout(() => setPublishStatus('idle'), 3000)
     }
   }
 
@@ -186,6 +197,28 @@ export default function SegmentEditorPage() {
         lessonSlug={lesson?.slug}
         previewBaseUrl={previewBaseUrl}
       />
+      {/* Publish Popup */}
+      {publishStatus !== 'idle' && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`px-6 py-3 rounded-xl shadow-lg border flex items-center gap-3 ${
+            publishStatus === 'success' 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+              : 'bg-red-50 border-red-200 text-red-700'
+          }`}>
+            {publishStatus === 'success' ? (
+              <>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-medium">Lesson published successfully!</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="font-medium">Failed to publish lesson</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

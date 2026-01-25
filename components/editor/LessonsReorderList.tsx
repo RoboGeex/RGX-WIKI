@@ -392,7 +392,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
                     className="rounded-md border border-amber-400 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-50"
                     title="Bilingual Segment Editor"
                   >
-                    Translate
+                    Content
                   </Link>
                 </>
               )}

@@ -21,7 +21,7 @@ export default async function EditorWikiDashboardPage({
 
   const primaryDomain = (wiki.domains || []).find((domain) => typeof domain === 'string' && domain.trim().length > 0)
   const sanitizedDomain = primaryDomain?.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const fallbackDomain = `${wiki.slug}.robogeex.com`
+  const fallbackDomain = `wiki.robogeex.com/${wiki.slug}`
   
   // Only use absolute domain URL in production to ensure local previews work via relative paths
   const viewBaseUrl = process.env.NODE_ENV === 'production' 

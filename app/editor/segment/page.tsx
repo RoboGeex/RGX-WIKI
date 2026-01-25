@@ -100,7 +100,7 @@ export default function SegmentEditorPage() {
 
       const res = await fetch('/api/lessons', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: applyDeveloperHeader({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload),
       })
 
@@ -129,7 +129,7 @@ export default function SegmentEditorPage() {
       
       const res = await fetch('/api/lessons', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: applyDeveloperHeader({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload),
       })
 

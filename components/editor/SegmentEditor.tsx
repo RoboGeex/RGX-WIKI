@@ -98,10 +98,10 @@ interface SegmentEditorProps {
   lessonId: string
   wikiSlug: string
   initialBody?: any[]
-  onSave?: (segments: Segment[]) => void
+  onSave?: (segments: Segment[]) => Promise<void>
   isOwner?: boolean
   isAdmin?: boolean
-  onPublish?: () => void
+  onPublish?: () => Promise<void>
   lessonSlug?: string
   previewBaseUrl?: string
 }
@@ -543,13 +543,13 @@ export default function SegmentEditor({
     setIsSaving(true)
     try {
       const currentSegments = segmentsRef.current
-      const body = convertSegmentsToBody(currentSegments)
       if (onSave) {
-        onSave(currentSegments)
+        await onSave(currentSegments)
       }
       setLastSaved(new Date())
     } catch (error) {
       console.error('Save failed:', error)
+      alert('Failed to save changes. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -1259,7 +1259,7 @@ export default function SegmentEditor({
             
             <Link 
               href={process.env.NODE_ENV === 'production' && previewBaseUrl
-                ? `${previewBaseUrl}/en/lesson/${lessonSlug || lessonId}`
+                ? `${previewBaseUrl}/en/${lessonSlug || lessonId}`
                 : `/en/${wikiSlug}/lesson/${lessonSlug || lessonId}`
               }
               target="_blank"

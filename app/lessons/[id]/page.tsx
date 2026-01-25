@@ -4,6 +4,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import KitHeader from '@/components/kit-header';
+import { getListMarker } from '@/lib/segment-types';
 
 const LessonPage = () => {
     const params = useParams();
@@ -15,10 +16,8 @@ const LessonPage = () => {
     // Extract headings from lesson.body (array of blocks)
     const headings = useMemo(() => {
         if (!lesson?.body) {
-            console.log('No lesson body found:', lesson)
             return []
         }
-        console.log('Lesson body:', lesson.body)
         const extractedHeadings = lesson.body
             .filter((item: any) => item.type === 'heading' && item.en && ((item.level ?? 2) === 1))
             .map((item: any, idx: number) => ({
@@ -26,7 +25,6 @@ const LessonPage = () => {
                 text: item.en,
                 level: item.level || 2,
             }))
-        console.log('Extracted headings:', extractedHeadings)
         return extractedHeadings
     }, [lesson?.body]);
 
@@ -40,7 +38,6 @@ const LessonPage = () => {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const data = await response.json();
-                    console.log('Fetched lesson data:', data);
                     setLesson(data);
                 } catch (error) {
                     console.error('Error fetching lesson:', error);
@@ -73,10 +70,10 @@ const LessonPage = () => {
                   item.level === 1 ? 'text-2xl font-bold mt-8 mb-4' :
                   item.level === 2 ? 'text-xl font-semibold mt-6 mb-3' :
                   'text-lg font-medium mt-4 mb-2'
-                }>{item.en}</Tag>;
+                }>{item.html_en ? <span dangerouslySetInnerHTML={{ __html: item.html_en }} /> : item.en}</Tag>;
             }
-            if (item.type === 'paragraph' && item.en) {
-                return <p key={idx} className="mb-4">{item.en}</p>;
+            if (item.type === 'paragraph' && (item.html_en || item.en)) {
+                return <div key={idx} className="mb-4" dangerouslySetInnerHTML={{ __html: item.html_en || item.en }} />;
             }
             if (item.type === 'table') {
                 const html = item.html_en || ''
@@ -101,19 +98,61 @@ const LessonPage = () => {
                     </div>
                 );
             }
+            if (item.type === 'list') {
+                const items = item.items_en || (item.en ? [item.en] : []);
+                if (!Array.isArray(items) || items.length === 0) return null;
+                
+                return (
+                    <div key={idx} className="pl-2 mb-4 space-y-2 text-gray-700">
+                        {items.map((li: any, liIdx: number) => {
+                            const text = typeof li === 'object' ? li.text : li;
+                            const indent = typeof li === 'object' ? (li.indent || 0) : 0;
+                            const marker = getListMarker(items, liIdx, !!item.ordered)
+                            
+                            return (
+                                <div 
+                                    key={liIdx} 
+                                    className="flex items-start gap-3"
+                                    style={{ paddingLeft: `${indent * 2}rem` }}
+                                >
+                                    <span className={`shrink-0 font-medium ${item.ordered ? 'min-w-[1.5rem]' : 'w-4 text-center'} text-gray-500`}>
+                                        {marker}
+                                    </span>
+                                    <div 
+                                        className="flex-1"
+                                        dangerouslySetInnerHTML={{ __html: text }} 
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
 
             if (item.type === 'image' && item.image) {
                 const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || '';
+                const width = item.width || '100%';
+                const align = item.align || 'center';
+                const alignClass =
+                    align === 'left' ? 'items-start' :
+                    align === 'right' ? 'items-end' :
+                    'items-center';
+
                 return (
-                    <figure key={idx} className="my-6 space-y-2">
-                        <img
-                            src={item.image}
-                            alt={caption}
-                            className="w-full rounded-2xl border border-gray-200 bg-gray-50 object-contain"
-                        />
-                        {caption ? (
-                            <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>
-                        ) : null}
+                    <figure key={idx} className={`my-10 flex flex-col ${alignClass} w-full`}>
+                        <div style={{ width, maxWidth: '100%' }}>
+                            <div className="relative w-full aspect-[1920/720] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
+                                <img
+                                    src={item.image}
+                                    alt={caption}
+                                    className="h-full w-full object-contain"
+                                    loading="lazy"
+                                />
+                            </div>
+                            {caption ? (
+                                <figcaption className="mt-3 text-xs text-gray-500 text-center">{caption}</figcaption>
+                            ) : null}
+                        </div>
                     </figure>
                 );
             }

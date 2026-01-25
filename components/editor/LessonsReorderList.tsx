@@ -12,6 +12,7 @@ type LessonSummary = {
   duration_min?: number
   difficulty?: string
   order?: number
+  ownerId?: string
 }
 
 type Props = {
@@ -41,7 +42,6 @@ function reorderToIndex(list: LessonSummary[], slug: string, targetIndex: number
   const next = list.map((lesson) => ({ ...lesson }))
   const fromIndex = next.findIndex((lesson) => lesson.slug === slug)
   if (fromIndex === -1) {
-    console.log('Source lesson not found:', slug)
     return list
   }
 
@@ -55,7 +55,6 @@ function reorderToIndex(list: LessonSummary[], slug: string, targetIndex: number
 
   next.splice(target, 0, moved)
 
-  console.log('Reordered:', { slug, fromIndex, targetIndex, finalTarget: target })
   return assignSequentialOrder(next)
 }
 
@@ -76,12 +75,23 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
   const [error, setError] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
+  const [currentDev, setCurrentDev] = useState<any>(null)
   const dragImageRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setItems(normalizeLessons(lessons))
   }, [lessons])
+
+  useEffect(() => {
+    const headers = applyDeveloperHeader({})
+    fetch('/api/developers/me', { headers })
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok) setCurrentDev(data.developer)
+      })
+      .catch(console.error)
+  }, [])
 
   useEffect(() => {
     if (!status) return
@@ -122,8 +132,6 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     setStatus(null)
     setError(null)
     const sequence = nextOrder.map((lesson) => lesson.slug)
-    
-    console.log('Persisting order:', { wikiSlug, kitSlug, sequence })
     
     const headers = applyDeveloperHeader({ "Content-Type": "application/json" })
 
@@ -170,7 +178,6 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     
     // Calculate drag offset for smooth positioning
     const rect = dragElement.getBoundingClientRect()
-    const containerRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
     
     setDragOffset({
       x: event.clientX - rect.left,
@@ -266,7 +273,6 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
   const handleDragOverEnd = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     if (!draggingSlug || saving) return
-    console.log('Drag over end zone:', { draggingSlug, indicator })
     // Only update indicator if it's not already set to end position
     if (!(indicator?.slug === null && indicator?.position === "end")) {
       setIndicator({ slug: null, position: "end" })
@@ -277,15 +283,9 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     event.preventDefault()
     if (!draggingSlug || saving) return
     const sourceSlug = draggingSlug
-    console.log('Dropping at end:', { sourceSlug, currentLength: items.length })
     setItems((prev) => {
       const previous = prev.map((lesson) => ({ ...lesson }))
       const next = reorderToIndex(prev, sourceSlug, prev.length)
-      console.log('Drop at end - reorder result:', { 
-        previous: previous.map(l => l.slug), 
-        next: next.map(l => l.slug),
-        ordersMatch: ordersMatch(prev, next)
-      })
       if (ordersMatch(prev, next)) return prev
       persistOrder(next, previous)
       return next
@@ -300,6 +300,8 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
       </div>
     )
   }
+
+  const isGlobalAdmin = currentDev?.role === 'admin'
 
   return (
     <div ref={containerRef} className="space-y-2">
@@ -317,6 +319,8 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
         const isIndicatorBefore = indicator?.slug === lesson.slug && indicator.position === "before"
         const isIndicatorAfter = indicator?.slug === lesson.slug && indicator.position === "after"
         const isHovered = indicator?.slug === lesson.slug
+        
+        const isOwner = isGlobalAdmin || (currentDev?.id && lesson.ownerId === currentDev.id)
         
         const tileClasses = isDragging
           ? "border-primary/60 opacity-50 scale-95 ring-2 ring-primary/40 transform-gpu"
@@ -369,12 +373,23 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Link
-                href={`/editor/properties?wiki=${wikiSlug}&kit=${kitSlug}&slug=${lesson.slug}`}
-                className="rounded-md border border-primary/40 px-3 py-1.5 text-sm text-primary hover:bg-primary/10"
-              >
-                Edit
-              </Link>
+              {isOwner && (
+                <>
+                  <Link
+                    href={`/editor/properties?wiki=${wikiSlug}&kit=${kitSlug}&slug=${lesson.slug}`}
+                    className="rounded-md border border-primary/40 px-3 py-1.5 text-sm text-primary hover:bg-primary/10"
+                  >
+                    Edit
+                  </Link>
+                  <Link
+                    href={`/editor/segment?wiki=${wikiSlug}&kit=${kitSlug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
+                    className="rounded-md border border-amber-400 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-50"
+                    title="Bilingual Segment Editor"
+                  >
+                    Translate
+                  </Link>
+                </>
+              )}
               <Link
                 href={viewBaseUrl
                   ? `${viewBaseUrl.replace(/\/$/, '')}/${defaultLocale}/${lesson.slug}`
@@ -382,7 +397,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
                 target="_blank"
                 className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
               >
-                View
+                {isOwner ? 'View' : 'Preview'}
               </Link>
             </div>
           </div>

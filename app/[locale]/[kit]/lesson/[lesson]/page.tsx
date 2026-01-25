@@ -11,6 +11,7 @@ import PrevNextNav from '@/components/prev-next-nav'
 import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import Step from '@/components/step'
 import LessonToc from '@/components/lesson-toc'
+import { getListMarker } from '@/lib/segment-types'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,7 +94,7 @@ export default async function LessonPage(
       const text = locale === 'ar' ? (block.ar || '') : (block.en || '')
       if (html) {
         return (
-          <p
+          <div
             key={index}
             className="text-base leading-7 text-gray-700"
             dangerouslySetInnerHTML={{ __html: html }}
@@ -111,24 +112,39 @@ export default async function LessonPage(
     if (block.type === 'list') {
       const items = locale === 'ar' ? block.items_ar : block.items_en
       if (!Array.isArray(items) || items.length === 0) return null
-      const ListWrapper = (block.ordered ? 'ol' : 'ul') as 'ol' | 'ul'
-      const listClass = block.ordered ? 'list-decimal' : 'list-disc'
+      
       const paddingClass = locale === 'ar' ? 'pr-6' : 'pl-6'
-      const itemSpacingClass = locale === 'ar' ? 'mr-2' : 'ml-2'
+      
       return (
-        <ListWrapper
+        <div
           key={index}
           dir={locale === 'ar' ? 'rtl' : 'ltr'}
-          className={`text-base leading-7 text-gray-700 ${listClass} ${paddingClass} space-y-2`}
+          className={`text-base leading-7 text-gray-700 ${paddingClass} space-y-1 my-3`}
         >
-          {items.map((item: string, itemIndex: number) => (
-            <li
-              key={itemIndex}
-              className={itemSpacingClass}
-              dangerouslySetInnerHTML={{ __html: item }}
-            />
-          ))}
-        </ListWrapper>
+          {items.map((item: any, itemIndex: number) => {
+            const text = typeof item === 'object' ? item.text : item
+            const indent = typeof item === 'object' ? (item.indent || 0) : 0
+            const marker = getListMarker(items, itemIndex, !!block.ordered)
+            
+            return (
+              <div
+                key={itemIndex}
+                className="flex items-baseline gap-1.5"
+                style={{ 
+                  [locale === 'ar' ? 'paddingRight' : 'paddingLeft']: `${indent * 2}rem`
+                }}
+              >
+                <span className={`shrink-0 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-black`}>
+                  {marker}
+                </span>
+                <div 
+                  className="flex-1 [&_p]:m-0"
+                  dangerouslySetInnerHTML={{ __html: text }} 
+                />
+              </div>
+            )
+          })}
+        </div>
       )
     }
 
@@ -203,20 +219,37 @@ export default async function LessonPage(
 
     if (block.type === 'image' && block.image) {
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
+      // Use Arabic image if available in Arabic locale, otherwise use English image
+      const imageUrl = locale === 'ar' && block.image_ar ? block.image_ar : block.image
+      const width = block.width || '100%'
+      const align = block.align || 'center'
+
+      const alignClass =
+        align === 'left' ? 'items-start' :
+        align === 'right' ? 'items-end' :
+        'items-center'
+
       return (
-        <figure key={index} className="space-y-3 flex flex-col items-center">
-          <div className="w-full max-w-[720px]">
-            <div className="relative w-full h-[462px] overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center">
+        <figure 
+          key={index} 
+          className={`my-10 flex flex-col ${alignClass} w-full`}
+        >
+          <div style={{ width, maxWidth: '100%' }}>
+            <div className="relative w-full aspect-[1920/720] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
               <img
-                src={block.image}
+                src={imageUrl}
                 alt={caption || ''}
                 className="h-full w-full object-contain"
+                loading="lazy"
               />
             </div>
+            {caption ? (
+              <figcaption 
+                className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: caption }}
+              />
+            ) : null}
           </div>
-          {caption ? (
-            <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>
-          ) : null}
         </figure>
       )
     }

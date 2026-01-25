@@ -65,14 +65,3 @@ export function ensureCanManageLesson(
     throw err
   }
 }
-
-export function findDeveloperByCredentials(email: string, password: string): DeveloperAssignment | undefined {
-  const normalizedEmail = (email || '').trim().toLowerCase()
-  const normalizedPassword = (password || '').trim()
-  if (!normalizedEmail || !normalizedPassword) return undefined
-  return getDevelopers().find((dev) => {
-    const devEmail = (dev.email || '').trim().toLowerCase()
-    const devPassword = (dev.password || '').trim()
-    return devEmail === normalizedEmail && devPassword && devPassword === normalizedPassword
-  })
-}

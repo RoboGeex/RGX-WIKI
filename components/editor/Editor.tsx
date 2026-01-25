@@ -5,7 +5,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Heading from '@tiptap/extension-heading'
-import Image from '@tiptap/extension-image'
+import Image from './extensions/ResizableImage'
 import Youtube from '@tiptap/extension-youtube'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
@@ -385,8 +385,13 @@ export default function WikiEditor() {
     },
   }, [bubbleElementEn, textBubbleElementEn])
 
+  const [isVerified, setIsVerified] = useState(false)
+  
+
+
   const editorAr = useEditor({
     immediatelyRender: false,
+    editable: false,
     extensions: [
       StarterKit.configure({
         heading: false,
@@ -433,6 +438,26 @@ export default function WikiEditor() {
       },
     },
   }, [])
+
+  const handleVerifyAndMirror = () => {
+    if (!editorEn || !editorAr) return
+    const json = editorEn.getJSON()
+    setIsVerified(true)
+    editorAr.setEditable(true)
+    
+    // Mirror content
+    syncingArRef.current = true
+    editorAr.commands.setContent(json, { emitUpdate: false })
+    setTimeout(() => { syncingArRef.current = false }, 0)
+    
+    setStatus('English Verified! Content mirrored to Arabic pane.')
+  }
+
+  useEffect(() => {
+    if (editorAr) {
+      editorAr.setEditable(isVerified)
+    }
+  }, [isVerified, editorAr])
 
   const [status, setStatus] = useState<string>('')
 
@@ -772,6 +797,8 @@ export default function WikiEditor() {
                   src: item.image,
                   alt: altSource || undefined,
                   title: altSource || undefined,
+                  width: item.width || '100%',
+                  align: item.align || 'center',
                 },
               })
             }
@@ -877,6 +904,12 @@ export default function WikiEditor() {
         editorAr.commands.setContent(docAr, { emitUpdate: false })
         setTimeout(() => { syncingArRef.current = false }, 0)
 
+        if (hasArabicContent) {
+           setIsVerified(true) // Auto-verify/unlock if we already have Arabic content
+        } else {
+           setIsVerified(false)
+        }
+        
         arabicDirtyRef.current = hasArabicContent
         forceArabicDirtyRender((prev) => !prev)
         setStatus((prev) => prev === 'Failed to load lesson content.' ? '' : prev)
@@ -987,15 +1020,10 @@ export default function WikiEditor() {
           return next
         })
       }
-      if (!arabicDirtyRef.current && editorAr) {
-        syncingArRef.current = true
-        editorAr.commands.setContent(editorEn.getJSON(), { emitUpdate: false })
-        setTimeout(() => { syncingArRef.current = false }, 0)
-      }
     }
     editorEn.on('update', handler)
     return () => { editorEn.off('update', handler) }
-  }, [editorEn, editorAr])
+  }, [editorEn])
 
   useEffect(() => {
     if (!editorAr) return
@@ -1028,6 +1056,7 @@ export default function WikiEditor() {
 
   useEffect(() => {
     if (!editorAr) return
+    if (!isVerified) return // Don't auto-insert title if locked/empty
     if (arabicDirtyRef.current) return
     const preferred = (meta.title_ar || meta.title_en || meta.slug || meta.id || '').trim()
     if (!preferred) return
@@ -1035,7 +1064,7 @@ export default function WikiEditor() {
     if (!current || current === 'Untitled') {
       applyTitleToDocument(editorAr, preferred)
     }
-  }, [editorAr, meta.title_ar, meta.title_en, meta.slug, meta.id])
+  }, [editorAr, meta.title_ar, meta.title_en, meta.slug, meta.id, isVerified])
 
   useEffect(() => {
     const slug = typeof meta.slug === 'string' ? meta.slug.trim() : ''
@@ -1226,6 +1255,8 @@ export default function WikiEditor() {
           const block: any = {
             type: 'image',
             image: src,
+            width: node.attrs?.width,
+            align: node.attrs?.align,
             [jsonKey]: cloneNode(node),
           }
           if (alt) {
@@ -1516,11 +1547,23 @@ export default function WikiEditor() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span>Arabic (right to left)</span>
+                  {!isVerified && (
+                     <button
+                       onClick={handleVerifyAndMirror}
+                       className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                       title="Verify English content and start translating"
+                     >
+                       Verify & Mirror English
+                     </button>
+                  )}
                 </div>
+                {isVerified && (
+                  <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded">Unlocked</span>
+                )}
                 <span className="text-xs text-gray-400">يمكنك استخدام الأمر <span className="px-1 rounded bg-gray-100">/</span> للإدراج</span>
               </div>
             </div>
-            <div className="px-6 py-6 space-y-4">
+            <div className={`px-6 py-6 space-y-4 ${!isVerified ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
               {arabicDirtyRef.current && (
                 <div className="text-xs text-amber-600">Arabic content has diverged from the English draft.</div>
               )}

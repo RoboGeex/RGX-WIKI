@@ -4,6 +4,7 @@ const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx}',
     './styles/**/*.{css}',
   ],
   theme: {
@@ -50,6 +51,37 @@ const config: Config = {
       },
       boxShadow: {
         'custom': '0 4px 30px rgba(0, 0, 0, 0.1)',
+      },
+      spacing: {
+        '88': '22rem',
+      },
+      typography: {
+        DEFAULT: {
+          css: {
+            h1: {
+              fontSize: '3.25rem',
+              lineHeight: '1.1',
+              marginTop: '3rem',
+              marginBottom: '1.2rem',
+              fontWeight: '750',
+              letterSpacing: '-0.02em',
+            },
+            h2: {
+              fontSize: '2.35rem',
+              lineHeight: '1.2',
+              marginTop: '2.4rem',
+              marginBottom: '1rem',
+              fontWeight: '650',
+            },
+            h3: {
+              fontSize: '1.5rem',
+              lineHeight: '1.3',
+              marginTop: '1.6rem',
+              marginBottom: '0.8rem',
+              fontWeight: '600',
+            },
+          },
+        },
       },
     },
   },

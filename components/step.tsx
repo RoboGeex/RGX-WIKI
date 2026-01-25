@@ -18,8 +18,11 @@ export default function Step({ step, stepNumber, locale }: StepProps) {
         </span>
         {title}
       </h3>
-      {text && (
-        <p className="text-sm leading-relaxed">{text}</p>
+      {(step.html_en || step.html_ar || text) && (
+        <div 
+          className="text-sm leading-relaxed" 
+          dangerouslySetInnerHTML={{ __html: locale === 'ar' ? (step.html_ar || text) : (step.html_en || text) }} 
+        />
       )}
       {step.image && (
         <div className="mt-4 rounded-xl overflow-hidden border bg-gray-50">

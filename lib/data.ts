@@ -93,7 +93,7 @@ export function getKit(slug: string, wikiSlug?: string) {
 
 export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boolean }): Promise<Lesson[]> {
   const wikiSlug = wikiSlugForKit(kitSlug)
-  const includeDrafts = opts?.includeDrafts === true
+  const includeDrafts = opts?.includeDrafts === true || process.env.NODE_ENV === 'development'
   try {
     const { getPrisma } = await import('@/lib/prisma-multi')
     const prisma = getPrisma(wikiSlug)

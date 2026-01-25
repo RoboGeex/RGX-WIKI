@@ -52,7 +52,6 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
       }
 
       const result = await response.json()
-      console.log('Wiki created successfully:', result)
       
       // Call the parent onSubmit callback
       await onSubmit({ name: name.trim(), grade: grade.trim(), picture })

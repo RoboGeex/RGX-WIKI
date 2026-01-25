@@ -10,12 +10,27 @@ const nextConfig = {
   trailingSlash: false,
   // Disable x-powered-by header
   poweredByHeader: false,
-  webpack: (config) => {
+  webpack: (config, { dev }) => {
     config.externals = config.externals || []
     config.externals.push({
       'ssh2-sftp-client': 'commonjs ssh2-sftp-client',
       ssh2: 'commonjs ssh2',
     })
+
+    if (dev) {
+      config.watchOptions = {
+        ...(config.watchOptions || {}),
+        ignored: [
+          // Defaults
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/.next/**',
+          // Custom: Ignore public uploads to prevent reloads
+          '**/public/uploads/**',
+        ],
+      }
+    }
+
     return config
   },
 }

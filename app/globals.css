@@ -5,7 +5,7 @@
 /* ========== Base Theme Tokens & Resets ========== */
 :root {
   /* Light Theme Colors */
-  --background: 210 40% 98%; 
+  --background: 210 40% 98%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
@@ -172,7 +172,7 @@ html {
   background: rgba(240, 93, 78, 0.08) !important;
 }
 .tiptap .selectedCell::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border: 2px solid hsl(var(--primary));
@@ -211,4 +211,76 @@ html {
   height: 100%;
   display: block;
   object-fit: contain;
+}
+
+/* ========== Cool & Light Animations ========== */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-subtle {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.3s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+.hover-scale {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-slide {
+  transition: transform 0.2s ease-out;
+}
+
+.hover-slide:hover {
+  transform: translateX(4px);
 }

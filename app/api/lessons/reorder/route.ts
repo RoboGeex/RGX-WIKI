@@ -47,8 +47,6 @@ export async function POST(req: Request) {
     const seen = new Set(ordered.map((lesson) => lesson.slug))
     const remaining = allLessons.filter(lesson => !seen.has(lesson.slug))
     const finalOrder = [...ordered, ...remaining]
-
-    console.log('Database reorder - final order:', finalOrder.map((l, i) => ({ slug: l.slug, order: i + 1 })))
     
     await prisma.$transaction(
       finalOrder.map((lesson, idx) =>

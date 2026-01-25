@@ -22,7 +22,11 @@ export default async function EditorWikiDashboardPage({
   const primaryDomain = (wiki.domains || []).find((domain) => typeof domain === 'string' && domain.trim().length > 0)
   const sanitizedDomain = primaryDomain?.replace(/^https?:\/\//, '').replace(/\/$/, '')
   const fallbackDomain = `${wiki.slug}.robogeex.com`
-  const viewBaseUrl = `https://${sanitizedDomain || fallbackDomain}`
+  
+  // Only use absolute domain URL in production to ensure local previews work via relative paths
+  const viewBaseUrl = process.env.NODE_ENV === 'production' 
+    ? `https://${sanitizedDomain || fallbackDomain}`
+    : undefined
 
   const kits = getKits(wiki.slug)
   const kitSummaries = kits.length
@@ -86,7 +90,7 @@ export default async function EditorWikiDashboardPage({
             wikiSlug={wiki.slug}
             kitSlug={kit.slug}
             defaultLocale={wiki.defaultLocale || 'en'}
-            lessons={lessons.map(({ id, slug, title_en, title_ar, duration_min, difficulty, order }) => ({
+            lessons={lessons.map(({ id, slug, title_en, title_ar, duration_min, difficulty, order, ownerId }) => ({
               id,
               slug,
               title_en,
@@ -94,6 +98,7 @@ export default async function EditorWikiDashboardPage({
               duration_min,
               difficulty,
               order,
+              ownerId,
             }))}
             viewBaseUrl={viewBaseUrl}
           />

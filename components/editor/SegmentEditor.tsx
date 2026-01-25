@@ -1258,9 +1258,9 @@ export default function SegmentEditor({
             </div>
             
             <Link 
-              href={process.env.NODE_ENV === 'production' && previewBaseUrl
-                ? `${previewBaseUrl}/en/${lessonSlug || lessonId}`
-                : `/en/${wikiSlug}/lesson/${lessonSlug || lessonId}`
+              href={(process.env.NODE_ENV === 'production' && previewBaseUrl
+                ? `${previewBaseUrl.replace(/\/$/, '')}/en/${lessonSlug || lessonId}`
+                : `/en/${wikiSlug}/lesson/${lessonSlug || lessonId}`) + '?preview=1'
               }
               target="_blank"
               className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"

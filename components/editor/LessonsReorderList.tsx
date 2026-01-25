@@ -15,6 +15,10 @@ type LessonSummary = {
   ownerId?: string
   status?: string
 }
+type Props = {
+  wikiSlug: string
+  kitSlug: string
+  defaultLocale: string
   lessons: LessonSummary[]
   viewBaseUrl?: string
 }

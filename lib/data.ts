@@ -112,8 +112,12 @@ export function getModules(wikiSlug: string): any[] {
     return []
 }
 
-export async function getLesson(kit: string, lessonSlug: string): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kit)
+export async function getLesson(
+  kit: string,
+  lessonSlug: string,
+  opts?: { includeDrafts?: boolean }
+): Promise<Lesson | undefined> {
+  const lessons = await getLessons(kit, opts)
   return lessons.find(l => l.slug === lessonSlug)
 }
 
@@ -127,15 +131,23 @@ export async function getFirstLesson(kit: string): Promise<Lesson | undefined> {
   return list[0]
 }
 
-export async function getNextLesson(kit: string, slug: string): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kit)
+export async function getNextLesson(
+  kit: string,
+  slug: string,
+  opts?: { includeDrafts?: boolean }
+): Promise<Lesson | undefined> {
+  const lessons = await getLessons(kit, opts)
   const list = sortLessons(lessons)
   const idx = list.findIndex(l => l.slug === slug)
   if (idx >= 0 && idx < list.length - 1) return list[idx + 1]
 }
 
-export async function getPrevLesson(kit: string, slug: string): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kit)
+export async function getPrevLesson(
+  kit: string,
+  slug: string,
+  opts?: { includeDrafts?: boolean }
+): Promise<Lesson | undefined> {
+  const lessons = await getLessons(kit, opts)
   const list = sortLessons(lessons)
   const idx = list.findIndex(l => l.slug === slug)
   if (idx > 0) return list[idx - 1]

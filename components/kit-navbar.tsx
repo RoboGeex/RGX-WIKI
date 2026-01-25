@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { Locale } from '../lib/i18n'
 import type { Lesson } from '../lib/types'
 import { isUnlocked, setStoredLocale } from '../lib/unlock'
@@ -26,6 +26,7 @@ export default function KitNavbar({
 }: Props) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (!pathname) return
@@ -45,7 +46,8 @@ export default function KitNavbar({
     setStoredLocale(nextLocale)
     if (locale !== nextLocale) {
       const updated = pathname.replace(`/${locale}/`, `/${nextLocale}/`)
-      router.push(updated)
+      const query = searchParams?.toString()
+      router.push(query ? `${updated}?${query}` : updated)
     }
   }
 

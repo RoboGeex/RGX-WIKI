@@ -104,7 +104,11 @@ export default async function EditorWikiDashboardPage({
             }))}
             viewBaseUrl={viewBaseUrl}
           />
-
+        </section>
+      ))}
+    </div>
+  )
+}
 
 
 

@@ -51,9 +51,24 @@ import {
   Globe,
   Tag,
   Minus,
-  GalleryHorizontal
+  GalleryHorizontal,
+  Code,
+  Moon,
+  Sun
 } from 'lucide-react'
 import { Outfit } from 'next/font/google'
+
+// Code Editor imports
+import Editor from 'react-simple-code-editor'
+import { highlight, languages } from 'prismjs/components/prism-core'
+import 'prismjs/components/prism-clike'
+import 'prismjs/components/prism-javascript'
+import 'prismjs/components/prism-typescript'
+import 'prismjs/components/prism-css'
+import 'prismjs/components/prism-json'
+import 'prismjs/components/prism-bash'
+import 'prismjs/components/prism-python'
+import 'prismjs/components/prism-sql'
 
 const outfit = Outfit({ subsets: ['latin'] })
 
@@ -109,14 +124,15 @@ interface SegmentEditorProps {
 type SegmentType = Segment['type']
 
 const SEGMENT_TYPE_OPTIONS: { value: SegmentType; label: string; icon: React.ReactNode }[] = [
-  { value: 'paragraph', label: 'Paragraph', icon: <AlignLeft size={18} /> },
   { value: 'heading', label: 'Heading', icon: <Heading1 size={18} /> },
+  { value: 'paragraph', label: 'Paragraph', icon: <AlignLeft size={18} /> },
   { value: 'list', label: 'List', icon: <List size={18} /> },
+  { value: 'code', label: 'Code Block', icon: <Code size={18} /> },
   { value: 'image', label: 'Image', icon: <ImageIcon size={18} /> },
   { value: 'imageSlider', label: 'Image Slider', icon: <GalleryHorizontal size={18} /> },
-  { value: 'callout', label: 'Callout', icon: <Quote size={18} /> },
   { value: 'video', label: 'Video', icon: <Film size={18} /> },
   { value: 'table', label: 'Table', icon: <Grid3X3 size={18} /> },
+  { value: 'callout', label: 'Callout', icon: <Quote size={18} /> },
   { value: 'horizontalRule', label: 'Separator', icon: <Minus size={18} /> },
 ]
 
@@ -279,6 +295,16 @@ const SegmentOverlayContent = ({ segment, segments }: { segment: Segment, segmen
 }
 
 const StatusBadge = ({ segment }: { segment: Segment }) => {
+  // Separators are always synced since they have no translatable content
+  if (segment.type === 'horizontalRule') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight bg-emerald-50 text-emerald-600 border border-emerald-200/50 uppercase shadow-sm">
+        <Check size={11} strokeWidth={2.5} />
+        Live & Synced
+      </span>
+    )
+  }
+  
   if (segment.needsUpdate) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight bg-amber-50 text-amber-600 border border-amber-200/50 uppercase shadow-sm animate-pulse">
@@ -287,7 +313,12 @@ const StatusBadge = ({ segment }: { segment: Segment }) => {
       </span>
     )
   }
-  if (segment.arabic && segment.arabicVersion >= segment.englishVersion) {
+
+  const isSynced = segment.arabicVersion >= segment.englishVersion;
+  const isMediaBlock = ['imageSlider', 'horizontalRule', 'youtube', 'video', 'image'].includes(segment.type);
+  const hasContent = (segment.arabic && segment.arabic.trim().length > 0) || isMediaBlock;
+
+  if (isSynced && !segment.needsUpdate && hasContent) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight bg-emerald-50 text-emerald-600 border border-emerald-200/50 uppercase shadow-sm">
         <Check size={11} strokeWidth={2.5} />
@@ -344,6 +375,7 @@ const SegmentTypeIcon = ({ segment, isParent, className }: { segment: Segment, i
     case 'callout': return <Quote size={size} className={className} />;
     case 'horizontalRule': return <Minus size={size} className={className} />;
     case 'imageSlider': return <GalleryHorizontal size={size} className={className} />;
+    case 'code': return <Code size={size} className={className} />;
     default: return <AlignLeft size={size} className={className} />;
   }
 }
@@ -470,6 +502,29 @@ export default function SegmentEditor({
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [isAuthorized, setIsAuthorized] = useState(true)
+
+  // Publish confirmation state
+  const [showPublishModal, setShowPublishModal] = useState(false)
+  const [publishCheckpoints, setPublishCheckpoints] = useState({
+    linguistic: false,
+    media: false,
+    ux: false,
+    flow: false
+  })
+  
+  // Code editor theme state
+  const [codeTheme, setCodeTheme] = useState<'light' | 'dark'>('dark')
+
+  // Confirmation modal state
+  const [confirmSyncSegmentId, setConfirmSyncSegmentId] = useState<string | null>(null)
+
+  // Code block language handler
+  const handleLanguageChange = (segmentId: string, language: string) => {
+    setSegments(prev => prev.map(s => 
+      s.id === segmentId ? { ...s, language, needsUpdate: true } : s
+    ))
+  }
   
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -505,7 +560,6 @@ export default function SegmentEditor({
 
   // Check permissions on mount
   const router = useRouter()
-  const [isAuthorized, setIsAuthorized] = useState(true)
 
   useEffect(() => {
     // Determine strict authorization early
@@ -518,20 +572,26 @@ export default function SegmentEditor({
     }
   }, [isOwner, isAdmin, wikiSlug, router])
 
-
-
-  // Auto-save handler - Now stable!
-  const scheduleAutoSave = useCallback(() => {
-    if (!isOwner && !isAdmin) return; 
-
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current)
+  // Scroll lock for modal
+  useEffect(() => {
+    if (showPublishModal) {
+      document.body.style.overflow = 'hidden'
+      // Reset checkpoints when panel opens
+      setPublishCheckpoints({
+        linguistic: false,
+        media: false,
+        ux: false,
+        flow: false
+      })
+    } else {
+      document.body.style.overflow = 'unset'
     }
-    autoSaveTimeoutRef.current = setTimeout(() => {
-      // Use ref to get latest segments without breaking dependency chain
-      handleSave() 
-    }, 2000)
-  }, [isOwner, isAdmin])
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showPublishModal])
+
+
 
   // Save handler - Now stable!
   const handleSave = useCallback(async () => {
@@ -554,6 +614,19 @@ export default function SegmentEditor({
       setIsSaving(false)
     }
   }, [onSave, isOwner, isAdmin])
+
+  // Auto-save handler - Now stable!
+  const scheduleAutoSave = useCallback(() => {
+    if (!isOwner && !isAdmin) return; 
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      // Use ref to get latest segments without breaking dependency chain
+      handleSave() 
+    }, 2000)
+  }, [isOwner, isAdmin, handleSave])
 
   // Handle English text update
   const handleEnglishChange = useCallback((segmentId: string, newText: string) => {
@@ -642,7 +715,12 @@ export default function SegmentEditor({
   const handleConfirmSync = useCallback((segmentId: string) => {
     setSegments(prev => prev.map(seg => {
       if (seg.id === segmentId) {
-        return updateArabicContent(seg, seg.arabic)
+        return {
+          ...seg,
+          arabicVersion: seg.englishVersion,
+          needsUpdate: false,
+          updatedAt: new Date().toISOString(),
+        }
       }
       return seg
     }))
@@ -1271,7 +1349,7 @@ export default function SegmentEditor({
             
             {isAdmin && onPublish && (
               <button 
-                onClick={onPublish}
+                onClick={() => setShowPublishModal(true)}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm"
               >
                 <Globe size={14} />
@@ -1493,6 +1571,23 @@ export default function SegmentEditor({
                           )}
                           actionButtons={(
                             <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setConfirmSyncSegmentId(segment.id)
+                                }}
+                                className={`p-2 rounded-xl transition-all ${
+                                  isParent 
+                                    ? 'text-slate-500 hover:bg-emerald-500/20 hover:text-emerald-400' 
+                                    : segment.needsUpdate
+                                      ? 'text-amber-500 hover:bg-emerald-50 hover:text-emerald-600 border border-transparent hover:border-emerald-200'
+                                      : 'text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 border border-transparent hover:border-emerald-200'
+                                }`}
+                                title="Mark as Synced"
+                              >
+                                <Check size={18} />
+                              </button>
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -1800,6 +1895,50 @@ export default function SegmentEditor({
                                     </span>
                                   </div>
                                 </div>
+                              ) : segment.type === 'code' ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div className="flex gap-2 flex-wrap">
+                                        {['typescript', 'javascript', 'html', 'css', 'json', 'bash', 'sql', 'python'].map(lang => (
+                                          <button
+                                            key={lang}
+                                            onClick={() => handleLanguageChange(segment.id, lang)}
+                                            className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${
+                                              (segment.language || 'typescript') === lang
+                                                ? 'bg-slate-800 text-white'
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                            }`}
+                                          >
+                                            {lang}
+                                          </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                      onClick={() => setCodeTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                                      className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                      title="Toggle Editor Theme"
+                                    >
+                                      {codeTheme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+                                    </button>
+                                  </div>
+                                  <div className={`rounded-lg overflow-hidden border ${codeTheme === 'dark' ? 'border-gray-700 bg-[#1e1e1e] prism-dark' : 'border-gray-200 bg-[#fdfdfd] prism-light'}`}>
+                                    <Editor
+                                      value={segment.english}
+                                      onValueChange={(code) => handleEnglishChange(segment.id, code)}
+                                      highlight={(code) => highlight(code, languages[segment.language || 'typescript'] || languages.clike, segment.language || 'typescript')}
+                                      padding={20}
+                                      style={{
+                                        fontFamily: '"Fira code", "Fira Mono", monospace',
+                                        fontSize: 16,
+                                        backgroundColor: codeTheme === 'dark' ? '#1e1e1e' : '#fdfdfd',
+                                        color: codeTheme === 'dark' ? '#d4d4d4' : '#000000',
+                                        minHeight: '100px',
+                                        textShadow: 'none',
+                                      }}
+                                      className="min-h-[100px]"
+                                    />
+                                  </div>
+                                </div>
                               ) : segment.type === 'imageSlider' ? (
                                 <div className="space-y-4">
                                   {/* Image Grid */}
@@ -1913,6 +2052,40 @@ export default function SegmentEditor({
                                     <span className="relative bg-white px-2 text-xs font-medium text-gray-400 border border-gray-100 rounded-full shadow-sm">
                                       فاصل
                                     </span>
+                                  </div>
+                                </div>
+                              ) : segment.type === 'code' ? (
+                                <div className="space-y-2 mt-[36px]" dir="ltr">
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                     <span className="text-xs text-gray-500 font-mono">
+                                       {segment.language || 'typescript'} (translation)
+                                     </span>
+                                     <button
+                                        onClick={() => setCodeTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                                        className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                        title="Toggle Editor Theme"
+                                     >
+                                        {codeTheme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+                                     </button>
+                                  </div>
+                                  <div className={`rounded-lg overflow-hidden border ${codeTheme === 'dark' ? 'border-gray-700 bg-[#1e1e1e] prism-dark' : 'border-gray-200 bg-[#fdfdfd] prism-light'}`}>
+                                    <Editor
+                                      value={segment.arabic}
+                                      onValueChange={(code) => handleArabicChange(segment.id, code)}
+                                      highlight={(code) => highlight(code, languages[segment.language || 'typescript'] || languages.clike, segment.language || 'typescript')}
+                                      padding={20}
+                                      style={{
+                                        fontFamily: '"Fira code", "Fira Mono", monospace',
+                                        fontSize: 16,
+                                        backgroundColor: codeTheme === 'dark' ? '#1e1e1e' : '#fdfdfd',
+                                        color: codeTheme === 'dark' ? '#d4d4d4' : '#000000',
+                                        minHeight: '100px',
+                                        direction: 'ltr',
+                                        textAlign: 'left',
+                                        textShadow: 'none',
+                                      }}
+                                      className="min-h-[100px]"
+                                    />
                                   </div>
                                 </div>
                               ) : segment.type === 'imageSlider' ? (
@@ -2136,6 +2309,178 @@ export default function SegmentEditor({
       </div>
       </>
       )}
+
+      {/* Confirmation Modal */}
+      {confirmSyncSegmentId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setConfirmSyncSegmentId(null)}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-emerald-100 rounded-full">
+                <Check className="w-6 h-6 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Confirm Translation Sync</h3>
+            </div>
+            
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to mark this translation as synced? This will update the Arabic version to match the current English version number.
+            </p>
+            
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setConfirmSyncSegmentId(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (confirmSyncSegmentId) {
+                    handleConfirmSync(confirmSyncSegmentId)
+                  }
+                  setConfirmSyncSegmentId(null)
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm"
+              >
+                Yes, Mark as Synced
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Publish Confirmation Modal */}
+      <AnimatePresence>
+        {showPublishModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setShowPublishModal(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-slate-50 px-8 py-6 border-b border-slate-100">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <Globe className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Publish to Wiki</h3>
+                </div>
+                <p className="text-sm text-slate-500">Please complete the following quality assurance checkpoints before making this lesson live.</p>
+              </div>
+
+              {/* Checkpoints */}
+              <div className="p-8 space-y-4">
+                {[
+                  { id: 'linguistic', title: 'Linguistic & Content Accuracy', desc: 'Verified that both English and Arabic translations are accurate and properly contextualized.' },
+                  { id: 'media', title: 'Visual & Media Audit', desc: 'Confirmed all images, sliders, and video assets are present, optimized, and correctly placed.' },
+                  { id: 'ux', title: 'UX & Design Validation', desc: 'Inspected the lesson in Preview Mode to ensure perfect layout, responsiveness, and design excellence.' },
+                  { id: 'flow', title: 'Instructional Continuity', desc: 'Validated the logical flow, educational sequence, and curriculum alignment of the lesson.' }
+                ].map((item, idx) => {
+                  const isChecked = (publishCheckpoints as any)[item.id]
+                  return (
+                    <motion.label
+                      key={item.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + idx * 0.05 }}
+                      className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${isChecked ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'}`}
+                    >
+                      <div className="mt-1 relative flex items-center justify-center w-6 h-6">
+                        <input 
+                          type="checkbox" 
+                          checked={isChecked}
+                          onChange={(e) => setPublishCheckpoints(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                        />
+                        <motion.div 
+                          initial={false}
+                          animate={{ 
+                            backgroundColor: isChecked ? 'rgb(16 185 129)' : 'rgb(255 255 255)',
+                            borderColor: isChecked ? 'rgb(16 185 129)' : 'rgb(226 232 240)',
+                            scale: isChecked ? [1, 1.15, 1] : 1
+                          }}
+                          transition={{ duration: 0.3 }}
+                          className="flex items-center justify-center w-6 h-6 border-2 rounded-lg shadow-sm"
+                        >
+                          {isChecked && (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                              <Check className="text-white" size={14} strokeWidth={4} />
+                            </motion.div>
+                          )}
+                        </motion.div>
+                        {/* Shine effect for checkbox */}
+                        {isChecked && (
+                          <motion.div 
+                            initial={{ x: '-100%', opacity: 0 }}
+                            animate={{ x: '200%', opacity: [0, 0.5, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-12 pointer-events-none"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{item.title}</div>
+                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.desc}</p>
+                      </div>
+                      
+                      {/* Subtile background shine for the whole card when checked */}
+                      {isChecked && (
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent pointer-events-none"
+                        />
+                      )}
+                    </motion.label>
+                  )
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  onClick={() => setShowPublishModal(false)}
+                  className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!Object.values(publishCheckpoints).every(Boolean)}
+                  onClick={() => {
+                    setShowPublishModal(false)
+                    onPublish?.()
+                  }}
+                  className="group relative px-8 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 disabled:opacity-50 disabled:shadow-none disabled:bg-slate-300 transition-all active:scale-95 overflow-hidden"
+                >
+                  <span className="relative z-10">Confirm & Publish Now</span>
+                  {!Object.values(publishCheckpoints).every(Boolean) ? null : (
+                    <motion.div 
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '100%' }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                    />
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
     </div>
   )

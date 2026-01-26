@@ -284,3 +284,236 @@ html {
 .hover-slide:hover {
   transform: translateX(4px);
 }
+
+/* Prism Global Reset - Remove all shadows and highlights */
+.prism-dark *,
+.prism-light * {
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.prism-dark code,
+.prism-dark pre,
+.prism-light code,
+.prism-light pre {
+  background: transparent !important;
+  text-decoration: none !important;
+  border: none !important;
+}
+
+/* Ensure ALL text in dark mode is visible - fallback color */
+.prism-dark span {
+  color: #d4d4d4;
+  background: transparent !important;
+}
+
+/* Ensure ALL text in light mode is visible - fallback color */
+.prism-light span {
+  color: #1f2937;
+  background: transparent !important;
+}
+
+/* Prism Dark Theme (VS Code Dark Plus) */
+.prism-dark code[class*="language-"],
+.prism-dark pre[class*="language-"] {
+  color: #d4d4d4;
+  background: transparent;
+  font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 0.95rem;
+  text-align: left;
+  white-space: pre-wrap;
+  word-spacing: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  line-height: 1.6;
+  text-shadow: none;
+  -moz-tab-size: 2;
+  -o-tab-size: 2;
+  tab-size: 2;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+.prism-dark pre[class*="language-"] {
+  padding: 1.25em;
+  margin: 0;
+  overflow: auto;
+  background: transparent;
+}
+
+.prism-dark .token.comment,
+.prism-dark .token.prolog,
+.prism-dark .token.doctype,
+.prism-dark .token.cdata {
+  color: #6a9955;
+}
+
+.prism-dark .token.punctuation {
+  color: #d4d4d4;
+}
+
+.prism-dark .token.namespace {
+  color: #4ec9b0;
+}
+
+.prism-dark .token.property,
+.prism-dark .token.tag,
+.prism-dark .token.boolean,
+.prism-dark .token.number,
+.prism-dark .token.constant,
+.prism-dark .token.symbol,
+.prism-dark .token.deleted {
+  color: #b5cea8;
+}
+
+.prism-dark .token.selector,
+.prism-dark .token.attr-name,
+.prism-dark .token.string,
+.prism-dark .token.char,
+.prism-dark .token.builtin,
+.prism-dark .token.inserted {
+  color: #ce9178;
+}
+
+.prism-dark .token.operator,
+.prism-dark .token.entity,
+.prism-dark .token.url,
+.prism-dark .language-css .token.string,
+.prism-dark .style .token.string {
+  color: #d4d4d4;
+}
+
+.prism-dark .token.atrule,
+.prism-dark .token.attr-value,
+.prism-dark .token.keyword {
+  color: #c586c0;
+}
+
+.prism-dark .token.function,
+.prism-dark .token.class-name {
+  color: #dcdcaa;
+}
+
+.prism-dark .token.regex,
+.prism-dark .token.important,
+.prism-dark .token.variable {
+  color: #9cdcfe;
+}
+
+.prism-dark .token.parameter {
+  color: #9cdcfe;
+}
+
+.prism-dark .token.plain,
+.prism-dark .token.plain-text {
+  color: #d4d4d4;
+}
+
+.prism-dark .token.important,
+.prism-dark .token.bold {
+  font-weight: bold;
+}
+
+.prism-dark .token.italic {
+  font-style: italic;
+}
+
+/* Prism Light Theme */
+.prism-light code[class*="language-"],
+.prism-light pre[class*="language-"] {
+  color: #1f2937;
+  background: transparent;
+  font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 0.95rem;
+  text-align: left;
+  white-space: pre-wrap;
+  word-spacing: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  line-height: 1.6;
+  text-shadow: none;
+  -moz-tab-size: 2;
+  -o-tab-size: 2;
+  tab-size: 2;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+.prism-light pre[class*="language-"] {
+  padding: 1.25em;
+  margin: 0;
+  overflow: auto;
+  background: transparent;
+}
+
+.prism-light .token.comment,
+.prism-light .token.prolog,
+.prism-light .token.doctype,
+.prism-light .token.cdata {
+  color: #6b7280;
+}
+
+.prism-light .token.punctuation {
+  color: #374151;
+}
+
+.prism-light .token.namespace {
+  color: #0d9488;
+}
+
+.prism-light .token.property,
+.prism-light .token.tag,
+.prism-light .token.boolean,
+.prism-light .token.number,
+.prism-light .token.constant,
+.prism-light .token.symbol,
+.prism-light .token.deleted {
+  color: #dc2626;
+}
+
+.prism-light .token.selector,
+.prism-light .token.attr-name,
+.prism-light .token.string,
+.prism-light .token.char,
+.prism-light .token.builtin,
+.prism-light .token.inserted {
+  color: #16a34a;
+}
+
+.prism-light .token.operator,
+.prism-light .token.entity,
+.prism-light .token.url,
+.prism-light .language-css .token.string,
+.prism-light .style .token.string {
+  color: #374151;
+}
+
+.prism-light .token.atrule,
+.prism-light .token.attr-value,
+.prism-light .token.keyword {
+  color: #2563eb;
+}
+
+.prism-light .token.function,
+.prism-light .token.class-name {
+  color: #7c3aed;
+}
+
+.prism-light .token.regex,
+.prism-light .token.important,
+.prism-light .token.variable {
+  color: #ea580c;
+}
+
+.prism-light .token.important,
+.prism-light .token.bold {
+  font-weight: bold;
+}
+
+.prism-light .token.italic {
+  font-style: italic;
+}

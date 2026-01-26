@@ -23,12 +23,24 @@ export default function SegmentEditorPage() {
   
   useEffect(() => {
     async function loadData() {
-      if (!lessonId) {
-        setLoading(false)
-        return
-      }
-
       try {
+        // Load initial metadata from sessionStorage first
+        let initialMeta: any = null
+        try {
+          const raw = sessionStorage.getItem('lessonMeta')
+          if (raw) {
+            initialMeta = JSON.parse(raw)
+            setLesson((prev: any) => ({ ...prev, ...initialMeta }))
+          }
+        } catch (e) {
+          console.error("Failed to load lessonMeta from sessionStorage", e)
+        }
+
+        if (!lessonId) {
+          setLoading(false)
+          return
+        }
+
         const [lessonRes, meRes, wikisRes] = await Promise.all([
           fetch(`/api/lessons/${lessonId}?kit=${wikiSlug}`),
           fetch('/api/developers/me', { headers: applyDeveloperHeader({}) }),
@@ -37,9 +49,20 @@ export default function SegmentEditorPage() {
 
         if (lessonRes.ok) {
           const data = await lessonRes.json()
-          setLesson(data)
+          // Merge API data with sessionStorage meta (API data takes precedence for existing lessons)
+          setLesson((prev: any) => {
+            const next = { ...prev, ...data }
+            // Don't overwrite properties with empty values if we already have them from sessionStorage
+            if (!data.coverImage && prev?.coverImage) next.coverImage = prev.coverImage
+            if (!data.title_en && prev?.title_en) next.title_en = prev.title_en
+            if (!data.title_ar && prev?.title_ar) next.title_ar = prev.title_ar
+            return next
+          })
         } else {
-          setError('Failed to load lesson')
+          // If lesson doesn't exist yet, we keep the initialMeta
+          if (!initialMeta) {
+            setError('Failed to load lesson')
+          }
         }
         
         if (meRes.ok) {
@@ -61,7 +84,6 @@ export default function SegmentEditorPage() {
               setPreviewBaseUrl(`https://wiki.robogeex.com/${wikiSlug}`)
             }
           } else {
-             // Fallback if wiki not found in list (shouldn't happen usually)
              setPreviewBaseUrl(`https://wiki.robogeex.com/${wikiSlug}`)
           }
         }
@@ -111,6 +133,15 @@ export default function SegmentEditorPage() {
 
       const result = await res.json()
       console.log('Saved successfully:', result)
+      
+      // Update local lesson state with saved data (to get ID/Slug/CoverImage/etc.)
+      if (result.lesson) {
+        setLesson((prev: any) => ({
+          ...prev,
+          ...result.lesson,
+          body: prev?.body // Keep current segments body
+        }))
+      }
     } catch (err) {
       console.error('Save error:', err)
       throw err

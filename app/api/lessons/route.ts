@@ -308,6 +308,7 @@ export async function POST(req: Request) {
             id: saved.id,
             slug: saved.slug,
             order: saved.order,
+            coverImage: saved.coverImage,
             ownerId: saved.ownerId || lesson.ownerId || developer?.id || null,
             status: saved.status,
           },

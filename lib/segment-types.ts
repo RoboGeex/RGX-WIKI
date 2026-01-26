@@ -12,11 +12,14 @@ export interface ListItem {
 
 export interface Segment {
   id: string;
-  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'image' | 'list' | 'youtube' | 'video' | 'table' | 'horizontalRule' | 'imageSlider';
+  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'image' | 'list' | 'youtube' | 'video' | 'table' | 'horizontalRule' | 'imageSlider' | 'code';
   
   // Content
   english: string;
   arabic: string;
+
+  // Language for code blocks
+  language?: string;
   
   // List items (for list type) - supports nested lists with structured items
   items_en?: ListItem[];
@@ -90,6 +93,7 @@ export function createSegment(type: Segment['type'], english: string = '', arabi
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     refTitle: '',
+    language: type === 'code' ? 'typescript' : undefined,
   };
   
   // Initialize list items for list type
@@ -206,6 +210,7 @@ export function convertBodyToSegments(body: any[]): Segment[] {
       image_ar: item.image_ar,
       images: item.images,
       url: item.url,
+      language: item.language,
       html_en: item.html_en,
       html_ar: item.html_ar,
       // Restore versioning and sync status from metadata
@@ -260,6 +265,7 @@ export function convertSegmentsToBody(segments: Segment[]): any[] {
       image_ar: seg.image_ar,
       images: seg.images,
       url: seg.url,
+      language: seg.language,
       // Store segment metadata for sync tracking
       _segment: {
         id: seg.id,

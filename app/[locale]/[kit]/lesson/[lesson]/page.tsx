@@ -7,6 +7,7 @@ import {
 import type { Locale } from '@/lib/i18n'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
+import CodeBlock from '@/components/code-block'
 import PrevNextNav from '@/components/prev-next-nav'
 import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import Step from '@/components/step'
@@ -332,6 +333,12 @@ export default async function LessonPage(
 
     if (block.type === 'codeTabs') {
       return <CodeTabs key={index} codeItem={block} locale={locale} />
+    }
+
+    if (block.type === 'code') {
+      const code = locale === 'ar' ? (block.ar || block.en || '') : (block.en || '')
+      if (!code) return null
+      return <CodeBlock key={index} code={code} language={block.language} locale={locale} />
     }
 
     return null

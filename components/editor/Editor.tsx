@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -19,7 +20,7 @@ import { common, createLowlight } from 'lowlight'
 const lowlightInstance = createLowlight(common)
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import BubbleMenuExt from '@tiptap/extension-bubble-menu'
-import { DOMSerializer } from 'prosemirror-model'
+import { DOMSerializer, DOMParser as ProseDOMParser } from 'prosemirror-model'
 import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
@@ -27,6 +28,8 @@ import ImageSlider from './extensions/ImageSlider'
 import { CellSelection } from '@tiptap/pm/tables'
 import type { EditorView } from '@tiptap/pm/view'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, Globe, Eye } from 'lucide-react'
+import './hljs.css'
 import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
 import DeveloperLogin from './DeveloperLogin'
 
@@ -42,16 +45,21 @@ function getCellPos(view: EditorView, cell: HTMLElement): number | null {
 }
 
 function setCellSelection(view: EditorView, anchorPos: number, headPos: number) {
-  const { state, dispatch } = view
-  const selection = CellSelection.create(state.doc, anchorPos, headPos)
-  if (
-    state.selection instanceof CellSelection &&
-    state.selection.$anchorCell.pos === selection.$anchorCell.pos &&
-    state.selection.$headCell.pos === selection.$headCell.pos
-  ) {
+  try {
+    const { state, dispatch } = view
+    const selection = CellSelection.create(state.doc, anchorPos, headPos)
+    if (
+      state.selection instanceof CellSelection &&
+      state.selection.$anchorCell.pos === selection.$anchorCell.pos &&
+      state.selection.$headCell.pos === selection.$headCell.pos
+    ) {
+      return
+    }
+    dispatch(state.tr.setSelection(selection))
+  } catch (e) {
+    // Silently ignore - the position wasn't inside a valid table cell
     return
   }
-  dispatch(state.tr.setSelection(selection))
 }
 
 function handleTableMouseDown(view: EditorView, event: MouseEvent): boolean {
@@ -153,6 +161,8 @@ function normalizeUrl(value: string): string {
 
 const bubbleIdEn = 'table-bubble-menu-en'
 const textBubbleIdEn = 'text-bubble-menu-en'
+const bubbleIdAr = 'table-bubble-menu-ar'
+const textBubbleIdAr = 'text-bubble-menu-ar'
 
 export default function WikiEditor() {
   const router = useRouter()
@@ -246,7 +256,7 @@ export default function WikiEditor() {
         const data = await res.json()
         if (cancelled) return
         if (res.ok && data?.developer?.role) {
-          setIsAdmin(data.developer.role === 'admin')
+          setIsAdmin(data.developer.role === 'admin' || data.developer.role === 'superadmin')
         } else {
           setIsAdmin(false)
         }
@@ -261,6 +271,41 @@ export default function WikiEditor() {
   }, [developerId])
   const isOwner = Boolean(meta.ownerId && developerId && meta.ownerId === developerId)
   const saveDisabled = !isAdmin && !isOwner && !meta.isNew && Boolean(meta.ownerId)
+
+  // Publish confirmation modal state
+  const [showPublishModal, setShowPublishModal] = useState(false)
+  const [publishCheckpoints, setPublishCheckpoints] = useState({
+    linguistic: false,
+    media: false,
+    ux: false,
+    flow: false
+  })
+
+  // Verify & Mirror confirmation modal state
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [verifyCheckpoints, setVerifyCheckpoints] = useState({
+    content: false,
+    structure: false,
+    readability: false
+  })
+
+  // Reset checkpoints when modals open
+  useEffect(() => {
+    if (showPublishModal || showVerifyModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    if (showPublishModal) {
+      setPublishCheckpoints({ linguistic: false, media: false, ux: false, flow: false })
+    }
+    if (showVerifyModal) {
+      setVerifyCheckpoints({ content: false, structure: false, readability: false })
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showPublishModal, showVerifyModal])
   const displayTitle = useMemo(() => {
     const english = typeof meta.title_en === 'string' ? meta.title_en.trim() : ''
     const arabic = typeof meta.title_ar === 'string' ? meta.title_ar.trim() : ''
@@ -273,6 +318,11 @@ export default function WikiEditor() {
   const textBubbleElementEnRef = useRef<HTMLElement | null>(null)
   const [bubbleElementEn, setBubbleElementEn] = useState<HTMLElement | null>(null)
   const [textBubbleElementEn, setTextBubbleElementEn] = useState<HTMLElement | null>(null)
+
+  const bubbleElementArRef = useRef<HTMLElement | null>(null)
+  const textBubbleElementArRef = useRef<HTMLElement | null>(null)
+  const [bubbleElementAr, setBubbleElementAr] = useState<HTMLElement | null>(null)
+  const [textBubbleElementAr, setTextBubbleElementAr] = useState<HTMLElement | null>(null)
   const [isSigningIn, setIsSigningIn] = useState(!developerId)
 
   useEffect(() => {
@@ -292,12 +342,21 @@ export default function WikiEditor() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return
+    // English
     const tableElement = document.getElementById(bubbleIdEn) as HTMLElement | null
     const textElement = document.getElementById(textBubbleIdEn) as HTMLElement | null
     bubbleElementEnRef.current = tableElement
     textBubbleElementEnRef.current = textElement
     setBubbleElementEn(tableElement)
     setTextBubbleElementEn(textElement)
+
+    // Arabic
+    const tableElementAr = document.getElementById(bubbleIdAr) as HTMLElement | null
+    const textElementAr = document.getElementById(textBubbleIdAr) as HTMLElement | null
+    bubbleElementArRef.current = tableElementAr
+    textBubbleElementArRef.current = textElementAr
+    setBubbleElementAr(tableElementAr)
+    setTextBubbleElementAr(textElementAr)
   }, [])
 
   const initialTitleRef = useRef<string | null>(null)
@@ -424,6 +483,23 @@ export default function WikiEditor() {
       CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
       Video,
       ImageSlider,
+      BubbleMenuExt.configure({
+        element: bubbleElementAr,
+        pluginKey: 'table-bubble-ar',
+        shouldShow: ({ editor }) => editor.isActive('table'),
+        options: { placement: 'top', offset: 8 },
+      }),
+      BubbleMenuExt.configure({
+        element: textBubbleElementAr,
+        pluginKey: 'text-bubble-ar',
+        shouldShow: ({ editor, view, state, from, to }) => {
+          const hasSelection = from !== to && state.selection.empty === false
+          const isNotInTable = !editor.isActive('table')
+          const hasTextContent = state.selection.content().content.size > 0
+          return isNotInTable && hasSelection && hasTextContent
+        },
+        options: { placement: 'top', offset: 8 },
+      }),
       Placeholder.configure({ placeholder: "اكتب '/' للإدراج" }),
       SlashCommand.configure({
         getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
@@ -437,7 +513,7 @@ export default function WikiEditor() {
         dragstart: handleTableDragStart,
       },
     },
-  }, [])
+  }, [bubbleElementAr, textBubbleElementAr])
 
   const handleVerifyAndMirror = () => {
     if (!editorEn || !editorAr) return
@@ -662,6 +738,28 @@ export default function WikiEditor() {
     }
   }
 
+  // Parse HTML string to TipTap JSON nodes using an editor's schema
+  const parseHtmlToNodes = (html: string, editorInstance?: any): any[] => {
+    if (!html || !editorInstance?.schema || typeof document === 'undefined') return []
+    try {
+      const container = document.createElement('div')
+      container.innerHTML = html
+      const parser = ProseDOMParser.fromSchema(editorInstance.schema)
+      const doc = parser.parse(container)
+      if (doc?.content) {
+        const nodes: any[] = []
+        doc.content.forEach((node: any) => {
+          nodes.push(node.toJSON())
+        })
+        return nodes
+      }
+      return []
+    } catch (error) {
+      console.warn('Failed to parse HTML to nodes:', error)
+      return []
+    }
+  }
+
   const stripHtml = (value: string): string =>
     typeof value === 'string'
       ? value
@@ -737,15 +835,20 @@ export default function WikiEditor() {
             if (listItems.length > 0) {
               nodes.push({
                 type: item.ordered ? 'orderedList' : 'bulletList',
-                content: listItems.map((entry: string) => ({
-                  type: 'listItem',
-                  content: [
-                    {
-                      type: 'paragraph',
-                      content: stripHtml(entry) ? [{ type: 'text', text: stripHtml(entry) }] : [],
-                    },
-                  ],
-                })),
+                content: listItems.map((entry: any) => {
+                  // Handle both string format and ListItem object format ({text, indent})
+                  const rawText = typeof entry === 'string' ? entry : (entry?.text || '')
+                  const text = stripHtml(rawText)
+                  return {
+                    type: 'listItem',
+                    content: [
+                      {
+                        type: 'paragraph',
+                        content: text ? [{ type: 'text', text }] : [],
+                      },
+                    ],
+                  }
+                }),
               })
             }
             break
@@ -754,6 +857,16 @@ export default function WikiEditor() {
             const jsonNode = item[jsonKey]
             if (jsonNode && typeof jsonNode === 'object') {
               nodes.push(cloneNode(jsonNode))
+            } else {
+              // Fallback: parse table HTML (e.g., from Segment Editor)
+              const tableHtml = typeof item[htmlKey] === 'string' ? item[htmlKey] : ''
+              if (tableHtml) {
+                const editor = language === 'ar' ? editorAr : editorEn
+                const parsed = parseHtmlToNodes(tableHtml, editor)
+                if (parsed.length > 0) {
+                  parsed.forEach(n => nodes.push(n))
+                }
+              }
             }
             break
           }
@@ -830,13 +943,38 @@ export default function WikiEditor() {
             })
           }
           break
-          default:
-            if (textValue) {
+          case 'code': {
+            const codeText = typeof item[htmlKey] === 'string' ? stripHtml(item[htmlKey]) : textValue
+            if (codeText) {
+              nodes.push({
+                type: 'codeBlock',
+                attrs: { language: item.language || 'typescript' },
+                content: [{ type: 'text', text: codeText }],
+              })
+            }
+            break
+          }
+          default: {
+            // Fallback: try to parse HTML if available
+            const fallbackHtml = typeof item[htmlKey] === 'string' ? item[htmlKey] : ''
+            if (fallbackHtml) {
+              const editor = language === 'ar' ? editorAr : editorEn
+              const parsed = parseHtmlToNodes(fallbackHtml, editor)
+              if (parsed.length > 0) {
+                parsed.forEach(n => nodes.push(n))
+              } else if (textValue) {
+                nodes.push({
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: textValue }],
+                })
+              }
+            } else if (textValue) {
               nodes.push({
                 type: 'paragraph',
                 content: [{ type: 'text', text: textValue }],
               })
             }
+          }
         }
       })
     }
@@ -1074,6 +1212,7 @@ export default function WikiEditor() {
   }, [meta])
 
   const supportsColorEn = useMemo(() => Boolean(editorEn?.schema?.marks?.textStyle), [editorEn])
+  const supportsColorAr = useMemo(() => Boolean(editorAr?.schema?.marks?.textStyle), [editorAr])
   const tableColors = [
     { name: 'None', value: '' },
     { name: 'Yellow', value: '#FEF9C3' },
@@ -1298,6 +1437,21 @@ export default function WikiEditor() {
           blocks.push(block)
           break
         }
+        case 'codeBlock': {
+          const { text, html } = serializeInline(node.content)
+          if (!text) break
+          const block: any = {
+            type: 'code',
+            language: node.attrs?.language || 'typescript',
+            [textKey]: text,
+            [jsonKey]: cloneNode(node),
+          }
+          if (html) {
+             block[htmlKey] = html
+          }
+          blocks.push(block)
+          break
+        }
         default: {
           if (Array.isArray(node.content)) {
             node.content.forEach((child: any) => handleNode(child))
@@ -1442,99 +1596,133 @@ export default function WikiEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef2f1]">
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
-              <h1 className="font-semibold text-lg">Lesson Editor</h1>
-              {status && <div className="text-sm text-gray-600">{status}</div>}
+    <div className="revolutionary-editor-container">
+      <div className="revolutionary-editor-wrapper">
+        {/* Top Toolbar - Glassmorphic */}
+        <div className="glass-top-toolbar mb-6">
+          <div className="glass-top-toolbar-left">
+            <div className="glass-top-toolbar-title">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                <Globe size={10} />
+                {meta.wikiSlug && <span>{meta.wikiSlug}</span>}
+                <span>/</span>
+                <span>Editor</span>
+              </div>
+              <input
+                type="text"
+                value={meta.title_en || ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setMeta((m: typeof meta) => {
+                    const next = { ...m, title_en: val }
+                    try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch {}
+                    return next
+                  })
+                }}
+                placeholder="Untitled Lesson"
+                className="text-lg font-bold text-slate-900 leading-none bg-transparent border-none outline-none w-full placeholder:text-slate-300 hover:bg-white/50 focus:bg-white/80 rounded px-1 -mx-1 py-0.5 transition-colors"
+                style={{ fontSize: '1.125rem' }}
+              />
+              {meta.slug && (
+                <div className="glass-top-toolbar-meta" style={{ marginTop: '2px' }}>
+                  <span>{meta.slug}</span>
+                </div>
+              )}
             </div>
-            {(displayTitle || meta.slug || meta.wikiSlug) && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                {displayTitle && <span className="font-medium text-gray-700">{displayTitle}</span>}
-                {meta.slug && <span>Slug: {meta.slug}</span>}
-                {meta.wikiSlug && <span>Wiki: {meta.wikiSlug}</span>}
+          </div>
+          <div className="glass-top-toolbar-right">
+            {status && (
+              <div className="glass-status">
+                <span className="glass-status-dot" />
+                {status}
               </div>
             )}
-          </div>
-          <div className="flex gap-2">
+            {meta.slug && (
+              <button
+                className="glass-btn glass-btn-secondary mr-2"
+                onClick={() => window.open(`/wiki/${meta.wikiSlug || 'student-kit'}/${meta.slug}`, '_blank')}
+                title="Preview in new tab"
+                type="button"
+              >
+                <Eye className="inline w-4 h-4 mr-1" /> Preview
+              </button>
+            )}
             <button
-              className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 disabled:opacity-50"
+              className="glass-btn glass-btn-secondary"
               onClick={() => publish('draft')}
               disabled={saveDisabled}
-              title={saveDisabled ? 'Only the owner or admin can save this lesson' : undefined}
+              title={saveDisabled ? 'Only the owner or admin can save this lesson' : 'Save as draft'}
               type="button"
             >
-              Save (Draft)
+              <Save className="inline w-4 h-4 mr-1" /> Save Draft
             </button>
             <button
-              className="px-3 py-1.5 rounded-md bg-green-600 text-white text-sm hover:opacity-90 disabled:opacity-50"
-              onClick={() => publish('published')}
+              className="glass-btn glass-btn-success"
+              onClick={() => setShowPublishModal(true)}
               disabled={!isAdmin}
               title="Only admins can publish"
               type="button"
             >
-              Publish to Wiki
+              <Rocket className="inline w-4 h-4 mr-1" /> Publish
             </button>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-
+        <div className="revolutionary-editor-grid">
           {/* English Editor Pane */}
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
-            <div className="px-6 pt-6 pb-4 border-b text-sm text-gray-500">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span>English (left to right)</span>
-                </div>
-                <span className="text-xs text-gray-400">Press <span className="px-1 rounded bg-gray-100">/</span> for commands</span>
+          <div className="glass-editor-panel">
+            <div className="glass-editor-header">
+              <div className="glass-editor-header-title">
+                <span className="glass-lang-indicator en">EN</span>
+                <span>English</span>
+                <span className="text-slate-400 text-xs font-normal">• Left to Right</span>
+              </div>
+              <div className="glass-shortcut-hint">
+                Press <span className="glass-shortcut-key">/</span> for commands
               </div>
             </div>
-            <div className="px-6 py-6 space-y-4">
-              <div id={bubbleIdEn} className="rounded-lg border bg-white shadow p-1 flex items-center gap-1 text-xs" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().addRowBefore().run()}>Row +</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().addRowAfter().run()}>Row -</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().addColumnBefore().run()}>Col +</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().addColumnAfter().run()}>Col -</button>
-                <span className="mx-1 h-4 w-px bg-gray-200" />
-                <button className="px-2 py-1 rounded hover:bg-gray-100 text-red-600" onClick={() => editorEn?.chain().focus().deleteRow().run()}>Del Row</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100 text-red-600" onClick={() => editorEn?.chain().focus().deleteColumn().run()}>Del Col</button>
-                <span className="mx-1 h-4 w-px bg-gray-200" />
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().toggleHeaderRow().run()}>Hdr Row</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().toggleHeaderColumn().run()}>Hdr Col</button>
-                <span className="mx-1 h-4 w-px bg-gray-200" />
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().mergeCells().run()}>Merge</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().splitCell().run()}>Split</button>
-                <span className="mx-1 h-4 w-px bg-gray-200" />
-                <div className="flex items-center gap-1" title="Cell color">
-                  {tableColors.map(c => (
-                    <button key={c.name} className="w-4 h-4 rounded border" style={{ background: c.value || 'transparent' }} onClick={() => editorEn?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} />
-                  ))}
-                </div>
-                <span className="mx-1 h-4 w-px bg-gray-200" />
-                <button className="px-2 py-1 rounded hover:bg-gray-100 text-red-700" onClick={() => editorEn?.chain().focus().deleteTable().run()}>Delete</button>
+            
+            <div className="glass-editor-content">
+              {/* Table Bubble Menu */}
+              <div id={bubbleIdEn} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addRowBefore().run()} title="Add row above">↑+</button>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addRowAfter().run()} title="Add row below">↓+</button>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addColumnBefore().run()} title="Add column left">←+</button>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addColumnAfter().run()} title="Add column right">→+</button>
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteRow().run()} title="Delete row" style={{color: '#ef4444'}}>⊖</button>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteColumn().run()} title="Delete column" style={{color: '#ef4444'}}>⊝</button>
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().toggleHeaderRow().run()} title="Toggle header row">H̲</button>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().mergeCells().run()} title="Merge cells">⊞</button>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().splitCell().run()} title="Split cell">⊟</button>
+                <span className="glass-bubble-divider" />
+                {tableColors.map(c => (
+                  <button key={c.name} className="glass-bubble-color" style={{ background: c.value || '#f8fafc' }} onClick={() => editorEn?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} title={c.name} />
+                ))}
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteTable().run()} title="Delete table" style={{color: '#dc2626'}}><Trash2 className="inline w-3.5 h-3.5" /></button>
               </div>
 
-              <div id={textBubbleIdEn} className="mt-2 rounded-lg border bg-white shadow p-1 flex items-center gap-1 text-xs" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
-                <button className="px-2 py-1 rounded hover:bg-gray-100 font-semibold" onClick={() => editorEn?.chain().focus().toggleBold().run()}>B</button>
-                <button className="px-2 py-1 rounded hover:bg-gray-100 italic" onClick={() => editorEn?.chain().focus().toggleItalic().run()}>I</button>
-              <button className="px-2 py-1 rounded hover:bg-gray-100 underline" onClick={() => editorEn?.chain().focus().toggleUnderline().run()}>U</button>
-              <button className="px-2 py-1 rounded hover:bg-gray-100 line-through" onClick={() => editorEn?.chain().focus().toggleStrike().run()}>S</button>
-              <span className="mx-1 h-4 w-px bg-gray-200" />
-              <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => promptForLink(editorEn)}>Link</button>
-              <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().unsetLink().run()}>Unlink</button>
-              <span className="mx-1 h-4 w-px bg-gray-200" />
-              {textColors.map(col => (
-                <button key={col} className="w-4 h-4 rounded border" style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} />
-              ))}
-              <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined}>Clear</button>
-              <span className="mx-1 h-4 w-px bg-gray-200" />
-                {highlightColors.map(col => (
-                  <button key={col} className="w-4 h-4 rounded border" style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} />
+              {/* Text Bubble Menu */}
+              <div id={textBubbleIdEn} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
+                <button className="glass-bubble-btn" style={{fontWeight: 700}} onClick={() => editorEn?.chain().focus().toggleBold().run()} title="Bold">B</button>
+                <button className="glass-bubble-btn" style={{fontStyle: 'italic'}} onClick={() => editorEn?.chain().focus().toggleItalic().run()} title="Italic">I</button>
+                <button className="glass-bubble-btn" style={{textDecoration: 'underline'}} onClick={() => editorEn?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
+                <button className="glass-bubble-btn" style={{textDecoration: 'line-through'}} onClick={() => editorEn?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => promptForLink(editorEn)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
+                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
+                <span className="glass-bubble-divider" />
+                {textColors.map(col => (
+                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} title="Text color" />
                 ))}
-                <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={() => editorEn?.chain().focus().unsetHighlight().run()}>Clear</button>
+                <button className="glass-bubble-btn text-xs" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
+                <span className="glass-bubble-divider" />
+                {highlightColors.map(col => (
+                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                ))}
+                <button className="glass-bubble-btn text-xs" onClick={() => editorEn?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
               </div>
 
               <EditorContent editor={editorEn} />
@@ -1542,36 +1730,329 @@ export default function WikiEditor() {
           </div>
 
           {/* Arabic Editor Pane */}
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
-            <div className="px-6 pt-6 pb-4 border-b text-sm text-gray-500">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span>Arabic (right to left)</span>
-                  {!isVerified && (
-                     <button
-                       onClick={handleVerifyAndMirror}
-                       className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                       title="Verify English content and start translating"
-                     >
-                       Verify & Mirror English
-                     </button>
-                  )}
-                </div>
-                {isVerified && (
-                  <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded">Unlocked</span>
+          <div className={`glass-editor-panel ${!isVerified ? 'glass-editor-locked' : ''}`}>
+            <div className="glass-editor-header">
+              <div className="glass-editor-header-title">
+                <span className="glass-lang-indicator ar">AR</span>
+                <span>العربية</span>
+                <span className="text-slate-400 text-xs font-normal">• Right to Left</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {!isVerified ? (
+                  <button onClick={() => setShowVerifyModal(true)} className="glass-verify-btn" title="Verify English and unlock Arabic">
+                    <Unlock className="inline w-4 h-4 mr-1" /> Verify & Mirror
+                  </button>
+                ) : (
+                  <span className="glass-editor-header-badge synced"><Check className="inline w-3.5 h-3.5 mr-0.5" /> Unlocked</span>
                 )}
-                <span className="text-xs text-gray-400">يمكنك استخدام الأمر <span className="px-1 rounded bg-gray-100">/</span> للإدراج</span>
               </div>
             </div>
-            <div className={`px-6 py-6 space-y-4 ${!isVerified ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+            
+            <div className="glass-editor-content">
               {arabicDirtyRef.current && (
-                <div className="text-xs text-amber-600">Arabic content has diverged from the English draft.</div>
+                <div className="glass-sync-ribbon needs-sync">
+                  <AlertTriangle className="inline w-3.5 h-3.5 mr-1" /> Arabic content has diverged from English
+                </div>
               )}
+              {/* Table Bubble Menu AR */}
+              <div id={bubbleIdAr} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999 }}>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowBefore().run()} title="Add row above">↑+</button>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowAfter().run()} title="Add row below">↓+</button>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnBefore().run()} title="Add column left">←+</button>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnAfter().run()} title="Add column right">→+</button>
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteRow().run()} title="Delete row" style={{color: '#ef4444'}}>⊖</button>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteColumn().run()} title="Delete column" style={{color: '#ef4444'}}>⊝</button>
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().toggleHeaderRow().run()} title="Toggle header row">H̲</button>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().mergeCells().run()} title="Merge cells">⊞</button>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().splitCell().run()} title="Split cell">⊟</button>
+                <span className="glass-bubble-divider" />
+                {tableColors.map(c => (
+                  <button key={c.name} className="glass-bubble-color" style={{ background: c.value || '#f8fafc' }} onClick={() => editorAr?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} title={c.name} />
+                ))}
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteTable().run()} title="Delete table" style={{color: '#dc2626'}}><Trash2 className="inline w-3.5 h-3.5" /></button>
+              </div>
+
+              {/* Text Bubble Menu AR */}
+              <div id={textBubbleIdAr} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999 }}>
+                <button className="glass-bubble-btn" style={{fontWeight: 700}} onClick={() => editorAr?.chain().focus().toggleBold().run()} title="Bold">B</button>
+                <button className="glass-bubble-btn" style={{fontStyle: 'italic'}} onClick={() => editorAr?.chain().focus().toggleItalic().run()} title="Italic">I</button>
+                <button className="glass-bubble-btn" style={{textDecoration: 'underline'}} onClick={() => editorAr?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
+                <button className="glass-bubble-btn" style={{textDecoration: 'line-through'}} onClick={() => editorAr?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
+                <span className="glass-bubble-divider" />
+                <button className="glass-bubble-btn" onClick={() => promptForLink(editorAr)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
+                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
+                <span className="glass-bubble-divider" />
+                {textColors.map(col => (
+                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr || !supportsColorAr) return; editorAr.chain().focus().setColor(col).run() }} title="Text color" />
+                ))}
+                <button className="glass-bubble-btn text-xs" onClick={() => supportsColorAr ? editorAr?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
+                <span className="glass-bubble-divider" />
+                {highlightColors.map(col => (
+                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr) return; editorAr.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                ))}
+                <button className="glass-bubble-btn text-xs" onClick={() => editorAr?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
+              </div>
+
               <EditorContent editor={editorAr} />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Verify & Mirror Confirmation Modal */}
+      <AnimatePresence>
+        {showVerifyModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setShowVerifyModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-slate-50 px-8 py-6 border-b border-slate-100">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Unlock className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Verify & Unlock Arabic</h3>
+                </div>
+                <p className="text-sm text-slate-500">Please confirm the English content is finalized before mirroring it to the Arabic editor.</p>
+              </div>
+
+              {/* Checkpoints */}
+              <div className="p-8 space-y-4">
+                {[
+                  { id: 'content', title: 'Content Completeness', desc: 'All English content has been written and finalized. No placeholder text or missing sections remain.' },
+                  { id: 'structure', title: 'Structural Accuracy', desc: 'Headings, lists, images, and media are correctly placed and properly formatted.' },
+                  { id: 'readability', title: 'Readability & Quality', desc: 'The text has been proofread for grammar, spelling, and clarity. It is ready for translation.' }
+                ].map((item, idx) => {
+                  const isChecked = (verifyCheckpoints as any)[item.id]
+                  return (
+                    <motion.label
+                      key={item.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + idx * 0.05 }}
+                      className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${isChecked ? 'border-blue-200 bg-blue-50/50' : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'}`}
+                    >
+                      <div className="mt-1 relative flex items-center justify-center w-6 h-6">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => setVerifyCheckpoints(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                        />
+                        <motion.div
+                          initial={false}
+                          animate={{
+                            backgroundColor: isChecked ? 'rgb(59 130 246)' : 'rgb(255 255 255)',
+                            borderColor: isChecked ? 'rgb(59 130 246)' : 'rgb(226 232 240)',
+                            scale: isChecked ? [1, 1.15, 1] : 1
+                          }}
+                          transition={{ duration: 0.3 }}
+                          className="flex items-center justify-center w-6 h-6 border-2 rounded-lg shadow-sm"
+                        >
+                          {isChecked && (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                              <Check className="text-white" size={14} strokeWidth={4} />
+                            </motion.div>
+                          )}
+                        </motion.div>
+                        {isChecked && (
+                          <motion.div
+                            initial={{ x: '-100%', opacity: 0 }}
+                            animate={{ x: '200%', opacity: [0, 0.5, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-12 pointer-events-none"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-slate-900 text-sm group-hover:text-blue-700 transition-colors uppercase tracking-tight">{item.title}</div>
+                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.desc}</p>
+                      </div>
+                      {isChecked && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-transparent pointer-events-none"
+                        />
+                      )}
+                    </motion.label>
+                  )
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  onClick={() => setShowVerifyModal(false)}
+                  className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!Object.values(verifyCheckpoints).every(Boolean)}
+                  onClick={() => {
+                    setShowVerifyModal(false)
+                    handleVerifyAndMirror()
+                  }}
+                  className="group relative px-8 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200/50 hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none disabled:bg-slate-300 transition-all active:scale-95 overflow-hidden"
+                >
+                  <span className="relative z-10">Confirm & Unlock Arabic</span>
+                  {!Object.values(verifyCheckpoints).every(Boolean) ? null : (
+                    <motion.div
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '100%' }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                    />
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Publish Confirmation Modal */}
+      <AnimatePresence>
+        {showPublishModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setShowPublishModal(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-slate-50 px-8 py-6 border-b border-slate-100">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <Globe className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Publish to Wiki</h3>
+                </div>
+                <p className="text-sm text-slate-500">Please complete the following quality assurance checkpoints before making this lesson live.</p>
+              </div>
+
+              {/* Checkpoints */}
+              <div className="p-8 space-y-4">
+                {[
+                  { id: 'linguistic', title: 'Linguistic & Content Accuracy', desc: 'Verified that both English and Arabic translations are accurate and properly contextualized.' },
+                  { id: 'media', title: 'Visual & Media Audit', desc: 'Confirmed all images, sliders, and video assets are present, optimized, and correctly placed.' },
+                  { id: 'ux', title: 'UX & Design Validation', desc: 'Inspected the lesson in Preview Mode to ensure perfect layout, responsiveness, and design excellence.' },
+                  { id: 'flow', title: 'Instructional Continuity', desc: 'Validated the logical flow, educational sequence, and curriculum alignment of the lesson.' }
+                ].map((item, idx) => {
+                  const isChecked = (publishCheckpoints as any)[item.id]
+                  return (
+                    <motion.label
+                      key={item.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + idx * 0.05 }}
+                      className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${isChecked ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'}`}
+                    >
+                      <div className="mt-1 relative flex items-center justify-center w-6 h-6">
+                        <input 
+                          type="checkbox" 
+                          checked={isChecked}
+                          onChange={(e) => setPublishCheckpoints(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                        />
+                        <motion.div 
+                          initial={false}
+                          animate={{ 
+                            backgroundColor: isChecked ? 'rgb(16 185 129)' : 'rgb(255 255 255)',
+                            borderColor: isChecked ? 'rgb(16 185 129)' : 'rgb(226 232 240)',
+                            scale: isChecked ? [1, 1.15, 1] : 1
+                          }}
+                          transition={{ duration: 0.3 }}
+                          className="flex items-center justify-center w-6 h-6 border-2 rounded-lg shadow-sm"
+                        >
+                          {isChecked && (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                              <Check className="text-white" size={14} strokeWidth={4} />
+                            </motion.div>
+                          )}
+                        </motion.div>
+                        {/* Shine effect for checkbox */}
+                        {isChecked && (
+                          <motion.div 
+                            initial={{ x: '-100%', opacity: 0 }}
+                            animate={{ x: '200%', opacity: [0, 0.5, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-12 pointer-events-none"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{item.title}</div>
+                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.desc}</p>
+                      </div>
+                      
+                      {/* Subtle background shine for the whole card when checked */}
+                      {isChecked && (
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent pointer-events-none"
+                        />
+                      )}
+                    </motion.label>
+                  )
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  onClick={() => setShowPublishModal(false)}
+                  className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!Object.values(publishCheckpoints).every(Boolean)}
+                  onClick={() => {
+                    setShowPublishModal(false)
+                    publish('published')
+                  }}
+                  className="group relative px-8 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 disabled:opacity-50 disabled:shadow-none disabled:bg-slate-300 transition-all active:scale-95 overflow-hidden"
+                >
+                  <span className="relative z-10">Confirm & Publish Now</span>
+                  {!Object.values(publishCheckpoints).every(Boolean) ? null : (
+                    <motion.div 
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '100%' }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                    />
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

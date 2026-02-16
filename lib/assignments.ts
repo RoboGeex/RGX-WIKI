@@ -2,7 +2,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-export type DeveloperRole = 'admin' | 'owner' | 'editor'
+export type DeveloperRole = 'superadmin' | 'admin' | 'owner' | 'editor'
 
 export interface DeveloperAssignment {
   id: string
@@ -39,7 +39,7 @@ export function getDeveloperById(id?: string | null): DeveloperAssignment | unde
 
 export function canManageWiki(dev: DeveloperAssignment | undefined, wikiSlug: string): boolean {
   if (!dev) return false
-  if (dev.role === 'admin') return true
+  if (dev.role === 'admin' || dev.role === 'superadmin') return true
   return Boolean(dev.wikiSlugs?.includes(wikiSlug))
 }
 

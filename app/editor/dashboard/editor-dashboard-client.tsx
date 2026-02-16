@@ -26,6 +26,8 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
   const [loadingAccess, setLoadingAccess] = useState(true)
   const [accessError, setAccessError] = useState<string | null>(null)
 
+  const [devRole, setDevRole] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
     const loadAccess = async () => {
@@ -39,6 +41,7 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
         }
         if (cancelled) return
         setWikiAccess(Array.isArray(data.developer.wikiSlugs) ? data.developer.wikiSlugs : [])
+        setDevRole(data.developer.role || null)
       } catch (err: any) {
         if (cancelled) return
         setAccessError(err?.message || 'Failed to load developer access')
@@ -54,9 +57,11 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
   }, [])
 
   const filteredSummaries = useMemo(() => {
+    // Admins and Super Admins see all wikis
+    if (devRole === 'admin' || devRole === 'superadmin') return summaries
     if (!wikiAccess || wikiAccess.length === 0) return summaries
     return summaries.filter(({ wiki }) => wikiAccess.includes(wiki.slug))
-  }, [summaries, wikiAccess])
+  }, [summaries, wikiAccess, devRole])
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleWikiCreated = async (data: { name: string; grade: string; picture: File | null }) => {

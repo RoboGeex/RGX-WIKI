@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import ImageSliderComponent from './ImageSliderComponent'
 
 export interface ImageSliderOptions {
   HTMLAttributes: Record<string, any>
@@ -74,6 +76,10 @@ const ImageSlider = Node.create<ImageSliderOptions>({
       ),
       ['div', { class: 'tiptap-image-slider-track' }, ...slides],
     ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageSliderComponent)
   },
 
   addCommands() {

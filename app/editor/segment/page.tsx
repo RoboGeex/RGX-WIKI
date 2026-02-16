@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import SegmentEditor from '@/components/editor/SegmentEditor'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
@@ -99,6 +99,8 @@ export default function SegmentEditorPage() {
   }, [lessonId, wikiSlug])
 
   const handleSave = async (segments: Segment[]) => {
+    // Always keep the ref up to date for publish
+    latestSegmentsRef.current = segments
     try {
       // Convert segments back to body format
       const body = convertSegmentsToBody(segments)
@@ -150,13 +152,30 @@ export default function SegmentEditorPage() {
 
   const [publishStatus, setPublishStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
+  // Keep a ref to the latest segments so publish can access them
+  const latestSegmentsRef = useRef<Segment[]>([])
+
   const handlePublish = async () => {
     if (!lesson) return
     try {
-      // Create a payload that sets status to published
-      // IMPORTANT: Preserve the current body to prevent editor wipe
+      // First, save the latest segments to ensure we publish current content
+      // This mirrors the classic editor behavior which always saves + publishes in one step
+      const currentSegments = latestSegmentsRef.current
+      const body = convertSegmentsToBody(currentSegments)
+
       const payload = {
         ...lesson,
+        id: lessonId,
+        slug: lesson?.slug || lessonId,
+        wikiSlug,
+        title_en: lesson?.title_en || lessonTitle,
+        title_ar: lesson?.title_ar || '',
+        body,
+        duration_min: lesson?.duration_min || 30,
+        difficulty: lesson?.difficulty || 'Beginner',
+        prerequisites_en: lesson?.prerequisites_en || [],
+        prerequisites_ar: lesson?.prerequisites_ar || [],
+        materials: lesson?.materials || [],
         status: 'published',
         publishedAt: new Date().toISOString()
       }
@@ -174,7 +193,7 @@ export default function SegmentEditorPage() {
 
       const result = await res.json()
       
-      // Update local state but preserve body from current state if API doesn't return it fully populated
+      // Update local state but preserve body from current state
       setLesson((prev: any) => ({
         ...prev,
         ...result.lesson,
@@ -190,7 +209,7 @@ export default function SegmentEditorPage() {
     }
   }
 
-  const isAdmin = developer?.role === 'admin'
+  const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
   const isOwner = lesson?.ownerId === developer?.id || isAdmin // Admins are effectively owners
 
   if (loading) {
@@ -227,6 +246,7 @@ export default function SegmentEditorPage() {
         onPublish={handlePublish}
         lessonSlug={lesson?.slug}
         previewBaseUrl={previewBaseUrl}
+        onTitleChange={(title) => setLesson((prev: any) => ({ ...prev, title_en: title }))}
       />
       {/* Publish Popup */}
       {publishStatus !== 'idle' && (

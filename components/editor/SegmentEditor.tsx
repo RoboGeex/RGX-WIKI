@@ -54,7 +54,9 @@ import {
   GalleryHorizontal,
   Code,
   Moon,
-  Sun
+  Sun,
+  Maximize2,
+  Minimize2
 } from 'lucide-react'
 import { Outfit } from 'next/font/google'
 
@@ -119,6 +121,7 @@ interface SegmentEditorProps {
   onPublish?: () => Promise<void>
   lessonSlug?: string
   previewBaseUrl?: string
+  onTitleChange?: (title: string) => void
 }
 
 type SegmentType = Segment['type']
@@ -492,7 +495,8 @@ export default function SegmentEditor({
   isAdmin = false, 
   onPublish,
   lessonSlug,
-  previewBaseUrl
+  previewBaseUrl,
+  onTitleChange
 }: SegmentEditorProps) {
   const [segments, setSegments] = useState<Segment[]>([])
   const [expandedSegments, setExpandedSegments] = useState<Set<string>>(new Set())
@@ -951,6 +955,17 @@ export default function SegmentEditor({
 
 
 
+  // Expand/Collapse handlers
+  const expandAll = useCallback(() => {
+    setExpandedSegments(new Set(segments.map(s => s.id)))
+    setCollapsedSections(new Set())
+  }, [segments])
+
+  const collapseAll = useCallback(() => {
+    setExpandedSegments(new Set())
+    setCollapsedSections(new Set())
+  }, [])
+
   // Handle image upload
   const handleImageUpload = useCallback(async (segmentId: string, file: File) => {
     try {
@@ -1287,6 +1302,7 @@ export default function SegmentEditor({
   const searchParams = useSearchParams()
   const lessonTitleFromUrl = searchParams.get('title') || 'Untitled Lesson'
   const wikiNameFromUrl = searchParams.get('wiki') || 'RGX Wiki'
+  const [editableTitle, setEditableTitle] = useState(lessonTitleFromUrl)
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20 font-sans">
@@ -1309,15 +1325,22 @@ export default function SegmentEditor({
                 <span>/</span>
                 <span>Editor</span>
               </div>
-              <h1 className="text-lg font-bold text-slate-900 leading-none">
-                {lessonTitleFromUrl}
-              </h1>
+              <input
+                type="text"
+                value={editableTitle}
+                onChange={(e) => {
+                  setEditableTitle(e.target.value)
+                  onTitleChange?.(e.target.value)
+                }}
+                placeholder="Untitled Lesson"
+                className="text-lg font-bold text-slate-900 leading-none bg-transparent border-none outline-none w-full placeholder:text-slate-300 hover:bg-white/50 focus:bg-white/80 rounded px-1 -mx-1 py-0.5 transition-colors"
+              />
             </div>
           </div>
           
           <div className="flex items-center gap-3">
             <Link 
-              href={`/editor/lesson?wiki=${wikiSlug}&id=${lessonId}&title=${encodeURIComponent(lessonTitleFromUrl)}`}
+              href={`/editor/lesson?wiki=${wikiSlug}&id=${lessonId}&title=${encodeURIComponent(editableTitle)}`}
               className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors mr-2 hidden md:block"
             >
               Switch to Classic Editor →
@@ -1389,6 +1412,32 @@ export default function SegmentEditor({
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/50 flex flex-col overflow-hidden max-h-full">
             <div className="p-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
               <div className="space-y-6">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-2">View</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={expandAll}
+                      className="flex flex-col items-center justify-center gap-1.5 px-1 py-3 text-xs font-semibold text-slate-600 bg-white/50 border border-slate-200/50 rounded-xl hover:bg-white hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-500/5 transition-all text-center group active:scale-95"
+                    >
+                      <span className="p-1.5 rounded-lg bg-slate-50 group-hover:bg-emerald-50 text-slate-400 group-hover:text-emerald-500 transition-colors">
+                        <Maximize2 size={16} />
+                      </span>
+                      Expand All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={collapseAll}
+                      className="flex flex-col items-center justify-center gap-1.5 px-1 py-3 text-xs font-semibold text-slate-600 bg-white/50 border border-slate-200/50 rounded-xl hover:bg-white hover:text-amber-600 hover:border-amber-200 hover:shadow-lg hover:shadow-amber-500/5 transition-all text-center group active:scale-95"
+                    >
+                      <span className="p-1.5 rounded-lg bg-slate-50 group-hover:bg-amber-50 text-slate-400 group-hover:text-amber-500 transition-colors">
+                        <Minimize2 size={16} />
+                      </span>
+                      Collapse All
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-2">Compose</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -2460,9 +2509,19 @@ export default function SegmentEditor({
                 </button>
                 <button
                   disabled={!Object.values(publishCheckpoints).every(Boolean)}
-                  onClick={() => {
+                  onClick={async () => {
                     setShowPublishModal(false)
-                    onPublish?.()
+                    // Save current segments first, then publish
+                    // This ensures the latest content is persisted before the status update
+                    try {
+                      const currentSegments = segmentsRef.current
+                      if (onSave) {
+                        await onSave(currentSegments)
+                      }
+                      onPublish?.()
+                    } catch (err) {
+                      console.error('Pre-publish save failed:', err)
+                    }
                   }}
                   className="group relative px-8 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 disabled:opacity-50 disabled:shadow-none disabled:bg-slate-300 transition-all active:scale-95 overflow-hidden"
                 >

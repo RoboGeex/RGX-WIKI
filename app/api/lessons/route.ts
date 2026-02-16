@@ -174,7 +174,7 @@ export async function POST(req: Request) {
             lessonIds: []
         }
     }
-    const isAdmin = developer?.role === 'admin'
+    const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
 
     if (SHOULD_ENFORCE_DEV_OWNERSHIP && !developer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

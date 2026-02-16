@@ -14,6 +14,7 @@ import { TableCell } from '@tiptap/extension-table-cell'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
 import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import { isTextSelection } from '@tiptap/core'
+import { Trash2 } from 'lucide-react'
 
 interface SegmentTiptapEditorProps {
   content: string
@@ -276,7 +277,7 @@ export default memo(function SegmentTiptapEditor({
          <button type="button" className="px-1.5 py-1 rounded hover:bg-gray-100 text-red-600" onMouseDown={(e) => { e.preventDefault(); editor?.chain().focus().deleteRow().run() }} title="Del Row">DR</button>
          <button type="button" className="px-1.5 py-1 rounded hover:bg-gray-100 text-red-600" onMouseDown={(e) => { e.preventDefault(); editor?.chain().focus().deleteColumn().run() }} title="Del Col">DC</button>
          <div className="mx-1 h-3 w-px bg-gray-200" />
-         <button type="button" className="px-1.5 py-1 rounded hover:bg-gray-100 text-red-700" onClick={() => editor?.chain().focus().deleteTable().run()} title="Delete Table">🗑️</button>
+         <button type="button" className="px-1.5 py-1 rounded hover:bg-gray-100 text-red-700" onClick={() => editor?.chain().focus().deleteTable().run()} title="Delete Table"><Trash2 className="inline w-3.5 h-3.5" /></button>
       </div>
 
       {/* Manual Bubble Menu (Text) */}

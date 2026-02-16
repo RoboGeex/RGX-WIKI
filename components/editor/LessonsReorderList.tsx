@@ -76,6 +76,9 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [currentDev, setCurrentDev] = useState<any>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteConfirmSlug, setDeleteConfirmSlug] = useState<string | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const dragImageRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -301,9 +304,35 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     )
   }
 
-  const isGlobalAdmin = currentDev?.role === 'admin'
+  const isGlobalAdmin = currentDev?.role === 'admin' || currentDev?.role === 'superadmin'
+  const isSuperAdmin = currentDev?.role === 'superadmin'
+
+  const handleDeleteLesson = async (lessonId: string, lessonSlug: string) => {
+    setDeletingId(lessonId || lessonSlug)
+    setError(null)
+    try {
+      const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
+      const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId || lessonSlug)}?wiki=${encodeURIComponent(wikiSlug)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.error || 'Failed to delete lesson')
+      }
+      setItems(prev => prev.filter(l => (l.id || l.slug) !== (lessonId || lessonSlug)))
+      setStatus(`Lesson "${lessonSlug}" deleted successfully`)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to delete lesson')
+    } finally {
+      setDeletingId(null)
+      setDeleteConfirmSlug(null)
+      setDeleteConfirmText('')
+    }
+  }
 
   return (
+    <>
     <div ref={containerRef} className="space-y-2">
       {(saving || status || error) && (
         <div className="flex items-center gap-3 text-xs">
@@ -403,6 +432,20 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
               >
                 {isOwner ? 'View' : 'Preview'}
               </Link>
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  disabled={deletingId === (lesson.id || lesson.slug)}
+                  onClick={() => {
+                    setDeleteConfirmSlug(lesson.slug)
+                    setDeleteConfirmText('')
+                  }}
+                  className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  title="Delete lesson (Super Admin)"
+                >
+                  {deletingId === (lesson.id || lesson.slug) ? 'Deleting\u2026' : 'Delete'}
+                </button>
+              )}
             </div>
           </div>
         )
@@ -425,5 +468,74 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
         </div>
       )}
     </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmSlug && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => { setDeleteConfirmSlug(null); setDeleteConfirmText('') }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="bg-red-50 px-6 py-5 border-b border-red-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-red-900">Delete Lesson</h3>
+                  <p className="text-xs text-red-600">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-slate-700">
+                You are about to permanently delete the lesson{' '}
+                <strong className="text-slate-900">&ldquo;{items.find(l => l.slug === deleteConfirmSlug)?.title_en || deleteConfirmSlug}&rdquo;</strong>.
+                All content, translations, and media references will be lost.
+              </p>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
+                  Type <span className="text-red-600 font-mono bg-red-50 px-1 py-0.5 rounded">{deleteConfirmSlug}</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder={deleteConfirmSlug || undefined}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-300 transition-all"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <button
+                onClick={() => { setDeleteConfirmSlug(null); setDeleteConfirmText('') }}
+                className="px-5 py-2 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleteConfirmText !== deleteConfirmSlug || !!deletingId}
+                onClick={() => {
+                  const lesson = items.find(l => l.slug === deleteConfirmSlug)
+                  if (lesson) handleDeleteLesson(lesson.id || lesson.slug, lesson.slug)
+                }}
+                className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-red-200/50 hover:bg-red-700 disabled:opacity-40 disabled:shadow-none disabled:bg-slate-300 transition-all active:scale-95"
+              >
+                {deletingId ? 'Deleting\u2026' : 'Permanently Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

@@ -1009,42 +1009,54 @@ export default function SegmentEditor({
   const handleImageSliderUpload = useCallback(async (segmentId: string, files: FileList) => {
     if (!lessonId || !files.length) return;
     
-    // Upload all files
+    // Upload all files individually with proper wikiSlug
     const uploadPromises = Array.from(files).map(async (file) => {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('lessonId', lessonId)
+      if (wikiSlug) {
+        formData.append('wikiSlug', wikiSlug)
+      }
       
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       })
       
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `Upload failed (${res.status})`)
+      }
       const data = await res.json()
       return data.url
     })
     
-    try {
-      const urls = await Promise.all(uploadPromises)
-      
+    // Use allSettled so one failure doesn't kill the whole batch
+    const results = await Promise.allSettled(uploadPromises)
+    const successUrls = results
+      .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+      .map(r => r.value)
+    const failCount = results.filter(r => r.status === 'rejected').length
+    
+    if (successUrls.length > 0) {
       setSegments(prev => prev.map(seg => {
         if (seg.id === segmentId) {
           const currentImages = seg.images || []
           return {
             ...seg,
-            images: [...currentImages, ...urls],
+            images: [...currentImages, ...successUrls],
             updatedAt: new Date().toISOString()
           }
         }
         return seg
       }))
       scheduleAutoSave()
-    } catch (e) {
-      console.error('Failed to upload images', e)
-      alert('Failed to upload some images')
     }
-  }, [lessonId, scheduleAutoSave])
+    
+    if (failCount > 0) {
+      console.error(`${failCount} image(s) failed to upload`)
+      alert(`${failCount} image(s) couldn't be uploaded. The rest were added successfully.`)
+    }
+  }, [lessonId, wikiSlug, scheduleAutoSave])
 
   const handleRemoveImageFromSlider = useCallback((segmentId: string, imageIndex: number) => {
     setSegments(prev => prev.map(seg => {

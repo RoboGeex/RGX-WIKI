@@ -5,6 +5,8 @@ import Client from 'ssh2-sftp-client'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// Allow longer execution time for file uploads on Vercel (default is 10s on Hobby)
+export const maxDuration = 60
 
 function getVimeoFolderUri(wikiSlug?: string) {
   if (!wikiSlug) return process.env.VIMEO_FOLDER_DEFAULT

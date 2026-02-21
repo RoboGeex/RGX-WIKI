@@ -106,7 +106,7 @@ export default memo(function SegmentTiptapEditor({
        tableMenuRef.style.left = '-9999px'
     }
 
-    if (!editor || editor.isDestroyed || !editor.view || !editor.view.dom) return
+    if (!editor || editor.isDestroyed || !editor.view || !editor.view.dom || !editor.view.docView) return
 
     try {
       // 1. Check for Table Selection first

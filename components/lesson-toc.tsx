@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type TocEntry = {
   id: string
@@ -16,6 +16,8 @@ export interface LessonTocProps {
 export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
   const [activeId, setActiveId] = useState<string>('')
   const [discoveredEntries, setDiscoveredEntries] = useState<TocEntry[]>([])
+  const clickLockRef = useRef<string | null>(null)
+  const clickLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const baseEntries = useMemo(() => (entries.length > 0 ? entries : discoveredEntries), [entries, discoveredEntries])
   const tocEntries = useMemo(() => baseEntries.filter((entry) => entry.level === 1), [baseEntries])
@@ -41,6 +43,9 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
     let throttleTimer: ReturnType<typeof setTimeout> | undefined;
 
     const handleScroll = () => {
+      // If a click lock is active, don't override the clicked heading
+      if (clickLockRef.current) return;
+
       const activationLine = window.scrollY + 150;
 
       let currentHeadingId: string | undefined = undefined;
@@ -57,7 +62,7 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
           currentHeadingId = headingElements[0].id;
       }
       
-      if (currentHeadingId && currentHeadingId !== activeId) {
+      if (currentHeadingId) {
         setActiveId(currentHeadingId);
       }
     };
@@ -78,13 +83,22 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
       window.removeEventListener('scroll', throttledScrollHandler);
       if (throttleTimer) clearTimeout(throttleTimer);
     };
-  }, [tocEntries, activeId]);
+  }, [tocEntries]);
 
 
   const handleLinkClick = (id: string) => {
     const el = document.getElementById(id)
     if (el) {
+      // Set the active heading immediately
       setActiveId(id)
+
+      // Lock scroll-based highlighting so it doesn't override the click
+      clickLockRef.current = id
+      if (clickLockTimerRef.current) clearTimeout(clickLockTimerRef.current)
+      clickLockTimerRef.current = setTimeout(() => {
+        clickLockRef.current = null
+      }, 1000)
+
       window.scrollTo({
         top: el.offsetTop - 100, 
         behavior: 'smooth'

@@ -53,16 +53,17 @@ const ResizableImageComponent = (props: any) => {
   }
 
   return (
-    <NodeViewWrapper className="my-4" style={{ textAlign: align as any }}>
-      <div className="relative inline-block group">
-        <img
-          ref={imageRef}
-          src={node.attrs.src}
-          alt={node.attrs.alt}
-          title={node.attrs.title}
-          style={{ width: width, maxWidth: '100%', height: 'auto', display: 'block' }}
-          className={`rounded-lg transition-shadow ${selected ? 'ring-2 ring-primary' : ''}`}
-        />
+    <NodeViewWrapper className={`my-10 flex flex-col ${align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'} w-full`} style={{ textAlign: align as any }}>
+      <div className="relative inline-block group w-full" style={{ width: width, maxWidth: '100%' }}>
+        <div className={`relative w-full aspect-[1920/720] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center ${selected ? 'ring-2 ring-primary' : ''}`}>
+          <img
+            ref={imageRef}
+            src={node.attrs.src}
+            alt={node.attrs.alt}
+            title={node.attrs.title}
+            className="h-full w-full object-contain"
+          />
+        </div>
         
         {/* Resize Handle (Free Drag) */}
         {selected && (

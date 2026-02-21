@@ -41,6 +41,14 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Prevent long unbroken text from overflowing */
+.tiptap,
+.prose,
+.glass-editor-content {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 /* Make heading levels visually distinct in lesson/editor content */
 .tiptap h1,
 .prose :where(h1):not(:where(.not-prose *)) {
@@ -762,8 +770,20 @@ html {
 }
 
 .glass-editor-content {
-  padding: 1.5rem;
+  padding: 1.25rem;
   min-height: 400px;
+}
+
+@media (min-width: 768px) {
+  .glass-editor-content {
+    padding: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .glass-editor-content {
+    padding: 2.5rem;
+  }
 }
 
 /* Floating Toolbar - Glassmorphic */
@@ -1051,20 +1071,91 @@ html {
 }
 
 .revolutionary-editor-wrapper {
-  max-width: 1600px;
+  max-width: 1260px;
   margin: 0 auto;
 }
 
-.revolutionary-editor-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.revolutionary-editor-single {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
 }
 
-@media (max-width: 1024px) {
-  .revolutionary-editor-grid {
-    grid-template-columns: 1fr;
-  }
+/* Editor Language Tab Bar */
+.editor-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.375rem;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(248, 250, 252, 0.8) 100%
+  );
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.editor-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: 1;
+  padding: 0.75rem 1.25rem;
+  border: 2px solid transparent;
+  border-radius: 0.625rem;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  justify-content: center;
+}
+
+.editor-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.7);
+  color: #334155;
+}
+
+.editor-tab-btn.active {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(248, 250, 252, 0.95) 100%
+  );
+  color: #1e293b;
+  border-color: rgba(226, 232, 240, 0.8);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+}
+
+.editor-tab-direction {
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  padding: 0.15rem 0.5rem;
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 0.3rem;
+  border: 1px solid rgba(226, 232, 240, 0.4);
+}
+
+.editor-tab-btn.active .editor-tab-direction {
+  color: #64748b;
+  background: rgba(241, 245, 249, 1);
+  border-color: rgba(226, 232, 240, 0.6);
+}
+
+.editor-tab-lock {
+  font-size: 0.7rem;
+  opacity: 0.6;
 }
 
 /* Language Direction Indicator */
@@ -1326,4 +1417,12 @@ html {
     rgba(148, 163, 184, 0.5) 100%
   );
   background-clip: padding-box;
+}
+
+/* Ensure editor headings have enough scroll margin to clear the fixed header */
+.ProseMirror h1, 
+.ProseMirror h2, 
+.ProseMirror h3, 
+.ProseMirror h4 {
+  scroll-margin-top: 140px !important;
 }

@@ -8,10 +8,7 @@ export default function EditorLessonPage() {
   return (
     <EditorAuthGate>
       <div className="min-h-screen bg-[#eef2f1]">
-        <AdminNavbar />
-        <div className="pt-16">
-          <WikiEditor />
-        </div>
+        <WikiEditor />
       </div>
     </EditorAuthGate>
   )

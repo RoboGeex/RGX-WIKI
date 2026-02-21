@@ -36,35 +36,12 @@ export default function SegmentEditorPage() {
           console.error("Failed to load lessonMeta from sessionStorage", e)
         }
 
-        if (!lessonId) {
-          setLoading(false)
-          return
-        }
-
-        const [lessonRes, meRes, wikisRes] = await Promise.all([
-          fetch(`/api/lessons/${lessonId}?kit=${wikiSlug}`),
+        // Always fetch developer identity and wikis, even for new lessons
+        const [meRes, wikisRes] = await Promise.all([
           fetch('/api/developers/me', { headers: applyDeveloperHeader({}) }),
           fetch('/api/wikis')
         ])
 
-        if (lessonRes.ok) {
-          const data = await lessonRes.json()
-          // Merge API data with sessionStorage meta (API data takes precedence for existing lessons)
-          setLesson((prev: any) => {
-            const next = { ...prev, ...data }
-            // Don't overwrite properties with empty values if we already have them from sessionStorage
-            if (!data.coverImage && prev?.coverImage) next.coverImage = prev.coverImage
-            if (!data.title_en && prev?.title_en) next.title_en = prev.title_en
-            if (!data.title_ar && prev?.title_ar) next.title_ar = prev.title_ar
-            return next
-          })
-        } else {
-          // If lesson doesn't exist yet, we keep the initialMeta
-          if (!initialMeta) {
-            setError('Failed to load lesson')
-          }
-        }
-        
         if (meRes.ok) {
           const data = await meRes.json()
           if (data.ok) {
@@ -85,6 +62,32 @@ export default function SegmentEditorPage() {
             }
           } else {
              setPreviewBaseUrl(`https://wiki.robogeex.com/${wikiSlug}`)
+          }
+        }
+
+        // Only fetch the lesson itself if we have an ID (not a brand new lesson)
+        if (!lessonId) {
+          setLoading(false)
+          return
+        }
+
+        const lessonRes = await fetch(`/api/lessons/${lessonId}?kit=${wikiSlug}`)
+
+        if (lessonRes.ok) {
+          const data = await lessonRes.json()
+          // Merge API data with sessionStorage meta (API data takes precedence for existing lessons)
+          setLesson((prev: any) => {
+            const next = { ...prev, ...data }
+            // Don't overwrite properties with empty values if we already have them from sessionStorage
+            if (!data.coverImage && prev?.coverImage) next.coverImage = prev.coverImage
+            if (!data.title_en && prev?.title_en) next.title_en = prev.title_en
+            if (!data.title_ar && prev?.title_ar) next.title_ar = prev.title_ar
+            return next
+          })
+        } else {
+          // If lesson doesn't exist yet, we keep the initialMeta
+          if (!initialMeta) {
+            setError('Failed to load lesson')
           }
         }
 

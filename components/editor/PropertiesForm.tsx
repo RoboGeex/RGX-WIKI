@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { applyDeveloperHeader } from './dev-identity'
 import { Package, Sparkles } from 'lucide-react'
+
+const ENABLE_SEGMENTS_EDITOR = false
 // Removed static import - will use dynamic loading instead
 
 type WikiOption = {
@@ -80,7 +82,7 @@ export default function PropertiesForm() {
       difficulty: 'Beginner',
       coverImage: '',
       isNew: isNewLesson,
-      editorType: 'segment',
+      editorType: 'classic',
     }
     
     // If creating a new lesson, clear session storage and don't load existing data
@@ -400,34 +402,32 @@ export default function PropertiesForm() {
           {/* Editor Type Selector */}
           <div className="sm:col-span-2">
             <label className="block text-xs text-gray-500 mb-2">Choose Editor Type</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid ${ENABLE_SEGMENTS_EDITOR ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
               {/* Segment Editor Option */}
-              <button
-                type="button"
-                onClick={() => updateMeta({ editorType: 'segment' })}
-                className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                  meta.editorType === 'segment'
-                    ? 'border-primary bg-primary/5 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {meta.editorType === 'segment' && (
-                  <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
+              {ENABLE_SEGMENTS_EDITOR && (
+                <button
+                  type="button"
+                  onClick={() => updateMeta({ editorType: 'segment' })}
+                  className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                    meta.editorType === 'segment'
+                      ? 'border-primary bg-primary/5 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {meta.editorType === 'segment' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="text-2xl mb-2"><Package className="w-6 h-6" /></div>
+                  <div className="font-semibold text-sm text-gray-800">Segment Editor</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Structured blocks with drag & drop, version tracking, and visual tiles
                   </div>
-                )}
-                <div className="text-2xl mb-2"><Package className="w-6 h-6" /></div>
-                <div className="font-semibold text-sm text-gray-800">Segment Editor</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Structured blocks with drag & drop, version tracking, and visual tiles
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Recommended</span>
-                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">New</span>
-                </div>
-              </button>
+                </button>
+              )}
               
               {/* Classic Editor Option */}
               <button
@@ -437,7 +437,7 @@ export default function PropertiesForm() {
                   meta.editorType === 'classic'
                     ? 'border-primary bg-primary/5 shadow-md'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
+                } ${!ENABLE_SEGMENTS_EDITOR ? 'pointer-events-none' : ''}`}
               >
                 {meta.editorType === 'classic' && (
                   <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
@@ -450,9 +450,6 @@ export default function PropertiesForm() {
                 <div className="font-semibold text-sm text-gray-800">Classic Editor</div>
                 <div className="text-xs text-gray-500 mt-1">
                   Free-form rich text with glassmorphic design and slash commands
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Free-form</span>
                 </div>
               </button>
             </div>

@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, type DragEvent } from "react"
 import Link from "next/link"
 import { applyDeveloperHeader } from "./dev-identity"
 
+const ENABLE_SEGMENTS_EDITOR = false
+
 type LessonSummary = {
   id?: string
   slug: string
@@ -411,18 +413,20 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
               {isOwner && (
                 <>
                   <Link
-                    href={`/editor/properties?wiki=${wikiSlug}&kit=${kitSlug}&slug=${lesson.slug}`}
+                    href={`/editor/lesson?wiki=${wikiSlug}&kit=${kitSlug}&slug=${lesson.slug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
                     className="rounded-md border border-primary/40 px-3 py-1.5 text-sm text-primary hover:bg-primary/10"
                   >
                     Edit
                   </Link>
-                  <Link
-                    href={`/editor/segment?wiki=${wikiSlug}&kit=${kitSlug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
-                    className="rounded-md border border-amber-400 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-50"
-                    title="Bilingual Segment Editor"
-                  >
-                    Content
-                  </Link>
+                  {ENABLE_SEGMENTS_EDITOR && (
+                    <Link
+                      href={`/editor/segment?wiki=${wikiSlug}&kit=${kitSlug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
+                      className="rounded-md border border-amber-400 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-50"
+                      title="Bilingual Segment Editor"
+                    >
+                      Content
+                    </Link>
+                  )}
                 </>
               )}
               <Link

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
@@ -13,20 +13,19 @@ interface Props {
   onClose: () => void;
   modules?: Module[];
   lessons?: any[];
+  className?: string;
+  onLessonClick?: (lesson: any) => void;
+  activeSlug?: string;
+  hideLessons?: boolean;
+  tocMaxLevel?: number;
+  refreshTocTrigger?: number;
 }
 
 interface TocItem {
-  id: string;
+  id: string; 
   text: string;
   level: number;
 }
-
-type LessonSummary = {
-  slug: string;
-  title_en: string;
-  title_ar: string;
-  duration_min: number;
-};
 
 export default function Sidebar({
   locale,
@@ -35,6 +34,12 @@ export default function Sidebar({
   onClose,
   modules: propModules,
   lessons,
+  className,
+  onLessonClick,
+  activeSlug,
+  hideLessons,
+  tocMaxLevel = 1,
+  refreshTocTrigger,
 }: Props) {
   const pathname = usePathname();
   const safeLocale: Locale =
@@ -59,107 +64,180 @@ export default function Sidebar({
     }
   }, [propModules, lessons]);
 
+  // Track the scroll handler to remove it later
+  const scrollHandlerRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
-    const headingNodes = Array.from(
-      document.querySelectorAll("[data-toc]")
-    ) as HTMLElement[];
-    const mapped = headingNodes.map((node) => ({
-      id: node.id,
-      text: node.getAttribute("data-toc-text") || node.innerText || node.id,
-      level: Number(node.getAttribute("data-level") || "2"),
-    }));
-    setToc(mapped);
+    const updateToc = () => {
+      // 1. Target the active editor container
+      const containerSelector = `[data-editor-lang="${locale}"]`;
+      let container = document.querySelector(containerSelector);
+      
+      // Build query for headings
+      const hLevels = [];
+      for (let i = 1; i <= (tocMaxLevel || 1); i++) {
+        hLevels.push(`.ProseMirror h${i}`);
+      }
+      const query = hLevels.join(", ");
 
-    if (!headingNodes.length) return;
+      const headingElements = container 
+        ? Array.from(container.querySelectorAll(query))
+        : Array.from(document.querySelectorAll(query));
+      
+      // Filter visible ones
+      const visibleNodes = headingElements.filter((node) => {
+        const el = node as HTMLElement;
+        return el.offsetParent !== null || el.getBoundingClientRect().height > 0;
+      }) as HTMLElement[];
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort(
-            (a, b) =>
-              (a.target as HTMLElement).offsetTop -
-              (b.target as HTMLElement).offsetTop
-          );
-        if (visible.length > 0) {
-          setActiveHeading(visible[0].target.id);
+      // Map to TOC items & ensure stable IDs
+      const mapped: TocItem[] = visibleNodes.map((node, idx) => {
+        const tagName = node.tagName.toLowerCase();
+        const level = Number(tagName.replace("h", "")) || 1;
+        
+        const stableId = `toc-h${level}-${idx}`;
+        if (node.id !== stableId) {
+          node.id = stableId;
         }
-      },
-      { rootMargin: "-120px 0px -80% 0px" }
-    );
 
-    headingNodes.forEach((node) => observer.observe(node));
-    return () => {
-      observer.disconnect();
+        return {
+          id: stableId,
+          text: node.getAttribute("data-toc-text") || node.innerText || "Untitled Section",
+          level: level,
+        };
+      });
+
+      setToc(mapped);
+
+      // Setup Scroll Highlighting
+      if (mapped.length > 0) {
+        const handleScroll = () => {
+          const threshold = 160; 
+          let currentId = "";
+
+          for (const item of mapped) {
+            const el = document.getElementById(item.id);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              if (rect.top <= threshold) {
+                currentId = item.id;
+              } else {
+                break;
+              }
+            }
+          }
+
+          if (!currentId && mapped.length > 0) {
+            currentId = mapped[0].id;
+          }
+
+          if (currentId) setActiveHeading(currentId);
+        };
+
+        // Clean up previous listener
+        if (scrollHandlerRef.current) {
+          window.removeEventListener("scroll", scrollHandlerRef.current);
+        }
+
+        scrollHandlerRef.current = handleScroll;
+        window.addEventListener("scroll", handleScroll);
+        handleScroll();
+      }
     };
-  }, [pathname]);
 
-  const handleScrollTo = (id: string) => {
-    setActiveHeading(id);
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const timer = setTimeout(updateToc, 50);
+    return () => {
+      clearTimeout(timer);
+      if (scrollHandlerRef.current) {
+        window.removeEventListener("scroll", scrollHandlerRef.current);
+      }
+    };
+  }, [pathname, refreshTocTrigger, tocMaxLevel, locale]);
+
+  const handleScrollTo = (index: number) => {
+    const containerSelector = `[data-editor-lang="${locale}"]`;
+    const container = document.querySelector(containerSelector);
+    
+    const hLevels = [];
+    for (let i = 1; i <= (tocMaxLevel || 1); i++) {
+      hLevels.push(`.ProseMirror h${i}`);
+    }
+    const query = hLevels.join(", ");
+    
+    let elements = container 
+      ? Array.from(container.querySelectorAll(query))
+      : Array.from(document.querySelectorAll(query));
+
+    const visibleElements = elements.filter((node) => {
+      const el = node as HTMLElement;
+      return el.offsetParent !== null || el.getBoundingClientRect().height > 0;
+    }) as HTMLElement[];
+
+    const el = visibleElements[index];
+
+    if (el) {
+      const headerOffset = 140;
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+      
+      if (el.id) setActiveHeading(el.id);
+    }
+    
     if (isOpen) onClose();
   };
 
   return (
     <>
       {isOpen && (
-        <div
-          onClick={onClose}
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-        />
+        <div onClick={onClose} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
       <aside
         className={`fixed lg:static top-20 left-0 w-72 lg:w-64 h-[calc(100vh-5rem)] overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-sm z-50 transform transition-transform lg:sticky lg:top-28 lg:h-auto lg:self-start ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
+        } ${className || ""}`}
       >
         <div className="lg:hidden flex justify-end p-4">
-          <button
-            onClick={onClose}
-            className="p-2 rounded-md hover:bg-gray-100"
-          >
+          <button onClick={onClose} className="p-2 rounded-md hover:bg-gray-100">
             <X size={18} />
           </button>
         </div>
 
         <div className="p-5 space-y-6">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
-              {t("lessons", safeLocale)}
+          {!hideLessons && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                {t("lessons", safeLocale)}
+              </div>
+              <div className="space-y-1">
+                {lessons?.map((lesson) => {
+                  const isActive = activeSlug ? activeSlug === lesson.slug : pathname?.endsWith(`/${lesson.slug}`);
+                  return (
+                    <a
+                      key={lesson.slug}
+                      href={onLessonClick ? "#" : `/${locale}/${lesson.slug}`}
+                      onClick={(e) => {
+                        if (onLessonClick) {
+                          e.preventDefault();
+                          onLessonClick(lesson);
+                        }
+                      }}
+                      className={`block rounded-md px-3 py-2 text-sm transition ${
+                        isActive ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-primary/10 hover:text-primary"
+                      }`}
+                    >
+                      <div className="font-medium">{locale === "ar" ? lesson.title_ar : lesson.title_en}</div>
+                      <div className="text-[11px] text-gray-500">{lesson.duration_min}m</div>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
-            <div className="space-y-3">
-              {lessons && lessons.length > 0 ? (
-                <div className="space-y-1">
-                  {lessons.map((lesson) => {
-                    const isActive = pathname?.endsWith(`/${lesson.slug}`);
-                    return (
-                      <a
-                        key={lesson.slug}
-                        href={`/${locale}/${lesson.slug}`}
-                        className={`block rounded-md px-3 py-2 text-sm transition ${
-                          isActive
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "text-gray-700 hover:bg-primary/10 hover:text-primary"
-                        }`}
-                      >
-                        <div className="font-medium">
-                          {locale === "ar" ? lesson.title_ar : lesson.title_en}
-                        </div>
-                        <div className="text-[11px] text-gray-500">
-                          {lesson.duration_min}m
-                        </div>
-                      </a>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-xs text-gray-400">
-                  {t("noLessonsYet", safeLocale)}
-                </div>
-              )}
-            </div>
-          </div>
+          )}
 
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
@@ -167,25 +245,15 @@ export default function Sidebar({
             </div>
             <nav className="space-y-1">
               {toc.length === 0 && (
-                <div className="text-xs text-gray-400">
-                  {t("noHeadingsYet", safeLocale)}
-                </div>
+                <div className="text-xs text-gray-400">{t("noHeadingsYet", safeLocale)}</div>
               )}
-              {toc.map((item) => (
+              {toc.map((item, idx) => (
                 <button
-                  key={item.id}
-                  onClick={() => handleScrollTo(item.id)}
+                  key={`toc-${item.id}-${idx}`}
+                  onClick={() => handleScrollTo(idx)}
                   className={`block text-left w-full rounded-md px-3 py-2 text-sm transition ${
-                    item.level >= 4
-                      ? "pl-6 text-xs"
-                      : item.level === 3
-                      ? "pl-4"
-                      : ""
-                  } ${
-                    activeHeading === item.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-gray-700 hover:bg-primary/10 hover:text-primary"
-                  }`}
+                    item.level >= 4 ? "pl-6 text-xs" : item.level === 3 ? "pl-4" : ""
+                  } ${activeHeading === item.id ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-primary/10 hover:text-primary"}`}
                 >
                   {item.text}
                 </button>

@@ -4,6 +4,7 @@ import os from 'os'
 import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types';
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
+import { getPrisma } from '@/lib/prisma-multi'
 
 function loadJsonFile<T>(file: string, fallback: T): T {
   const tmpPath = path.join(os.tmpdir(), file)
@@ -96,7 +97,6 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   const enforcementDisabled = process.env.ENFORCE_DEV_OWNERSHIP !== 'true'
   const includeDrafts = opts?.includeDrafts === true || process.env.NODE_ENV === 'development' || enforcementDisabled
   try {
-    const { getPrisma } = await import('@/lib/prisma-multi')
     const prisma = getPrisma(wikiSlug)
     const lessons = await prisma.lesson.findMany({
       where: { wikiSlug, ...(includeDrafts ? {} : { status: 'published' }) },
@@ -108,6 +108,7 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
     return []
   }
 }
+
 
 export function getModules(wikiSlug: string): any[] {
     return []

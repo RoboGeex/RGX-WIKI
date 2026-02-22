@@ -1322,11 +1322,15 @@ export default function WikiEditor() {
 
         syncingEnRef.current = true
         editorEn.commands.setContent(docEn, { emitUpdate: false })
-        setTimeout(() => { syncingEnRef.current = false }, 0)
-
+        
         syncingArRef.current = true
         editorAr.commands.setContent(docAr, { emitUpdate: false })
-        setTimeout(() => { syncingArRef.current = false }, 0)
+
+        // Keep syncing flags TRUE for a short bit to catch any trailing events
+        setTimeout(() => {
+          syncingEnRef.current = false
+          syncingArRef.current = false
+        }, 500)
 
         if (hasArabicContent) {
            setIsVerified(true) // Auto-verify/unlock if we already have Arabic content
@@ -1376,8 +1380,10 @@ export default function WikiEditor() {
           }
           return changed ? next : prev
         })
-        // Mark load complete to enable autosave
-        initialLoadRef.current = false
+        // Mark load complete to enable autosave, but use a delay to allow stabilization
+        setTimeout(() => {
+          initialLoadRef.current = false
+        }, 500)
       } catch (error) {
         if (cancelled) return
         console.error('Error loading lesson content', error)

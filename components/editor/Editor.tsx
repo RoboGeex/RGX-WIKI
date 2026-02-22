@@ -3,12 +3,14 @@ import NextLink from 'next/link'
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, ReactNodeViewRenderer } from '@tiptap/react'
+import { posToDOMRect, isTextSelection } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Heading from '@tiptap/extension-heading'
 import Image from './extensions/ResizableImage'
 import Youtube from '@tiptap/extension-youtube'
+import YoutubeComponent from './extensions/YoutubeComponent'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import { TextStyle } from '@tiptap/extension-text-style'
@@ -21,19 +23,23 @@ import { common, createLowlight } from 'lowlight'
 const lowlightInstance = createLowlight(common)
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import BubbleMenuExt from '@tiptap/extension-bubble-menu'
+import { SafeBubbleMenu } from './extensions/SafeBubbleMenu'
 import { DOMSerializer, DOMParser as ProseDOMParser } from 'prosemirror-model'
 import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
 import ImageSlider from './extensions/ImageSlider'
 import { CellSelection } from '@tiptap/pm/tables'
+import { Columns, Column } from './extensions/Columns'
+import CodeBlockView from './CodeBlockView'
 import type { EditorView } from '@tiptap/pm/view'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft } from 'lucide-react'
+import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import './hljs.css'
 import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
 import DeveloperLogin from './DeveloperLogin'
 import Sidebar from '../sidebar'
+import { HUB_DOMAIN } from '@/lib/domains'
 
 const ENABLE_SEGMENTS_EDITOR = false
 
@@ -68,7 +74,8 @@ function setCellSelection(view: EditorView, anchorPos: number, headPos: number) 
 
 function handleTableMouseDown(view: EditorView, event: MouseEvent): boolean {
   if (event.button !== 0) return false
-  const targetCell = (event.target as HTMLElement | null)?.closest('td, th')
+  const target = event.target
+  const targetCell = (target instanceof Element) ? target.closest('td, th') : null
   if (!targetCell) return false
   if (event.detail >= 2) {
     // Allow double-clicks to edit the text inside the cell
@@ -119,7 +126,8 @@ function handleTableMouseDown(view: EditorView, event: MouseEvent): boolean {
 }
 
 function handleTableDragStart(_view: EditorView, event: Event): boolean {
-  if ((event.target as HTMLElement | null)?.closest('table')) {
+  const target = event.target
+  if (target instanceof Element && target.closest('table')) {
     event.preventDefault()
     return true
   }
@@ -251,6 +259,92 @@ export default function WikiEditor() {
   useEffect(() => {
     metaRef.current = meta
   }, [meta])
+
+  // --- Document Lock State ---
+  const [isLockedByOther, setIsLockedByOther] = useState(false)
+  const [lockedBy, setLockedBy] = useState<string | null>(null)
+  const [documentVersion, setDocumentVersion] = useState<number>(meta.version || 1)
+  // ---------------------------
+
+  // --- Document Lock Heartbeat ---
+  // Use a ref to track whether WE currently own the lock (for cleanup)
+  const weOwnLockRef = useRef(false)
+
+  useEffect(() => {
+    // Only attempt to lock if we have a saved lesson ID + a loaded developer
+    if (!meta.id || !developerId) return
+
+    let isMounted = true
+
+    const pingLock = async () => {
+      try {
+        const res = await fetch('/api/lessons/lock', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...applyDeveloperHeader()
+          },
+          body: JSON.stringify({
+            wikiSlug: meta.wikiSlug,
+            lessonId: meta.id,
+          })
+        })
+        
+        const data = await res.json()
+        if (!isMounted) return
+
+        if (res.ok) {
+          if (data.locked) {
+            // Someone else holds the lock
+            setIsLockedByOther(true)
+            setLockedBy(data.lockedBy || 'Another developer')
+            weOwnLockRef.current = false
+          } else {
+            // We successfully acquired/renewed the lock
+            setIsLockedByOther(false)
+            setLockedBy(null)
+            weOwnLockRef.current = true
+          }
+          // Update local version to stay in sync
+          if (typeof data.version === 'number') {
+            setDocumentVersion(data.version)
+          }
+        }
+      } catch (err) {
+        console.error('Lock ping failed', err)
+      }
+    }
+
+    // Attempt to release lock helper (uses ref, not stale closure)
+    const releaseLock = () => {
+      if (weOwnLockRef.current) {
+        const url = `/api/lessons/lock?wiki=${meta.wikiSlug}&id=${meta.id}`
+        fetch(url, {
+          method: 'DELETE',
+          headers: applyDeveloperHeader(),
+          keepalive: true
+        }).catch(() => {})
+        weOwnLockRef.current = false
+      }
+    }
+
+    // Ping immediately on mount
+    pingLock()
+
+    // Ping every 30 seconds to renew lock (and also re-check if the other user left)
+    const interval = setInterval(pingLock, 30000)
+
+    // Add beforeunload listener to release lock immediately on tab close
+    window.addEventListener('beforeunload', releaseLock)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+      window.removeEventListener('beforeunload', releaseLock)
+      releaseLock()
+    }
+  }, [meta.id, meta.wikiSlug, developerId])
+  // -------------------------------
   useEffect(() => {
     let cancelled = false
     const loadRole = async () => {
@@ -435,17 +529,40 @@ export default function WikiEditor() {
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
             switch (level) {
-              case 1: return 'text-4xl font-bold mt-10 mb-5 scroll-mt-36'
-              case 2: return 'text-3xl font-semibold mt-8 mb-4 scroll-mt-36'
-              case 3: return 'text-2xl font-semibold mt-6 mb-3 scroll-mt-36'
-              default: return 'text-xl font-medium mt-5 mb-3 scroll-mt-36'
+              case 1: return 'text-5xl font-extrabold mt-8 mb-4 text-gray-900 scroll-mt-36'
+              case 2: return 'text-4xl font-bold mt-8 mb-4 text-gray-900 scroll-mt-36'
+              case 3: return 'text-2xl font-semibold mt-8 mb-4 text-gray-900 scroll-mt-36'
+              default: return 'text-xl font-semibold mt-8 mb-4 text-gray-900 scroll-mt-36'
             }
           },
           'data-toc': '',
         }
       }),
       Image,
-      Youtube.configure({ controls: true }),
+      Youtube.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            width: {
+              default: '100%',
+              renderHTML: (attributes: Record<string, any>) => ({
+                width: attributes.width,
+                style: `width: ${attributes.width}`,
+              }),
+            },
+            align: {
+              default: 'center',
+              renderHTML: (attributes: Record<string, any>) => ({
+                'data-align': attributes.align,
+                style: `text-align: ${attributes.align}`,
+              }),
+            },
+          }
+        },
+        addNodeView() {
+          return ReactNodeViewRenderer(YoutubeComponent)
+        },
+      }).configure({ controls: true }),
       Link.configure({ openOnClick: true, autolink: true, linkOnPaste: true }),
       Underline,
       TextStyle,
@@ -455,10 +572,16 @@ export default function WikiEditor() {
       TableRow,
       TableHeader,
       TableCellWithBackground,
-      CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockView)
+        },
+      }).configure({ lowlight: lowlightInstance }),
       Video,
       ImageSlider,
-      ...(bubbleElementEn ? [BubbleMenuExt.configure({
+      Columns,
+      Column,
+      ...(bubbleElementEn ? [SafeBubbleMenu.configure({
         element: bubbleElementEn,
         pluginKey: 'table-bubble-en',
         shouldShow: ({ editor, view }) => {
@@ -471,9 +594,18 @@ export default function WikiEditor() {
             return false
           }
         },
+        getReferencedVirtualElement: function(this: any) {
+          try {
+            const v = this?.view
+            if (!v || v.isDestroyed || !(v as any).docView) return null
+            const { selection } = v.state
+            const domRect = posToDOMRect(v, selection.from, selection.to)
+            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
+          } catch { return null }
+        },
         options: { placement: 'top', offset: 8 },
       })] : []),
-      ...(textBubbleElementEn ? [BubbleMenuExt.configure({
+      ...(textBubbleElementEn ? [SafeBubbleMenu.configure({
         element: textBubbleElementEn,
         pluginKey: 'text-bubble-en',
         shouldShow: ({ editor, view, state, from, to }) => {
@@ -481,15 +613,29 @@ export default function WikiEditor() {
             if (!view || view.isDestroyed || editor.isDestroyed || !view.dom || !view.dom.isConnected || !(view as any).docView) return false
             if (activeTabRef.current !== 'en') return false
             if (!view.dom.offsetParent) return false
-            
-            const hasSelection = from !== to && state.selection.empty === false
-            const isNotInTable = !editor.isActive('table')
-            const hasTextContent = state.selection.content().content.size > 0
-            
-            return isNotInTable && hasSelection && hasTextContent
+
+            // Must be a text selection — excludes NodeSelection (images, videos, sliders, etc.)
+            if (!isTextSelection(state.selection)) return false
+            // Must not span into a table (table has its own bubble menu)
+            if (editor.isActive('table')) return false
+            // Must not be inside a code block
+            if (editor.isActive('codeBlock')) return false
+            // Must have actual text characters selected (excludes empty line selections)
+            if (from === to) return false
+            const selectedText = state.doc.textBetween(from, to, ' ', ' ').trim()
+            return selectedText.length > 0
           } catch {
             return false
           }
+        },
+        getReferencedVirtualElement: function(this: any) {
+          try {
+            const v = this?.view
+            if (!v || v.isDestroyed || !(v as any).docView) return null
+            const { selection } = v.state
+            const domRect = posToDOMRect(v, selection.from, selection.to)
+            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
+          } catch { return null }
         },
         options: { placement: 'top', offset: 8 },
       })] : []),
@@ -500,7 +646,7 @@ export default function WikiEditor() {
     ],
     content: initialContentRef.current,
     editorProps: {
-      attributes: { class: 'tiptap max-w-none focus:outline-none', lang: 'en' },
+      attributes: { class: 'tiptap prose prose-xl max-w-none focus:outline-none', lang: 'en' },
       handleDOMEvents: {
         mousedown: handleTableMouseDown,
         dragstart: handleTableDragStart,
@@ -525,17 +671,40 @@ export default function WikiEditor() {
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
             switch (level) {
-              case 1: return 'text-4xl font-bold mt-10 mb-5 scroll-mt-36'
-              case 2: return 'text-3xl font-semibold mt-8 mb-4 scroll-mt-36'
-              case 3: return 'text-2xl font-semibold mt-6 mb-3 scroll-mt-36'
-              default: return 'text-xl font-medium mt-5 mb-3 scroll-mt-36'
+              case 1: return 'text-5xl font-extrabold mt-8 mb-4 text-gray-900 scroll-mt-36'
+              case 2: return 'text-4xl font-bold mt-8 mb-4 text-gray-900 scroll-mt-36'
+              case 3: return 'text-2xl font-semibold mt-8 mb-4 text-gray-900 scroll-mt-36'
+              default: return 'text-xl font-semibold mt-8 mb-4 text-gray-900 scroll-mt-36'
             }
           },
           'data-toc': '',
         }
       }),
       Image,
-      Youtube.configure({ controls: true }),
+      Youtube.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            width: {
+              default: '100%',
+              renderHTML: (attributes: Record<string, any>) => ({
+                width: attributes.width,
+                style: `width: ${attributes.width}`,
+              }),
+            },
+            align: {
+              default: 'center',
+              renderHTML: (attributes: Record<string, any>) => ({
+                'data-align': attributes.align,
+                style: `text-align: ${attributes.align}`,
+              }),
+            },
+          }
+        },
+        addNodeView() {
+          return ReactNodeViewRenderer(YoutubeComponent)
+        },
+      }).configure({ controls: true }),
       Link.configure({ openOnClick: true, autolink: true, linkOnPaste: true }),
       Underline,
       TextStyle,
@@ -545,10 +714,16 @@ export default function WikiEditor() {
       TableRow,
       TableHeader,
       TableCellWithBackground,
-      CodeBlockLowlight.configure({ lowlight: lowlightInstance }),
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockView)
+        },
+      }).configure({ lowlight: lowlightInstance }),
       Video,
       ImageSlider,
-      ...(bubbleElementAr ? [BubbleMenuExt.configure({
+      Columns,
+      Column,
+      ...(bubbleElementAr ? [SafeBubbleMenu.configure({
         element: bubbleElementAr,
         pluginKey: 'table-bubble-ar',
         shouldShow: ({ editor, view }) => {
@@ -561,9 +736,18 @@ export default function WikiEditor() {
             return false
           }
         },
+        getReferencedVirtualElement: function(this: any) {
+          try {
+            const v = this?.view
+            if (!v || v.isDestroyed || !(v as any).docView) return null
+            const { selection } = v.state
+            const domRect = posToDOMRect(v, selection.from, selection.to)
+            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
+          } catch { return null }
+        },
         options: { placement: 'top', offset: 8 },
       })] : []),
-      ...(textBubbleElementAr ? [BubbleMenuExt.configure({
+      ...(textBubbleElementAr ? [SafeBubbleMenu.configure({
         element: textBubbleElementAr,
         pluginKey: 'text-bubble-ar',
         shouldShow: ({ editor, view, state, from, to }) => {
@@ -571,14 +755,29 @@ export default function WikiEditor() {
             if (!view || view.isDestroyed || editor.isDestroyed || !view.dom || !view.dom.isConnected || !(view as any).docView) return false
             if (activeTabRef.current !== 'ar') return false
             if (!view.dom.offsetParent) return false
-            
-            const hasSelection = from !== to && state.selection.empty === false
-            const isNotInTable = !editor.isActive('table')
-            const hasTextContent = state.selection.content().content.size > 0
-            return isNotInTable && hasSelection && hasTextContent
+
+            // Must be a text selection — excludes NodeSelection (images, videos, sliders, etc.)
+            if (!isTextSelection(state.selection)) return false
+            // Must not span into a table (table has its own bubble menu)
+            if (editor.isActive('table')) return false
+            // Must not be inside a code block
+            if (editor.isActive('codeBlock')) return false
+            // Must have actual text characters selected (excludes empty line selections)
+            if (from === to) return false
+            const selectedText = state.doc.textBetween(from, to, ' ', ' ').trim()
+            return selectedText.length > 0
           } catch {
             return false
           }
+        },
+        getReferencedVirtualElement: function(this: any) {
+          try {
+            const v = this?.view
+            if (!v || v.isDestroyed || !(v as any).docView) return null
+            const { selection } = v.state
+            const domRect = posToDOMRect(v, selection.from, selection.to)
+            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
+          } catch { return null }
         },
         options: { placement: 'top', offset: 8 },
       })] : []),
@@ -589,7 +788,7 @@ export default function WikiEditor() {
     ],
     content: initialContentRef.current,
     editorProps: {
-      attributes: { class: 'tiptap tiptap-rtl max-w-none focus:outline-none', lang: 'ar', dir: 'rtl' },
+      attributes: { class: 'tiptap tiptap-rtl prose prose-xl max-w-none focus:outline-none', lang: 'ar', dir: 'rtl' },
       handleDOMEvents: {
         mousedown: handleTableMouseDown,
         dragstart: handleTableDragStart,
@@ -1007,8 +1206,8 @@ export default function WikiEditor() {
                 type: 'youtube',
                 attrs: {
                   src: item.url,
-                  width: item.width || 640,
-                  height: item.height || 360,
+                  width: item.width || '100%',
+                  align: item.align || 'center',
                 },
               })
             }
@@ -1024,6 +1223,8 @@ export default function WikiEditor() {
                 title: item[titleKey] || item[captionKey] || null,
                 controls: provider === 'vimeo' ? false : true,
                 provider,
+                width: item.width || '100%',
+                align: item.align || 'center',
               },
             })
           }
@@ -1156,12 +1357,10 @@ export default function WikiEditor() {
             next.difficulty = lesson.difficulty
             changed = true
           }
-          if (typeof lesson?.coverImage === 'string' && lesson.coverImage.trim()) {
-            const trimmedCover = lesson.coverImage.trim()
-            if (trimmedCover !== prev.coverImage) {
-              next.coverImage = trimmedCover
-              changed = true
-            }
+          const newCoverImage = typeof lesson?.coverImage === 'string' ? lesson.coverImage.trim() : ''
+          if (newCoverImage !== prev.coverImage) {
+            next.coverImage = newCoverImage
+            changed = true
           }
           if (typeof lesson?.order === 'number' && lesson.order !== prev.order) {
             next.order = lesson.order
@@ -1192,6 +1391,13 @@ export default function WikiEditor() {
       cancelled = true
     }
   }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId])
+
+  // --- Enforce Read-Only Mode on Document Lock ---
+  useEffect(() => {
+    if (editorEn) editorEn.setEditable(!isLockedByOther)
+    if (editorAr) editorAr.setEditable(!isLockedByOther)
+  }, [editorEn, editorAr, isLockedByOther])
+  // -----------------------------------------------
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1329,24 +1535,19 @@ export default function WikiEditor() {
     const itemsKey = language === 'ar' ? 'items_ar' : 'items_en'
     const jsonKey = language === 'ar' ? 'json_ar' : 'json_en'
 
-    const handleNode = (node: any) => {
-      if (!node || typeof node !== 'object') return
+    const handleNodeInternal = (node: any): any => {
+      if (!node || typeof node !== 'object') return null
       switch (node.type) {
         case 'paragraph': {
           const { text, html } = serializeInline(node.content)
-          if (!text && !html) {
-            break
-          }
+          if (!text && !html) return null
           const block: any = {
             type: 'paragraph',
             [textKey]: (text || '').trim(),
             [jsonKey]: cloneNode(node),
           }
-          if (html) {
-            block[htmlKey] = html
-          }
-          blocks.push(block)
-          break
+          if (html) block[htmlKey] = html
+          return block
         }
         case 'blockquote': {
           const htmlParts: string[] = []
@@ -1355,19 +1556,20 @@ export default function WikiEditor() {
             node.content.forEach((child: any) => {
               if (child?.type === 'paragraph') {
                 const { text, html } = serializeInline(child.content)
-                if (html) {
-                  htmlParts.push(html)
-                }
+                if (html) htmlParts.push(html)
+                if (text) textParts.push(text)
+              } else if (child?.type === 'codeBlock') {
+                const { text } = serializeInline(child.content)
+                const lang = child.attrs?.language || ''
                 if (text) {
+                  htmlParts.push('<pre><code' + (lang ? ' class="language-' + escapeHtml(lang) + '"' : '') + '>' + escapeHtml(text) + '</code></pre>')
                   textParts.push(text)
                 }
               }
             })
           }
           const rawText = textParts.join('\n').trim()
-          if (!rawText) {
-            break
-          }
+          if (!rawText) return null
           const variant = deriveCalloutVariant(rawText)
           const normalized = stripVariantPrefix(rawText, variant)
           const block: any = {
@@ -1376,51 +1578,38 @@ export default function WikiEditor() {
             [textKey]: normalized,
             [jsonKey]: cloneNode(node),
           }
-          if (htmlParts.length > 0) {
-            block[htmlKey] = htmlParts.join('<br />')
-          }
-          blocks.push(block)
-          break
+          if (htmlParts.length > 0) block[htmlKey] = htmlParts.join('<br />')
+          return block
         }
         case 'heading': {
-            const { text, html } = serializeInline(node.content)
-            if (!text) {
-              break
-            }
-            const block: any = {
-              type: 'heading',
-              level: Number(node.attrs?.level) || 2,
-              [textKey]: text.trim(),
-              [jsonKey]: cloneNode(node),
-            }
-            if (html && html !== escapeHtml(text.trim())) {
-              block[htmlKey] = html
-            }
-            blocks.push(block)
-            break
+          const { text, html } = serializeInline(node.content)
+          if (!text) return null
+          const block: any = {
+            type: 'heading',
+            level: Number(node.attrs?.level) || 2,
+            [textKey]: text.trim(),
+            [jsonKey]: cloneNode(node),
           }
-          case 'horizontalRule': {
-            blocks.push({
-              type: 'horizontalRule',
-              [jsonKey]: cloneNode(node),
-            })
-            break
+          if (html && html !== escapeHtml(text.trim())) block[htmlKey] = html
+          return block
+        }
+        case 'horizontalRule': {
+          return {
+            type: 'horizontalRule',
+            [jsonKey]: cloneNode(node),
           }
+        }
         case 'bulletList':
         case 'orderedList': {
           const { htmlItems, textItems } = serializeListNode(node)
-          if (htmlItems.length === 0 && textItems.length === 0) {
-            break
-          }
-          const block: any = {
+          if (htmlItems.length === 0 && textItems.length === 0) return null
+          return {
             type: 'list',
             ordered: node.type === 'orderedList',
             [itemsKey]: htmlItems,
             [textKey]: textItems.join('\n'),
             [jsonKey]: cloneNode(node),
           }
-          blocks.push(block)
-          break
         }
         case 'table': {
           const block: any = {
@@ -1428,29 +1617,28 @@ export default function WikiEditor() {
             [jsonKey]: cloneNode(node),
           }
           const html = serializeNodeToHTML(node, editorInstance)
-          if (html) {
-            block[htmlKey] = html
-          }
-          blocks.push(block)
-          break
+          if (html) block[htmlKey] = html
+          return block
         }
         case 'imageSlider': {
           const images = Array.isArray(node.attrs?.images) ? node.attrs.images.filter((src: string) => typeof src === 'string' && src.trim().length) : []
+          const title = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
           const block: any = {
             type: 'imageSlider',
             images,
             [jsonKey]: cloneNode(node),
           }
-          const html = serializeNodeToHTML(node, editorInstance)
-          if (html) {
-            block[htmlKey] = html
+          if (title) {
+            block[titleKey] = title
+            block[captionKey] = title
           }
-          blocks.push(block)
-          break
+          const html = serializeNodeToHTML(node, editorInstance)
+          if (html) block[htmlKey] = html
+          return block
         }
         case 'image': {
           const src = node.attrs?.src
-          if (!src) break
+          if (!src) return null
           const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt.trim() : ''
           const title = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
           const block: any = {
@@ -1468,63 +1656,78 @@ export default function WikiEditor() {
             block[titleKey] = block[titleKey] || title
             block[captionKey] = block[captionKey] || title
           }
-          blocks.push(block)
-          break
+          return block
         }
         case 'youtube': {
           const url = node.attrs?.src
-          if (!url) break
-          const block: any = {
+          if (!url) return null
+          return {
             type: 'youtube',
             url,
-            width: node.attrs?.width ? Number(node.attrs.width) : undefined,
-            height: node.attrs?.height ? Number(node.attrs.height) : undefined,
+            width: node.attrs?.width,
+            align: node.attrs?.align,
             [jsonKey]: cloneNode(node),
           }
-          blocks.push(block)
-          break
         }
         case 'video': {
           const url = node.attrs?.src
-          if (!url) break
+          if (!url) return null
           const provider = node.attrs?.provider || (typeof url === 'string' && url.includes('vimeo.com') ? 'vimeo' : undefined)
           const block: any = {
             type: 'video',
             url,
             poster: node.attrs?.poster || undefined,
             [titleKey]: node.attrs?.title ? String(node.attrs.title) : undefined,
+            [captionKey]: node.attrs?.title ? String(node.attrs.title) : undefined,
             provider,
+            width: node.attrs?.width,
+            align: node.attrs?.align,
             [jsonKey]: cloneNode(node),
           }
-          blocks.push(block)
-          break
+          return block
+        }
+        case 'columns': {
+          return {
+            type: 'columns',
+            count: Number(node.attrs?.count) || 2,
+            [jsonKey]: cloneNode(node),
+            content: Array.isArray(node.content) 
+              ? node.content.map((child: any) => handleNodeInternal(child)).filter(Boolean)
+              : []
+          }
+        }
+        case 'column': {
+          return {
+            type: 'column',
+            [jsonKey]: cloneNode(node),
+            content: Array.isArray(node.content)
+              ? node.content.map((child: any) => handleNodeInternal(child)).filter(Boolean)
+              : []
+          }
         }
         case 'codeBlock': {
           const { text, html } = serializeInline(node.content)
-          if (!text) break
+          if (!text) return null
           const block: any = {
             type: 'code',
             language: node.attrs?.language || 'typescript',
             [textKey]: text,
             [jsonKey]: cloneNode(node),
           }
-          if (html) {
-             block[htmlKey] = html
-          }
-          blocks.push(block)
-          break
+          if (html) block[htmlKey] = html
+          return block
         }
         default: {
-          if (Array.isArray(node.content)) {
-            node.content.forEach((child: any) => handleNode(child))
-          }
-          break
+          return null
         }
       }
     }
 
     if (Array.isArray(doc?.content)) {
-      doc.content.forEach((node: any) => handleNode(node))
+      doc.content.forEach((node: any) => {
+        const block = handleNodeInternal(node)
+        if (block) blocks.push(block)
+      })
     }
 
     return blocks
@@ -1581,6 +1784,7 @@ export default function WikiEditor() {
       materials: [],
       body: mergedBody,
       forceNew: meta.isNew === true,
+      version: documentVersion,
     }
     try {
       if (!developerId) {
@@ -1629,6 +1833,11 @@ export default function WikiEditor() {
       }
 
       setMeta(updatedMeta)
+
+      // Update local documentVersion to match what the backend just saved
+      if (typeof savedLesson.version === 'number') {
+        setDocumentVersion(savedLesson.version)
+      }
       try {
         sessionStorage.setItem('lessonMeta', JSON.stringify(updatedMeta))
       } catch {}
@@ -1683,9 +1892,45 @@ export default function WikiEditor() {
   const handleLessonClick = useCallback((lesson: any) => {
     if (lesson.slug === meta.slug) return
     
-    // Autosave will handle saving before we leave? 
-    // Usually it fires on unmount or interval.
-    // We force visual feedback.
+    // CRITICAL: Block autosave immediately to prevent stale meta
+    // (e.g. old cover image) from being saved to the new lesson
+    initialLoadRef.current = true
+
+    // Cancel any pending autosave timer
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current)
+      progressIntervalRef.current = null
+    }
+    setAutosaveProgress(0)
+
+    // Reset the loaded lesson key so the new lesson will load fresh
+    loadedLessonKeyRef.current = null
+
+    // Write CLEAN meta for the new lesson into sessionStorage.
+    // This prevents the old lesson's coverImage/title from persisting
+    // when the page re-mounts and reads sessionStorage.
+    const cleanMeta = {
+      id: lesson.id,
+      slug: lesson.slug,
+      wikiSlug: lesson.wikiSlug || meta.wikiSlug,
+      title_en: lesson.title_en || '',
+      title_ar: lesson.title_ar || '',
+      coverImage: lesson.coverImage || '',
+      order: lesson.order || 0,
+      ownerId: lesson.ownerId || '',
+      isNew: false,
+    }
+    try {
+      sessionStorage.setItem('lessonMeta', JSON.stringify(cleanMeta))
+    } catch {}
+
+    // Also update local meta state immediately so the UI reflects the switch
+    setMeta((prev: typeof meta) => ({ ...prev, ...cleanMeta }))
+
     setStatus('Loading lesson...')
     
     const params = new URLSearchParams()
@@ -1694,12 +1939,13 @@ export default function WikiEditor() {
     params.set('slug', lesson.slug)
     
     router.push(`/editor/lesson?${params.toString()}`)
-  }, [meta.slug, router])
+  }, [meta.slug, meta.wikiSlug, router])
 
   const triggerAutosave = useCallback(() => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
     if (initialLoadRef.current) return
+    if (isLockedByOther) return
 
     const duration = 3000
     const start = Date.now()
@@ -1714,6 +1960,7 @@ export default function WikiEditor() {
 
     autosaveTimerRef.current = setTimeout(() => {
       if (initialLoadRef.current) return
+      if (isLockedByOther) return
       
       setStatus('Autosaving...')
       setAutosaveProgress(0)
@@ -1723,13 +1970,14 @@ export default function WikiEditor() {
         publishRef.current('draft').catch(() => {})
       }
     }, duration)
-  }, [])
+  }, [isLockedByOther])
 
-  // Attach autosave triggers
-  // Attach autosave triggers
+  // Attach autosave triggers (only on genuine user edits, not programmatic setContent)
   useEffect(() => {
     if (!editorEn) return
     const handler = () => {
+      if (syncingEnRef.current) return  // Skip: this is a programmatic content load
+      if (initialLoadRef.current) return
       triggerAutosave()
       setTocTrigger(prev => prev + 1)
     }
@@ -1740,16 +1988,14 @@ export default function WikiEditor() {
   useEffect(() => {
     if (!editorAr) return
     const handler = () => {
+      if (syncingArRef.current) return  // Skip: this is a programmatic content load
+      if (initialLoadRef.current) return
       triggerAutosave()
       setTocTrigger(prev => prev + 1)
     }
     editorAr.on('update', handler)
     return () => { editorAr.off('update', handler) }
   }, [editorAr, triggerAutosave])
-  
-  useEffect(() => {
-    if (!initialLoadRef.current) triggerAutosave()
-  }, [meta, triggerAutosave])
 
   // Cleanup autosave timer
   useEffect(() => () => {
@@ -1761,9 +2007,26 @@ export default function WikiEditor() {
   }
 
   return (
-    <div className="revolutionary-editor-container font-sans bg-transparent min-h-screen">
+    <div className="revolutionary-editor-container bg-transparent min-h-screen">
+      {/* Document Warning Banners (Lock & Version Conflicts) */}
+      <AnimatePresence>
+        {isLockedByOther && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -20, height: 0 }}
+            className="fixed top-0 left-0 right-0 z-[100] bg-rose-500 text-white px-6 py-2.5 text-sm font-semibold flex items-center justify-center gap-3 shadow-md"
+          >
+            <AlertTriangle size={18} />
+            Hold up! {lockedBy ? `Developer "${lockedBy}"` : "Another developer"} is currently editing this lesson. Your changes cannot be saved to prevent overwriting their work.
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Premium Header/Navbar area */}
-      <div className="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-slate-200 px-6 py-3 shadow-sm">
+      <div className={`fixed left-0 right-0 z-[60] bg-white border-b border-slate-200 px-6 py-3 shadow-sm transition-all duration-300 ${
+        isLockedByOther ? 'top-10' : 'top-0'
+      }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
             <NextLink 
@@ -1783,6 +2046,7 @@ export default function WikiEditor() {
               </div>
               <input
                 type="text"
+                disabled={isLockedByOther}
                 value={meta.title_en || ''}
                 onChange={(e) => {
                   const val = e.target.value
@@ -1816,9 +2080,14 @@ export default function WikiEditor() {
                  <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
                    Syncing in {Math.ceil((3000 - (autosaveProgress * 3000 / 100)) / 1000)}s...
                  </div>
+               ) : status && status.toLowerCase().includes('error') ? (
+                 <div className="flex items-center gap-1.5 text-[10px] text-rose-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]" title={status}>
+                   <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                   {status.replace('Error: ', '')}
+                 </div>
                ) : status ? (
                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                   <div className="w-1.5 h-1.5 rounded-full bg-[#f05d4e] animate-pulse" />
+                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                    Synced
                  </div>
                ) : (
@@ -1841,7 +2110,12 @@ export default function WikiEditor() {
                 onClick={async () => {
                   setStatus('Preparing preview...')
                   await publish('draft')
-                  window.open(`/en/${meta.wikiSlug || 'student-kit'}/lesson/${meta.slug}?preview=1`, '_blank')
+                  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                  const kitSlug = meta.wikiSlug || 'student-kit'
+                  const url = (!isLocal && typeof window !== 'undefined')
+                    ? `https://${HUB_DOMAIN}/${kitSlug}/en/${meta.slug}?preview=1`
+                    : `/en/${kitSlug}/lesson/${meta.slug}?preview=1`
+                  window.open(url, '_blank')
                 }}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
                 type="button"
@@ -1913,8 +2187,10 @@ export default function WikiEditor() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-28 pb-10">
-        <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+      {/* Match KitLayout's outer container */}
+      <div className="mx-auto w-full max-w-[1920px] px-6 sm:px-10 lg:px-16 pt-20 pb-12">
+        <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
+          <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
           <div className="hidden lg:block relative">
             <Sidebar
               locale={activeEditorTab === 'ar' ? 'ar' : 'en'}
@@ -1970,7 +2246,10 @@ export default function WikiEditor() {
               </div>
             </div>
             
-            <div className="glass-editor-content" data-editor-lang="en">
+            
+
+            <div className="glass-editor-content p-5 md:p-8 xl:p-10 space-y-6" data-editor-lang="en">
+
               {/* Table Bubble Menu */}
               <div id={bubbleIdEn} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
                 <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addRowBefore().run()} title="Add row above">↑+</button>
@@ -2026,17 +2305,30 @@ export default function WikiEditor() {
                 <span className="text-slate-400 text-xs font-normal">• Right to Left</span>
               </div>
               <div className="flex items-center gap-3">
-                {!isVerified ? (
-                  <button onClick={() => setShowVerifyModal(true)} className="glass-verify-btn" title="Verify English and unlock Arabic">
-                    <Unlock className="inline w-4 h-4 mr-1" /> Verify & Mirror
-                  </button>
-                ) : (
-                  <span className="glass-editor-header-badge synced"><Check className="inline w-3.5 h-3.5 mr-0.5" /> Unlocked</span>
+                {isVerified && (
+                  <span className="glass-editor-header-badge synced"><Check className="inline w-3.5 h-3.5 mr-0.5" /> Synced</span>
                 )}
+                <button 
+                  onClick={() => setShowVerifyModal(true)} 
+                  className="glass-verify-btn" 
+                  title={isVerified ? "Overwrite Arabic with current English content" : "Verify English and unlock Arabic"}
+                >
+                  <Unlock className="inline w-4 h-4 mr-1" /> {isVerified ? 'Re-Mirror English' : 'Verify & Mirror'}
+                </button>
               </div>
             </div>
             
-            <div className="glass-editor-content" data-editor-lang="ar">
+            {meta.coverImage && (
+              <div className="w-full bg-gray-100 border-b border-slate-200">
+                <img
+                  src={meta.coverImage}
+                  alt="Cover"
+                  className="w-full h-[150px] md:h-[240px] object-cover"
+                />
+              </div>
+            )}
+
+            <div className="glass-editor-content p-5 md:p-8 xl:p-10 space-y-6" data-editor-lang="ar">
               {arabicDirtyRef.current && (
                 <div className="glass-sync-ribbon needs-sync">
                   <AlertTriangle className="inline w-3.5 h-3.5 mr-1" /> Arabic content has diverged from English
@@ -2088,9 +2380,10 @@ export default function WikiEditor() {
             </div>
           </div>
         </div>
-        </div>
-        </div>
       </div>
+    </div>
+  </div>
+</div>
 
       {/* Verify & Mirror Confirmation Modal */}
       <AnimatePresence>
@@ -2442,6 +2735,7 @@ export default function WikiEditor() {
                     <div className="space-y-3">
                       <div className="rounded-xl overflow-hidden border border-slate-200 aspect-video relative group">
                         <img 
+                          key={meta.coverImage}
                           src={meta.coverImage} 
                           alt="Cover Preview" 
                           className="absolute inset-0 w-full h-full object-cover"
@@ -2473,6 +2767,7 @@ export default function WikiEditor() {
                     </div>
                   )}
                 </div>
+
               </div>
 
               <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end">

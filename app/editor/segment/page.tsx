@@ -7,6 +7,7 @@ import { applyDeveloperHeader } from '@/components/editor/dev-identity'
 import { Segment, convertSegmentsToBody } from '@/lib/segment-types'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { HUB_DOMAIN } from '@/lib/domains'
 
 export default function SegmentEditorPage() {
   const searchParams = useSearchParams()
@@ -50,19 +51,7 @@ export default function SegmentEditorPage() {
         }
 
         if (wikisRes.ok) {
-          const wikis = await wikisRes.json()
-          const currentWiki = wikis.find((w: any) => w.slug === wikiSlug)
-          
-          if (currentWiki) {
-            const domain = currentWiki.domains && currentWiki.domains.length > 0 ? currentWiki.domains[0] : null
-            if (domain) {
-              setPreviewBaseUrl(`https://${domain}`)
-            } else {
-              setPreviewBaseUrl(`https://wiki.robogeex.com/${wikiSlug}`)
-            }
-          } else {
-             setPreviewBaseUrl(`https://wiki.robogeex.com/${wikiSlug}`)
-          }
+          setPreviewBaseUrl(`https://${HUB_DOMAIN}/${wikiSlug}`)
         }
 
         // Only fetch the lesson itself if we have an ID (not a brand new lesson)

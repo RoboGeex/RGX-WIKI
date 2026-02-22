@@ -104,14 +104,14 @@ export default async function LessonPage(
         return (
           <div
             key={index}
-            className="text-base leading-7 text-gray-700"
+            className="text-gray-700"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )
       }
       if (!text) return null
       return (
-        <p key={index} className="text-base leading-7 text-gray-700">
+        <p key={index} className="text-gray-700">
           {text}
         </p>
       )
@@ -170,11 +170,11 @@ export default async function LessonPage(
       const level = block.level && block.level >= 1 && block.level <= 6 ? block.level : 2
       const Tag = (`h${level}` as keyof JSX.IntrinsicElements)
       const sizeClass =
-        level === 1 ? 'text-4xl' :
-        level === 2 ? 'text-3xl' :
-        level === 3 ? 'text-xl' :
-        level === 4 ? 'text-lg' :
-        'text-base'
+        level === 1 ? 'text-5xl' :
+        level === 2 ? 'text-4xl' :
+        level === 3 ? 'text-2xl' :
+        level === 4 ? 'text-xl' :
+        'text-lg'
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
       const normalizedHeading = textValue.trim()
       const normalizedTitle = lessonDisplayTitle.trim()
@@ -191,7 +191,7 @@ export default async function LessonPage(
           data-toc={true}
           data-level={level}
           data-toc-text={anchorText}
-          className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4 ${paddingClass}`}
+          className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4`}
         >
           {htmlValue ? (
             <span dangerouslySetInnerHTML={{ __html: htmlValue }} />
@@ -218,7 +218,18 @@ export default async function LessonPage(
     if (block.type === 'imageSlider') {
       const images = Array.isArray(block.images) ? block.images.filter(Boolean) : []
       if (!images.length) return null
-      return <LessonImageSlider key={index} images={images} />
+      const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
+      return (
+        <figure key={index} className="my-10 flex flex-col items-center w-full">
+          <LessonImageSlider images={images} />
+          {caption ? (
+            <figcaption 
+              className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: caption }}
+            />
+          ) : null}
+        </figure>
+      )
     }
 
     if (block.type === 'horizontalRule') {
@@ -243,7 +254,7 @@ export default async function LessonPage(
           className={`my-10 flex flex-col ${alignClass} w-full`}
         >
           <div style={{ width, maxWidth: '100%' }}>
-            <div className="relative w-full aspect-[1920/720] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
+            <div className="relative w-full aspect-[3/2] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
               <img
                 src={imageUrl}
                 alt={caption || ''}
@@ -269,16 +280,24 @@ export default async function LessonPage(
         locale === 'ar'
           ? block.title_ar || block.title_en || 'YouTube video'
           : block.title_en || block.title_ar || 'YouTube video'
+      const width = block.width || '100%'
+      const align = block.align || 'center'
+      const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
+
       return (
-        <div key={index} className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
-          <iframe
-            src={embedUrl}
-            title={title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="h-full w-full"
-          />
-        </div>
+        <figure key={index} className={`my-10 flex flex-col ${alignClass} w-full`}>
+          <div style={{ width, maxWidth: '100%' }}>
+            <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+              <iframe
+                src={embedUrl}
+                title={title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="h-full w-full block"
+              />
+            </div>
+          </div>
+        </figure>
       )
     }
 
@@ -290,34 +309,39 @@ export default async function LessonPage(
       const provider =
         block.provider ||
         (typeof block.url === 'string' && block.url.includes('vimeo.com') ? 'vimeo' : undefined)
-      if (provider === 'vimeo') {
-        return (
-          <figure key={index} className="space-y-3">
-            <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
-              <iframe
-                src={block.url}
-                title={caption || lessonDisplayTitle}
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full"
-                data-video-provider="vimeo"
-              />
-            </div>
-            {caption ? <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption> : null}
-          </figure>
-        )
-      }
+      
+      const width = block.width || '100%'
+      const align = block.align || 'center'
+      const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
+
       return (
-        <figure key={index} className="space-y-3">
-          <video
-            controls
-            className="w-full rounded-xl border border-gray-200 bg-black"
-            src={block.url}
-            poster={block.poster || undefined}
-          />
-          {caption ? (
-            <figcaption className="text-xs text-gray-500 text-center">{caption}</figcaption>
-          ) : null}
+        <figure key={index} className={`my-10 flex flex-col ${alignClass} w-full`}>
+          <div style={{ width, maxWidth: '100%' }}>
+            {provider === 'vimeo' ? (
+              <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+                <iframe
+                  src={block.url}
+                  title={caption || lessonDisplayTitle || 'Video'}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  className="h-full w-full block"
+                  data-video-provider="vimeo"
+                />
+              </div>
+            ) : (
+              <div className="w-full rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <video
+                  controls
+                  className="w-full block"
+                  src={block.url}
+                  poster={block.poster || undefined}
+                />
+              </div>
+            )}
+            {caption ? (
+              <figcaption className="mt-3 text-xs text-gray-500 text-center leading-relaxed" dangerouslySetInnerHTML={{ __html: caption }} />
+            ) : null}
+          </div>
         </figure>
       )
     }
@@ -333,6 +357,29 @@ export default async function LessonPage(
 
     if (block.type === 'codeTabs') {
       return <CodeTabs key={index} codeItem={block} locale={locale} />
+    }
+
+    if (block.type === 'columns') {
+      const count = block.count || 2
+      const content = block.content || []
+      return (
+        <div 
+          key={index} 
+          className="columns-layout" 
+          style={{ '--columns-count': count.toString() } as React.CSSProperties}
+        >
+          {content.map((child: any, childIndex: number) => renderBlock(child, childIndex))}
+        </div>
+      )
+    }
+
+    if (block.type === 'column') {
+      const content = block.content || []
+      return (
+        <div key={index} className="column-layout">
+          {content.map((child: any, childIndex: number) => renderBlock(child, childIndex))}
+        </div>
+      )
     }
 
     if (block.type === 'code') {
@@ -395,7 +442,7 @@ export default async function LessonPage(
               </h1>
             </header>
 
-            <article className="tiptap prose prose-lg max-w-none space-y-6">
+            <article className="tiptap prose prose-xl max-w-none space-y-6">
               {renderedBlocks}
             </article>
 

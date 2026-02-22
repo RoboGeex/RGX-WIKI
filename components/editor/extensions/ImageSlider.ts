@@ -50,6 +50,9 @@ const ImageSlider = Node.create<ImageSliderOptions>({
           }
         },
       },
+      title: {
+        default: null,
+      },
     }
   },
 

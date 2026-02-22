@@ -3,14 +3,6 @@ import type { NextRequest } from 'next/server'
 import wikisData from '@/data/wikis.json'
 import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
 
-function getWikiByDomain(host?: string | null) {
-  const normalised = host?.split(':')[0].toLowerCase()
-  if (!normalised) return undefined
-  return (wikisData as any[]).find((w) =>
-    (w.domains || []).map((d: string) => d.toLowerCase()).includes(normalised)
-  )
-}
-
 function getWikiBySlug(slug?: string | null) {
   if (!slug) return undefined
   const trimmed = slug.trim()
@@ -18,7 +10,10 @@ function getWikiBySlug(slug?: string | null) {
   return (wikisData as any[]).find((w) => w.slug === trimmed)
 }
 
-const hasDedicatedDomain = (wiki: any) => Array.isArray(wiki?.domains) && wiki.domains.length > 0
+const legacyDomainMap: Record<string, string> = {
+  'ziggy.robogeex.com': 'ziggy',
+  'clicky2.robogeex.com': 'clicky'
+}
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
@@ -33,7 +28,21 @@ export function middleware(request: NextRequest) {
   }
 
   if (host === 'robogeex.com' || host === 'www.robogeex.com') {
-    return NextResponse.redirect('https://ziggy.robogeex.com')
+    return NextResponse.redirect(`https://${HUB_DOMAIN}/ziggy`)
+  }
+
+  // Redirect legacy subdomains to the central wiki hub
+  const legacySlug = legacyDomainMap[host]
+  if (legacySlug) {
+    const newUrl = new URL(request.url)
+    newUrl.host = HUB_DOMAIN
+    // If they hit the root of the legacy domain, redirect to the hub's kit root / slug
+    if (pathname === '/') {
+      newUrl.pathname = `/${legacySlug}`
+    } else {
+      newUrl.pathname = `/${legacySlug}${pathname}`
+    }
+    return NextResponse.redirect(newUrl)
   }
 
   if (host === 'admin.robogeex.com') {
@@ -90,14 +99,6 @@ export function middleware(request: NextRequest) {
       }
       url.pathname = '/wikis'
       return NextResponse.rewrite(url)
-    }
-
-    if (hasDedicatedDomain(wiki)) {
-      const targetDomain = wiki.domains[0]
-      const locale = localeSegment || wiki.defaultLocale || 'en'
-      const remainder = rest.join('/')
-      const destinationPath = remainder ? `${locale}/${remainder}` : `${locale}/getting-started`
-      return NextResponse.redirect(`https://${targetDomain}/${destinationPath}`)
     }
 
     const defaultLocale = wiki.defaultLocale || 'en'
@@ -158,67 +159,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
 
-  const wiki = getWikiByDomain(host)
-  if (wiki) {
-    const locale = wiki.defaultLocale || 'en'
-    const kitSlug = wiki.slug
-
-    const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads']
-    if (passthroughPaths.some(p => pathname.startsWith(p))) {
-      return NextResponse.next()
-    }
-
-    const accessCookie = request.cookies.get(`wiki-${wiki.slug}-access`)
-    const unlockLocales = ['en', 'ar']
-    const isLocaleUnlock = unlockLocales.some(loc =>
-      pathname === `/${loc}/unlock` || pathname.startsWith(`/${loc}/unlock/`)
-    )
-    const isUnlockPath = pathname === '/unlock' || isLocaleUnlock
-
-    if (!accessCookie && !isUnlockPath) {
-      const unlockUrl = new URL(`/${locale}/unlock`, request.url)
-      unlockUrl.searchParams.set('kit', kitSlug)
-      const redirectTarget = pathname === '/' ? '/' : pathname
-      const redirectWithQuery = `${redirectTarget}${request.nextUrl.search || ''}`
-      unlockUrl.searchParams.set('redirect', redirectWithQuery || '/')
-      return NextResponse.redirect(unlockUrl)
-    }
-
-    if (pathname.endsWith('/unlock')) {
-      const pathLocale = pathname.split('/')[1]
-      if (pathLocale === 'en' || pathLocale === 'ar') {
-        url.pathname = `/${pathLocale}/unlock`
-        return NextResponse.rewrite(url)
-      } else {
-        url.pathname = `/${locale}/unlock`
-        return NextResponse.redirect(url)
-      }
-    }
-
-    if (pathname === '/') {
-      url.pathname = `/${locale}/${kitSlug}`
-      return NextResponse.rewrite(url)
-    }
-
-    const pathSegments = pathname.split('/').filter(Boolean)
-    const pathLocale = pathSegments[0]
-
-    if (pathLocale === 'en' || pathLocale === 'ar') {
-      const slug = pathSegments.slice(1).join('/')
-      if (slug) {
-        url.pathname = `/${pathLocale}/${kitSlug}/lesson/${slug}`
-        return NextResponse.rewrite(url)
-      } else if (pathSegments.length === 1) {
-        url.pathname = `/${pathLocale}/${kitSlug}`
-        return NextResponse.rewrite(url)
-      }
-    }
-
-    if (pathSegments.length > 0 && pathSegments[0] !== 'en' && pathSegments[0] !== 'ar') {
-      const newUrl = new URL(`/${locale}${pathname}`, request.url)
-      return NextResponse.redirect(newUrl)
-    }
-  }
+  // Any unhandled requests hit next()
+  return NextResponse.next()
 
   return NextResponse.next()
 }

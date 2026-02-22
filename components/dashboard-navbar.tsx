@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { Globe, Menu, Eye, Edit3, Layout, HelpCircle, LogOut } from 'lucide-react'
 import { Locale, t } from '@/lib/i18n'
 import { setStoredLocale } from '@/lib/unlock'
+import { HUB_DOMAIN } from '@/lib/domains'
 // Note: We can't import server-side functions in client components
 
 interface Props {
@@ -103,16 +104,16 @@ export default function DashboardNavbar({ locale, wikiSlug, kitSlug }: Props) {
       targetKitSlug = 'student-kit'
     }
     
-    // For client components, we'll generate the subdomain URL directly
-    // This assumes the wiki slug matches the subdomain pattern
-    if (currentWikiSlug && currentWikiSlug !== 'student-kit') {
-      const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:'
-      const port = typeof window !== 'undefined' ? window.location.port : '3000'
-      const portSuffix = port && port !== '80' && port !== '443' ? `:${port}` : ''
-      return `${protocol}//${currentWikiSlug}.localhost${portSuffix}/${locale}/${targetKitSlug}`
+    // For production (admin.robogeex.com), we must point to the central wiki hub.
+    // For localhost, we can use a relative link or localhost
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    
+    if (!isLocal && typeof window !== 'undefined') {
+      const protocol = window.location.protocol || 'https:'
+      return `${protocol}//${HUB_DOMAIN}/${locale}/${targetKitSlug}`
     }
     
-    // Fallback to relative URL
+    // Fallback to relative URL for local development
     return `/${locale}/${targetKitSlug}`
   }
 

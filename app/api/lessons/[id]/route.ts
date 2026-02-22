@@ -62,13 +62,16 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const prisma = getPrisma(existing.wikiSlug)
 
+    const shouldEnforceOwnership = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
+
     const updateData = {
       ...payload,
-      status: isAdmin ? payload.status || existing.status || 'draft' : 'draft',
+      // Only restrict to draft if ownership enforcement is enabled AND user is not admin
+      status: (shouldEnforceOwnership && !isAdmin) ? 'draft' : (payload.status || existing.status || 'draft'),
       publishedAt:
-        isAdmin && payload.status === 'published'
+        (!shouldEnforceOwnership || isAdmin) && payload.status === 'published'
           ? payload.publishedAt || existing.publishedAt || new Date().toISOString()
-          : null,
+          : existing.publishedAt || null,
       lastModifiedBy: developer?.id || payload.lastModifiedBy,
     }
 

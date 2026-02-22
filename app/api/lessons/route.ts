@@ -6,6 +6,7 @@ import { getWiki } from '@/lib/data'
 import { getPrisma } from '@/lib/prisma-multi'
 import { canManageLesson, canManageWiki } from '@/lib/assignments'
 import { findDeveloperById } from '@/lib/developers'
+import { getActorIdFromRequest } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -54,6 +55,7 @@ type NewLesson = {
   prerequisites_ar: string[]
   materials: { qty: number; name_en: string; name_ar: string; sku?: string }[]
   body: LessonBodyItem[]
+  version?: number
 }
 
 type LessonPayload = NewLesson & { forceNew?: boolean }
@@ -98,17 +100,6 @@ function generateUniqueId(baseId: string, existingLessons: NewLesson[]): string 
 
 const SHOULD_ENFORCE_DEV_OWNERSHIP = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
 
-function getActorIdFromRequest(req: Request): string | undefined {
-  const headers = (req as any)?.headers as Headers | undefined
-  if (!headers) return undefined
-  const raw =
-    headers.get('x-user-id') ||
-    headers.get('x-actor-id') ||
-    headers.get('x-developer-id') ||
-    headers.get('x-dev-id')
-  return raw ? raw.trim() || undefined : undefined
-}
-
 export async function POST(req: Request) {
   try {
     const incoming = (await req.json()) as LessonPayload
@@ -127,6 +118,7 @@ export async function POST(req: Request) {
       status: (rawLesson.status || '').trim() || 'draft',
       publishedAt: rawLesson.publishedAt || undefined,
       difficulty: (rawLesson.difficulty || 'Beginner').trim(),
+      version: typeof rawLesson.version === 'number' ? rawLesson.version : undefined,
     }
 
     if (!lesson.slug) {
@@ -194,12 +186,14 @@ export async function POST(req: Request) {
       lesson.lastModifiedBy = developer.id
     }
 
-    // Enforce publish rules: non-admins cannot publish
-    if (!isAdmin) {
+    // Enforce publish rules:
+    // - If ownership enforcement is enabled, only admins can publish
+    // - If ownership enforcement is disabled (default), anyone can publish
+    if (SHOULD_ENFORCE_DEV_OWNERSHIP && !isAdmin) {
       lesson.status = 'draft'
       lesson.publishedAt = undefined
     } else {
-      // Admin can publish; if status is published and no publishedAt, set it
+      // Allow publish; set publishedAt if newly published
       if (lesson.status === 'published' && !lesson.publishedAt) {
         lesson.publishedAt = new Date().toISOString()
       }
@@ -214,7 +208,7 @@ export async function POST(req: Request) {
 
         const existingRecord = await prisma.lesson.findUnique({
           where: { id: lesson.id },
-          select: { order: true, wikiSlug: true, ownerId: true },
+          select: { order: true, wikiSlug: true, ownerId: true, version: true, activeEditorId: true, lockedUntil: true } as any,
         })
 
         const isSameWiki = existingRecord?.wikiSlug === lesson.wikiSlug
@@ -229,6 +223,35 @@ export async function POST(req: Request) {
         ) {
           return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
         }
+
+        // --- Document Lock & Version Check ---
+        if (isUpdate && existingRecord) {
+          const clientVersion = typeof lesson.version === 'number' ? lesson.version : 1
+          
+          // 1. Conflict Check: Did someone else save a newer version while we were editing?
+          if (existingRecord.version > clientVersion) {
+            return NextResponse.json({ 
+              error: 'Conflict: This lesson was modified by someone else since you opened it.',
+              errorCode: 'VERSION_CONFLICT',
+              currentVersion: existingRecord.version
+            }, { status: 409 })
+          }
+
+          // 2. Lock Check: Is someone else currently holding the lock for this document?
+          const now = new Date()
+          if (
+            existingRecord.activeEditorId &&
+            existingRecord.activeEditorId !== developer?.id?.toString() &&
+            existingRecord.lockedUntil &&
+            new Date(existingRecord.lockedUntil) > now
+          ) {
+            return NextResponse.json({
+              error: 'Conflict: This lesson is currently actively locked by another developer.',
+              errorCode: 'LOCKED_BY_OTHER',
+            }, { status: 409 })
+          }
+        }
+        // -------------------------------------
 
         if (!Number.isFinite(lesson.order) || lesson.order < 1) {
           if (isUpdate && existingRecord) {
@@ -286,6 +309,7 @@ export async function POST(req: Request) {
           prerequisites_ar: lesson.prerequisites_ar as any,
           materials: lesson.materials as any,
           body: lesson.body as any,
+          version: isUpdate ? (existingRecord?.version || 1) + 1 : 1,
         }
 
         const saved = isUpdate
@@ -311,6 +335,7 @@ export async function POST(req: Request) {
             coverImage: saved.coverImage,
             ownerId: saved.ownerId || lesson.ownerId || developer?.id || null,
             status: saved.status,
+            version: (saved as any).version,
           },
         })
       } catch (e: any) {
@@ -355,6 +380,7 @@ export async function POST(req: Request) {
             : undefined,
           lastModifiedBy: developer?.id || lesson.lastModifiedBy || existingLesson.lastModifiedBy,
           ownerId: existingLesson.ownerId || lesson.ownerId || developer?.id,
+          version: (existingLesson.version || 1) + 1,
         }
       } else {
         const maxOrder = list.reduce((max, item) => Math.max(max, item.order || 0), 0)
@@ -369,6 +395,7 @@ export async function POST(req: Request) {
             : undefined,
           ownerId: lesson.ownerId || developer?.id,
           lastModifiedBy: developer?.id || lesson.lastModifiedBy,
+          version: 1,
         })
       }
 
@@ -388,6 +415,7 @@ export async function POST(req: Request) {
             order: lesson.order,
             ownerId: lesson.ownerId || developer?.id || null,
             status: lesson.status || 'draft',
+            version: isUpdate ? list[existingLessonIndex].version : 1,
           },
         })
       } catch (error) {

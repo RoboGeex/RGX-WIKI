@@ -148,6 +148,43 @@ const items: SlashItem[] = [
       editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
     },
   },
+  {
+    title: '2 Columns',
+    description: 'Side-by-side columns (50/50)',
+    shortcut: 'cols',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="12" x2="12" y1="3" y2="21"/></svg>',
+    category: 'structure',
+    keywords: ['columns', 'layout', 'grid', 'split', 'side'],
+    command: ({ editor, range }: any) => {
+      editor.chain().focus().deleteRange(range).insertContent({
+        type: 'columns',
+        attrs: { count: 2 },
+        content: [
+          { type: 'column', content: [{ type: 'paragraph' }] },
+          { type: 'column', content: [{ type: 'paragraph' }] },
+        ]
+      }).run()
+    },
+  },
+  {
+    title: '3 Columns',
+    description: 'Three side-by-side columns',
+    shortcut: 'cols3',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>',
+    category: 'structure',
+    keywords: ['columns', 'layout', 'grid', 'split', 'side'],
+    command: ({ editor, range }: any) => {
+      editor.chain().focus().deleteRange(range).insertContent({
+        type: 'columns',
+        attrs: { count: 3 },
+        content: [
+          { type: 'column', content: [{ type: 'paragraph' }] },
+          { type: 'column', content: [{ type: 'paragraph' }] },
+          { type: 'column', content: [{ type: 'paragraph' }] },
+        ]
+      }).run()
+    },
+  },
   
   // MEDIA
   {

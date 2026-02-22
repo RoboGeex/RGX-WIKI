@@ -4,9 +4,7 @@
     "displayName": "Ziggy, the Turtle Robot",
     "grade": "All Levels",
     "picture": "/images/robogeex-logo.png",
-    "domains": [
-      "ziggy.robogeex.com"
-    ],
+    "domains": [],
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
@@ -17,9 +15,7 @@
     "displayName": "Clicky",
     "grade": "All Levels",
     "picture": "/images/robogeex-logo.png",
-    "domains": [
-      "clicky2.robogeex.com"
-    ],
+    "domains": [],
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",

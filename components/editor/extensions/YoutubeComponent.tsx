@@ -1,25 +1,25 @@
+import { NodeViewWrapper } from '@tiptap/react'
+import React, { useState, useEffect, useRef } from 'react'
+import { AlignLeft, AlignCenter, AlignRight, Maximize, Trash2 } from 'lucide-react'
 
-import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
-import Image from '@tiptap/extension-image'
-import React, { useEffect, useState, useRef } from 'react'
-import { AlignLeft, AlignCenter, AlignRight, GripVertical, Maximize } from 'lucide-react'
-
-const ResizableImageComponent = (props: any) => {
-  const { node, updateAttributes, selected } = props
+export default function YoutubeComponent(props: any) {
+  const { node, updateAttributes, selected, deleteNode, editor } = props
+  const provider = 'youtube'
+  
   const [width, setWidth] = useState(node.attrs.width || '100%')
   const [align, setAlign] = useState(node.attrs.align || 'center') // left | center | right
-  const [caption, setCaption] = useState(node.attrs.title || '')
-  const imageRef = useRef<HTMLImageElement>(null)
-  
+  const containerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     setWidth(node.attrs.width || '100%')
     setAlign(node.attrs.align || 'center')
-    setCaption(node.attrs.title || '')
-  }, [node.attrs.width, node.attrs.align, node.attrs.title])
+  }, [node.attrs.width, node.attrs.align])
 
-  const handleBlur = () => {
-    if (caption !== node.attrs.title) {
-       updateAttributes({ title: caption })
+  const removeVideo = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (typeof deleteNode === 'function') {
+      deleteNode()
     }
   }
 
@@ -37,17 +37,13 @@ const ResizableImageComponent = (props: any) => {
     e.preventDefault()
     e.stopPropagation()
     const startX = e.clientX
-    // Get current width in pixels
-    const startWidth = imageRef.current?.offsetWidth || 0
-    // Get parent width to potentially calculate percentage? No, stick to pixels for free drag.
+    const startWidth = containerRef.current?.offsetWidth || 0
     
     const onMouseMove = (moveEvent: MouseEvent) => {
         const delta = moveEvent.clientX - startX
         const newW = Math.max(50, startWidth + delta) // Min 50px
         const wStr = `${newW}px`
         setWidth(wStr)
-        // Defer attribute update to mouse up for performance? 
-        // TipTap handles updates fine usually. Live update feels better.
         updateAttributes({ width: wStr }) 
     }
 
@@ -61,44 +57,35 @@ const ResizableImageComponent = (props: any) => {
   }
 
   return (
-    <NodeViewWrapper className={`my-10 flex flex-col ${align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'} w-full`} style={{ textAlign: align as any }}>
+    <NodeViewWrapper className={`my-10 flex flex-col items-${align === 'left' ? 'start' : align === 'right' ? 'end' : 'center'} w-full relative group`} style={{ textAlign: align as any }}>
       <div className="relative inline-block group w-full" style={{ width: width, maxWidth: '100%' }}>
-        <div className={`relative w-full aspect-[3/2] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center ${selected ? 'ring-2 ring-primary' : ''}`}>
-          <img
-            ref={imageRef}
+        <div ref={containerRef} className={`relative w-full aspect-video overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm flex items-center justify-center ${selected ? 'ring-2 ring-primary' : ''}`}>
+          <iframe
             src={node.attrs.src}
-            alt={node.attrs.alt}
-            className="h-full w-full object-contain"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="h-full w-full block"
           />
-        </div>
-        
-        {/* Caption Input */}
-        <div className="mt-2 w-full flex justify-center">
-          <input
-            type="text"
-            className="w-full max-w-sm text-center text-sm text-gray-500 bg-transparent border border-transparent hover:border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 outline-none transition-colors placeholder:text-gray-300"
-            placeholder="Add a caption..."
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                e.currentTarget.blur()
-              }
-              // Stop TipTap from catching keyboard events while typing in the caption
-              e.stopPropagation()
-            }}
-            onMouseDown={(e) => {
-              e.stopPropagation()
-            }}
-          />
+
+          {/* Editor Controls */}
+          {editor?.isEditable && (
+            <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={removeVideo}
+                className="p-1.5 bg-red-500/80 backdrop-blur-sm rounded text-white hover:bg-red-500 transition-colors shadow-sm"
+                title="Delete video"
+                type="button"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Resize Handle (Free Drag) */}
         {selected && (
            <div 
-             className="absolute bottom-2 right-2 p-1.5 bg-white/90 shadow-sm border border-gray-200 rounded cursor-ew-resize hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+             className="absolute bottom-2 right-2 p-1.5 bg-white/90 shadow-sm border border-gray-200 rounded cursor-ew-resize hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity z-20"
              onMouseDown={handleMouseDown}
              title="Drag to resize"
            >
@@ -137,35 +124,3 @@ const ResizableImageComponent = (props: any) => {
     </NodeViewWrapper>
   )
 }
-
-export default Image.extend({
-  name: 'image',
-  
-  addAttributes() {
-    return {
-      // @ts-ignore
-      ...this.parent?.(),
-      width: {
-        default: '100%',
-        renderHTML: (attributes: Record<string, any>) => ({
-          width: attributes.width,
-          style: `width: ${attributes.width}`
-        }),
-      },
-      height: {
-        default: null,
-      },
-      align: {
-        default: 'center',
-        renderHTML: (attributes: Record<string, any>) => ({
-          'data-align': attributes.align,
-          style: `text-align: ${attributes.align}`
-        }),
-      }
-    }
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(ResizableImageComponent)
-  }
-})

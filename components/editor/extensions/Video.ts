@@ -1,4 +1,6 @@
 ﻿import { Node, mergeAttributes } from '@tiptap/core'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import VideoComponent from './VideoComponent'
 
 export interface VideoOptions {
   HTMLAttributes: Record<string, any>
@@ -13,6 +15,8 @@ declare module '@tiptap/core' {
         title?: string | null
         controls?: boolean
         provider?: string | null
+        width?: string | null
+        align?: string | null
       }) => ReturnType
     }
   }
@@ -50,6 +54,20 @@ const Video = Node.create<VideoOptions>({
       provider: {
         default: null,
       },
+      width: {
+        default: '100%',
+        renderHTML: (attributes: Record<string, any>) => ({
+          width: attributes.width,
+          style: `width: ${attributes.width}`
+        }),
+      },
+      align: {
+        default: 'center',
+        renderHTML: (attributes: Record<string, any>) => ({
+          'data-align': attributes.align,
+          style: `text-align: ${attributes.align}`
+        }),
+      },
     }
   },
 
@@ -77,7 +95,7 @@ const Video = Node.create<VideoOptions>({
     if (provider === 'vimeo') {
       return [
         'div',
-        { class: 'tiptap-video-embed aspect-video w-full rounded-xl overflow-hidden bg-black' },
+        { class: 'tiptap-video-embed aspect-video w-full rounded-2xl border border-gray-200 bg-black shadow-lg overflow-hidden' },
         [
           'iframe',
           {
@@ -93,6 +111,10 @@ const Video = Node.create<VideoOptions>({
     }
     const { provider: _provider, ...videoAttrs } = HTMLAttributes
     return ['video', mergeAttributes(this.options.HTMLAttributes, videoAttrs)]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(VideoComponent)
   },
 
   addCommands() {

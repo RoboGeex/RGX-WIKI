@@ -2,6 +2,7 @@
 import { notFound } from "next/navigation"
 import { getWiki, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
+import { HUB_DOMAIN } from "@/lib/domains"
 import LessonsReorderList from "@/components/editor/LessonsReorderList"
 
 export const dynamic = "force-dynamic"
@@ -19,13 +20,9 @@ export default async function EditorWikiDashboardPage({
   const wiki = getWiki(wikiSlug)
   if (!wiki) notFound()
 
-  const primaryDomain = (wiki.domains || []).find((domain) => typeof domain === 'string' && domain.trim().length > 0)
-  const sanitizedDomain = primaryDomain?.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const fallbackDomain = `wiki.robogeex.com/${wiki.slug}`
-  
   // Only use absolute domain URL in production to ensure local previews work via relative paths
   const viewBaseUrl = process.env.NODE_ENV === 'production' 
-    ? `https://${sanitizedDomain || fallbackDomain}`
+    ? `https://${HUB_DOMAIN}/${wiki.slug}`
     : undefined
 
   const kits = getKits(wiki.slug)
@@ -50,7 +47,7 @@ export default async function EditorWikiDashboardPage({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Link href="/editor/dashboard" className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700">
-            ? Back to dashboard
+            ← Back to dashboard
           </Link>
           {selectedKitSlug && (
             <>

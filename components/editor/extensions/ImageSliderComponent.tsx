@@ -1,10 +1,21 @@
 import { NodeViewWrapper } from '@tiptap/react'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ArrowLeft, ArrowRight, Trash2 } from 'lucide-react'
 
 export default function ImageSliderComponent(props: any) {
   const images = props.node.attrs.images || []
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [caption, setCaption] = useState(props.node.attrs.title || '')
+
+  useEffect(() => {
+    setCaption(props.node.attrs.title || '')
+  }, [props.node.attrs.title])
+
+  const handleBlur = () => {
+    if (caption !== props.node.attrs.title) {
+       props.updateAttributes({ title: caption })
+    }
+  }
 
   if (!images.length) return <NodeViewWrapper className="image-slider-wrapper p-4 bg-slate-50 rounded border border-slate-200 text-slate-400 text-center text-sm">No images in slider</NodeViewWrapper>
 
@@ -132,6 +143,29 @@ export default function ImageSliderComponent(props: any) {
           </div>
         )}
       </div>
+      </div>
+      
+      {/* Caption Input */}
+      <div className="mt-1 w-full flex justify-center max-w-[720px]">
+        <input
+          type="text"
+          className="w-full max-w-sm text-center text-sm text-gray-500 bg-transparent border border-transparent hover:border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 outline-none transition-colors placeholder:text-gray-300"
+          placeholder="Add a caption..."
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              e.currentTarget.blur()
+            }
+            // Stop TipTap from catching keyboard events while typing in the caption
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation()
+          }}
+        />
       </div>
     </NodeViewWrapper>
   )

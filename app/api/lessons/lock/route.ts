@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma-multi'
 import { getActorIdFromRequest } from '@/lib/api-auth'
+import { findDeveloperById } from '@/lib/developers'
+import { canManageWiki } from '@/lib/assignments'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +18,14 @@ export async function POST(req: Request) {
 
     if (!wikiSlug || !lessonId) {
       return NextResponse.json({ error: 'Missing wikiSlug or lessonId' }, { status: 400 })
+    }
+
+    const developer = await findDeveloperById(actorId)
+    const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
+    const isEnforcementOn = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
+
+    if (!isAdmin && !canManageWiki(developer, wikiSlug)) {
+      return NextResponse.json({ error: 'Access denied: You are not assigned to this wiki' }, { status: 403 })
     }
 
     const prisma = getPrisma(wikiSlug)
@@ -93,6 +103,14 @@ export async function DELETE(req: Request) {
     }
 
     const prisma = getPrisma(wikiSlug)
+
+    const developer = await findDeveloperById(actorId)
+    const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
+    const isEnforcementOn = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
+
+    if (!isAdmin && !canManageWiki(developer, wikiSlug)) {
+      return NextResponse.json({ error: 'Access denied: You are not assigned to this wiki' }, { status: 403 })
+    }
 
     // Only release the lock if the current user owns it
     const lesson = await prisma.lesson.findUnique({

@@ -34,7 +34,7 @@ import { Columns, Column } from './extensions/Columns'
 import CodeBlockView from './CodeBlockView'
 import type { EditorView } from '@tiptap/pm/view'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, ShieldAlert, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
 import './hljs.css'
 import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
 import DeveloperLogin from './DeveloperLogin'
@@ -180,6 +180,7 @@ export default function WikiEditor() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [developerId, setDeveloperId] = useState<string | undefined>(() => getDeveloperId())
+  const [developer, setDeveloper] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [tocTrigger, setTocTrigger] = useState(0)
   const [autosaveProgress, setAutosaveProgress] = useState(0)
@@ -266,13 +267,21 @@ export default function WikiEditor() {
   const [documentVersion, setDocumentVersion] = useState<number>(meta.version || 1)
   // ---------------------------
 
+  // Logic to determine if user has permission to edit this wiki
+  const hasWikiAccess = useMemo(() => {
+    if (!developer) return false
+    if (developer.role === 'admin' || developer.role === 'superadmin') return true
+    const currentWiki = meta.wikiSlug || 'student-kit'
+    return Boolean(developer.wikiSlugs?.includes(currentWiki))
+  }, [developer, meta.wikiSlug])
+
   // --- Document Lock Heartbeat ---
   // Use a ref to track whether WE currently own the lock (for cleanup)
   const weOwnLockRef = useRef(false)
 
   useEffect(() => {
-    // Only attempt to lock if we have a saved lesson ID + a loaded developer
-    if (!meta.id || !developerId) return
+    // Only attempt to lock if we have a saved lesson ID + a loaded developer + wiki access
+    if (!meta.id || !developerId || !hasWikiAccess) return
 
     let isMounted = true
 
@@ -343,7 +352,7 @@ export default function WikiEditor() {
       window.removeEventListener('beforeunload', releaseLock)
       releaseLock()
     }
-  }, [meta.id, meta.wikiSlug, developerId])
+  }, [meta.id, meta.wikiSlug, developerId, hasWikiAccess])
   // -------------------------------
   useEffect(() => {
     let cancelled = false
@@ -356,13 +365,18 @@ export default function WikiEditor() {
         const res = await fetch('/api/developers/me', { headers: applyDeveloperHeader() })
         const data = await res.json()
         if (cancelled) return
-        if (res.ok && data?.developer?.role) {
+        if (res.ok && data?.developer) {
+          setDeveloper(data.developer)
           setIsAdmin(data.developer.role === 'admin' || data.developer.role === 'superadmin')
         } else {
+          setDeveloper(null)
           setIsAdmin(false)
         }
       } catch {
-        if (!cancelled) setIsAdmin(false)
+        if (!cancelled) {
+          setDeveloper(null)
+          setIsAdmin(false)
+        }
       }
     }
     loadRole()
@@ -370,8 +384,10 @@ export default function WikiEditor() {
       cancelled = true
     }
   }, [developerId])
+
+
   const isOwner = Boolean(meta.ownerId && developerId && meta.ownerId === developerId)
-  const saveDisabled = !isAdmin && !isOwner && !meta.isNew && Boolean(meta.ownerId)
+  const saveDisabled = !isAdmin && !isOwner && !meta.isNew && (Boolean(meta.ownerId) || !hasWikiAccess)
 
   // Publish confirmation modal state
   const [showPublishModal, setShowPublishModal] = useState(false)
@@ -1447,6 +1463,8 @@ export default function WikiEditor() {
 
 
 
+
+
   useEffect(() => {
     if (!editorEn && !editorAr) return;
     
@@ -2016,7 +2034,7 @@ export default function WikiEditor() {
     <div className="revolutionary-editor-container bg-transparent min-h-screen">
       {/* Document Warning Banners (Lock & Version Conflicts) */}
       <AnimatePresence>
-        {isLockedByOther && (
+        {(isLockedByOther && hasWikiAccess) && (
           <motion.div
             initial={{ opacity: 0, y: -20, height: 0 }}
             animate={{ opacity: 1, y: 0, height: 'auto' }}
@@ -2025,6 +2043,36 @@ export default function WikiEditor() {
           >
             <AlertTriangle size={18} />
             Hold up! {lockedBy ? `Developer "${lockedBy}"` : "Another developer"} is currently editing this lesson. Your changes cannot be saved to prevent overwriting their work.
+          </motion.div>
+        )}
+
+        {/* Access Denied Overlay */}
+        {!hasWikiAccess && !meta.isNew && developer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-3xl p-10 max-w-lg w-full text-center shadow-2xl border border-slate-200"
+            >
+              <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-500">
+                <ShieldAlert size={40} />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-3">Access Denied</h2>
+              <p className="text-slate-600 mb-8 leading-relaxed">
+                You don't have permission to manage lessons in the <span className="font-bold text-slate-900">"{meta.wikiSlug || 'this'}"</span> wiki. 
+                Please contact an administrator to request access.
+              </p>
+              <button
+                onClick={() => router.push(`/editor/dashboard/${developer.wikiSlugs?.[0] || 'student-kit'}`)}
+                className="w-full py-3.5 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
+              >
+                Return to Dashboard
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -2086,16 +2134,21 @@ export default function WikiEditor() {
                  <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
                    Syncing in {Math.ceil((3000 - (autosaveProgress * 3000 / 100)) / 1000)}s...
                  </div>
-               ) : status && status.toLowerCase().includes('error') ? (
-                 <div className="flex items-center gap-1.5 text-[10px] text-rose-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]" title={status}>
-                   <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                   {status.replace('Error: ', '')}
-                 </div>
-               ) : status ? (
-                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                   Synced
-                 </div>
+                ) : status && (status.toLowerCase().includes('error') || status.toLowerCase().includes('only owner') || status.toLowerCase().includes('sign in')) ? (
+                  <div className="flex items-center gap-1.5 text-[10px] text-rose-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]" title={status}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    {status.replace('Error: ', '')}
+                  </div>
+                ) : status && status === 'Autosaving...' ? (
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Autosaving...
+                  </div>
+                ) : status && (status.includes('saved') || status.includes('published') || status === 'Synced') ? (
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Synced
+                  </div>
                ) : (
                  <div className="text-[10px] text-slate-400 font-medium italic">Not saved yet</div>
                )}

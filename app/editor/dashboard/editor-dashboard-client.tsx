@@ -59,7 +59,8 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
   const filteredSummaries = useMemo(() => {
     // Admins and Super Admins see all wikis
     if (devRole === 'admin' || devRole === 'superadmin') return summaries
-    if (!wikiAccess || wikiAccess.length === 0) return summaries
+    // If not admin, they only see what they are assigned to
+    if (!wikiAccess) return [] 
     return summaries.filter(({ wiki }) => wikiAccess.includes(wiki.slug))
   }, [summaries, wikiAccess, devRole])
   const [isModalOpen, setIsModalOpen] = useState(false)

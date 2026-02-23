@@ -172,6 +172,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (SHOULD_ENFORCE_DEV_OWNERSHIP && !isAdmin && !canManageWiki(developer, lesson.wikiSlug)) {
+      return NextResponse.json({ error: 'Forbidden: You are not assigned to this wiki' }, { status: 403 })
+    }
+
     if (
       SHOULD_ENFORCE_DEV_OWNERSHIP &&
       !canManageLesson(developer, lesson.wikiSlug, lesson.id || lesson.slug)

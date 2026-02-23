@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma-multi'
 import { findDeveloperById } from '@/lib/developers'
-import { canManageLesson } from '@/lib/assignments'
+import { canManageLesson, canManageWiki } from '@/lib/assignments'
 
 function getActorIdFromRequest(req: Request): string | undefined {
   const headers = (req as any)?.headers as Headers | undefined
@@ -31,6 +31,15 @@ export async function GET(
       },
     })
     if (!lesson) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const actorId = getActorIdFromRequest(req)
+    const developer = actorId ? await findDeveloperById(actorId) : undefined
+    const isEnforcementOn = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
+
+    if (isEnforcementOn && !canManageWiki(developer, lesson.wikiSlug)) {
+      return NextResponse.json({ error: 'Access denied: You are not assigned to this wiki' }, { status: 403 })
+    }
+
     return NextResponse.json(lesson)
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to load lesson' }, { status: 500 })
@@ -55,6 +64,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       select: { ownerId: true, wikiSlug: true, status: true, publishedAt: true },
     })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    if (!isAdmin && !canManageWiki(developer, existing.wikiSlug)) {
+      return NextResponse.json({ error: 'Forbidden: You are not assigned to this wiki' }, { status: 403 })
+    }
 
     if (!isAdmin && (!existing.ownerId || existing.ownerId !== developer?.id)) {
       return NextResponse.json({ error: 'Only owner or admin can edit this lesson' }, { status: 403 })

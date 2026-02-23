@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server"
 import { getWiki } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
+import { findDeveloperById } from '@/lib/developers'
+import { canManageWiki } from '@/lib/assignments'
 
 export const dynamic = "force-dynamic"
 
@@ -9,6 +11,17 @@ type ReorderPayload = {
   wikiSlug?: string
   kitSlug?: string
   sequence?: string[]
+}
+
+function getActorIdFromRequest(req: Request): string | undefined {
+  const headers = (req as any)?.headers as Headers | undefined
+  if (!headers) return undefined
+  const raw =
+    headers.get('x-user-id') ||
+    headers.get('x-actor-id') ||
+    headers.get('x-developer-id') ||
+    headers.get('x-dev-id')
+  return raw ? raw.trim() || undefined : undefined
 }
 
 export async function POST(req: Request) {
@@ -23,6 +36,15 @@ export async function POST(req: Request) {
     }
     if (!getWiki(wikiSlug)) {
       return NextResponse.json({ error: "Unknown wiki" }, { status: 400 })
+    }
+
+    const actorId = getActorIdFromRequest(req)
+    const developer = actorId ? await findDeveloperById(actorId) : undefined
+    const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
+    const isEnforcementOn = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
+
+    if (isEnforcementOn && !isAdmin && !canManageWiki(developer, wikiSlug)) {
+      return NextResponse.json({ error: "Forbidden: You are not assigned to this wiki" }, { status: 403 })
     }
     if (!sequence.length) {
       return NextResponse.json({ error: "Nothing to reorder" }, { status: 400 })

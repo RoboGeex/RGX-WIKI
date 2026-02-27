@@ -338,6 +338,17 @@ export default function PropertiesForm() {
               onChange={(e) => applyTitle(e.target.value, 'en')}
             />
           </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">
+              Title (AR)
+            </label>
+            <input
+              className="w-full border rounded px-2 py-1 text-right"
+              dir="rtl"
+              value={meta.title_ar}
+              onChange={(e) => applyTitle(e.target.value, 'ar')}
+            />
+          </div>
           <div className="sm:col-span-2 space-y-2">
             <label className="block text-xs text-gray-500 mb-1">Cover image</label>
             <div className="flex flex-col gap-2">

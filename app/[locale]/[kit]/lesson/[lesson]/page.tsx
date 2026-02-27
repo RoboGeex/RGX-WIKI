@@ -120,9 +120,9 @@ export default async function LessonPage(
     if (block.type === 'list') {
       const items = locale === 'ar' ? block.items_ar : block.items_en
       if (!Array.isArray(items) || items.length === 0) return null
-      
+
       const paddingClass = locale === 'ar' ? 'pr-6' : 'pl-6'
-      
+
       return (
         <div
           key={index}
@@ -133,21 +133,21 @@ export default async function LessonPage(
             const text = typeof item === 'object' ? item.text : item
             const indent = typeof item === 'object' ? (item.indent || 0) : 0
             const marker = getListMarker(items, itemIndex, !!block.ordered)
-            
+
             return (
               <div
                 key={itemIndex}
                 className="flex items-baseline gap-1.5"
-                style={{ 
+                style={{
                   [locale === 'ar' ? 'paddingRight' : 'paddingLeft']: `${indent * 2}rem`
                 }}
               >
                 <span className={`shrink-0 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-black`}>
                   {marker}
                 </span>
-                <div 
+                <div
                   className="flex-1 [&_p]:m-0"
-                  dangerouslySetInnerHTML={{ __html: text }} 
+                  dangerouslySetInnerHTML={{ __html: text }}
                 />
               </div>
             )
@@ -171,10 +171,10 @@ export default async function LessonPage(
       const Tag = (`h${level}` as keyof JSX.IntrinsicElements)
       const sizeClass =
         level === 1 ? 'text-5xl' :
-        level === 2 ? 'text-4xl' :
-        level === 3 ? 'text-2xl' :
-        level === 4 ? 'text-xl' :
-        'text-lg'
+          level === 2 ? 'text-4xl' :
+            level === 3 ? 'text-2xl' :
+              level === 4 ? 'text-xl' :
+                'text-lg'
       const paddingClass = level >= 4 ? 'pl-6' : level === 3 ? 'pl-3' : ''
       const normalizedHeading = textValue.trim()
       const normalizedTitle = lessonDisplayTitle.trim()
@@ -220,10 +220,10 @@ export default async function LessonPage(
       if (!images.length) return null
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (
-        <figure key={index} className="my-10 flex flex-col items-center w-full">
+        <figure key={index} className="mt-2 mb-6 flex flex-col items-center w-full">
           <LessonImageSlider images={images} />
           {caption ? (
-            <figcaption 
+            <figcaption
               className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
               dangerouslySetInnerHTML={{ __html: caption }}
             />
@@ -245,25 +245,25 @@ export default async function LessonPage(
 
       const alignClass =
         align === 'left' ? 'items-start' :
-        align === 'right' ? 'items-end' :
-        'items-center'
+          align === 'right' ? 'items-end' :
+            'items-center'
 
       return (
-        <figure 
-          key={index} 
-          className={`my-10 flex flex-col ${alignClass} w-full`}
+        <figure
+          key={index}
+          className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}
         >
           <div style={{ width, maxWidth: '100%' }}>
-            <div className="relative w-full aspect-[3/2] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
+            <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
               <img
                 src={imageUrl}
                 alt={caption || ''}
-                className="h-full w-full object-contain"
+                className="w-full h-auto object-contain block"
                 loading="lazy"
               />
             </div>
             {caption ? (
-              <figcaption 
+              <figcaption
                 className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: caption }}
               />
@@ -285,7 +285,7 @@ export default async function LessonPage(
       const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
 
       return (
-        <figure key={index} className={`my-10 flex flex-col ${alignClass} w-full`}>
+        <figure key={index} className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}>
           <div style={{ width, maxWidth: '100%' }}>
             <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
               <iframe
@@ -306,33 +306,45 @@ export default async function LessonPage(
         locale === 'ar'
           ? block.caption_ar || block.title_ar || ''
           : block.caption_en || block.title_en || ''
-      const provider =
-        block.provider ||
-        (typeof block.url === 'string' && block.url.includes('vimeo.com') ? 'vimeo' : undefined)
-      
+      const isVimeo = typeof block.url === 'string' && block.url.includes('vimeo.com')
+      const isYoutube = typeof block.url === 'string' && (block.url.includes('youtube.com') || block.url.includes('youtu.be'))
+      const provider = block.provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)
+
+      const getEmbedUrl = (url: string) => {
+        if (!url) return ''
+        if (url.includes('vimeo.com') && !url.includes('player.vimeo.com')) {
+          const match = url.match(/vimeo\.com\/(?:video\/)*([0-9]+)/)
+          return match ? `https://player.vimeo.com/video/${match[1]}` : url
+        }
+        if ((url.includes('youtube.com') || url.includes('youtu.be')) && !url.includes('youtube.com/embed')) {
+          const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/\s]+)/)
+          return match ? `https://www.youtube.com/embed/${match[1]}` : url
+        }
+        return url
+      }
+
       const width = block.width || '100%'
       const align = block.align || 'center'
       const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
 
       return (
-        <figure key={index} className={`my-10 flex flex-col ${alignClass} w-full`}>
+        <figure key={index} className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}>
           <div style={{ width, maxWidth: '100%' }}>
-            {provider === 'vimeo' ? (
+            {provider === 'vimeo' || provider === 'youtube' ? (
               <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
                 <iframe
-                  src={block.url}
-                  title={caption || lessonDisplayTitle || 'Video'}
-                  allow="autoplay; fullscreen; picture-in-picture"
+                  src={getEmbedUrl(block.url)}
+                  title={caption || lessonDisplayTitle || (provider === 'youtube' ? 'YouTube video' : 'Vimeo video')}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   className="h-full w-full block"
-                  data-video-provider="vimeo"
                 />
               </div>
             ) : (
-              <div className="w-full rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="w-full aspect-video rounded-xl border border-gray-200 shadow-sm overflow-hidden bg-black flex items-center justify-center">
                 <video
                   controls
-                  className="w-full block"
+                  className="w-full h-full object-contain block"
                   src={block.url}
                   poster={block.poster || undefined}
                 />
@@ -363,9 +375,9 @@ export default async function LessonPage(
       const count = block.count || 2
       const content = block.content || []
       return (
-        <div 
-          key={index} 
-          className="columns-layout" 
+        <div
+          key={index}
+          className="columns-layout"
           style={{ '--columns-count': count.toString() } as React.CSSProperties}
         >
           {content.map((child: any, childIndex: number) => renderBlock(child, childIndex))}
@@ -437,21 +449,21 @@ export default async function LessonPage(
                   </span>
                   <span className="text-sm font-semibold text-gray-700">{kitData.title_en}</span>
                 </div>
-              <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
-                {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
-              </h1>
-            </header>
+                <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+                  {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
+                </h1>
+              </header>
 
-            <article className="tiptap prose prose-xl max-w-none space-y-6">
-              {renderedBlocks}
-            </article>
+              <article className="tiptap prose prose-xl max-w-none space-y-6">
+                {renderedBlocks}
+              </article>
 
-            <PrevNextNav
-              prevLesson={prevLesson}
-              nextLesson={nextLesson}
-              locale={locale}
-              kitSlug={kit}
-            />
+              <PrevNextNav
+                prevLesson={prevLesson}
+                nextLesson={nextLesson}
+                locale={locale}
+                kitSlug={kit}
+              />
             </div>
           </div>
         </div>

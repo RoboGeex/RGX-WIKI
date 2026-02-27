@@ -1544,6 +1544,8 @@ html {
   padding: 0 !important; /* Remove padding for true-to-wiki look */
   word-break: break-word;
   overflow-wrap: break-word;
+  display: flex;
+  flex-direction: column;
 }
 
 .column-layout > *:first-child {
@@ -1564,4 +1566,9 @@ html {
   border-top: 1px solid #e5e7eb; /* border-gray-200 */
   margin: 2rem 0 !important;
   width: 100%;
+}
+
+/* Ensure bold text inherits text color applied via Tiptap */
+.prose strong, .prose b, .tiptap strong, .tiptap b {
+  color: inherit !important;
 }

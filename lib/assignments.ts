@@ -39,28 +39,46 @@ export function getDeveloperById(id?: string | null): DeveloperAssignment | unde
 
 export function canManageWiki(dev: DeveloperAssignment | undefined, wikiSlug: string): boolean {
   if (!dev) return false
-  if (dev.role === 'admin' || dev.role === 'superadmin') return true
+  if (dev.role === 'superadmin') return true
+  // Both admin and editor only have access to wikis assigned to them
   return Boolean(dev.wikiSlugs?.includes(wikiSlug))
 }
 
-export function canManageLesson(
+export function canEditLesson(
   dev: DeveloperAssignment | undefined,
   wikiSlug: string,
-  lessonId: string
+  lessonOwnerId: string | null | undefined
 ): boolean {
   if (!dev) return false
-  if (canManageWiki(dev, wikiSlug)) return true
-  const lessonKeyVariants = [lessonId, `${wikiSlug}:${lessonId}`]
-  return Boolean(dev.lessonIds?.some((id) => lessonKeyVariants.includes(id)))
+  if (dev.role === 'superadmin') return true
+  
+  if (!canManageWiki(dev, wikiSlug)) return false
+
+  if (dev.role === 'admin') {
+    return true // Admin can edit all lessons in assigned wikis
+  }
+
+  // Editor can only edit their own lessons
+  if (dev.role === 'editor') {
+    if (!lessonOwnerId) return true // Allow if lesson has no owner (for backwards compatibility/adoption)
+    return dev.id === lessonOwnerId
+  }
+
+  return false
+}
+
+export function canDeleteLesson(dev: DeveloperAssignment | undefined): boolean {
+  if (!dev) return false
+  return dev.role === 'superadmin'
 }
 
 export function ensureCanManageLesson(
   dev: DeveloperAssignment | undefined,
   wikiSlug: string,
-  lessonId: string
+  lessonOwnerId: string | null | undefined
 ): void {
-  if (!canManageLesson(dev, wikiSlug, lessonId)) {
-    const err = new Error('Not authorized to manage this lesson')
+  if (!canEditLesson(dev, wikiSlug, lessonOwnerId)) {
+    const err = new Error('Not authorized to edit this lesson')
     ;(err as any).status = 403
     throw err
   }

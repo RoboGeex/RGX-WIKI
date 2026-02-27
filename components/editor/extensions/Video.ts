@@ -87,12 +87,27 @@ const Video = Node.create<VideoOptions>({
           }
         },
       },
+      {
+        tag: 'iframe[data-video-provider="youtube"]',
+        getAttrs: (element) => {
+          const el = element as HTMLElement
+          return {
+            src: el.getAttribute('src'),
+            provider: 'youtube',
+            controls: false,
+          }
+        },
+      },
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
-    const provider = HTMLAttributes.provider || (typeof HTMLAttributes.src === 'string' && HTMLAttributes.src.includes('vimeo.com') ? 'vimeo' : null)
-    if (provider === 'vimeo') {
+    const src = typeof HTMLAttributes.src === 'string' ? HTMLAttributes.src : ''
+    const isVimeo = src.includes('vimeo.com')
+    const isYoutube = src.includes('youtube.com') || src.includes('youtu.be')
+    const provider = HTMLAttributes.provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)
+
+    if (provider === 'vimeo' || provider === 'youtube') {
       return [
         'div',
         { class: 'tiptap-video-embed aspect-video w-full rounded-2xl border border-gray-200 bg-black shadow-lg overflow-hidden' },
@@ -100,10 +115,10 @@ const Video = Node.create<VideoOptions>({
           'iframe',
           {
             src: HTMLAttributes.src,
-            title: HTMLAttributes.title || 'Vimeo video',
-            allow: 'autoplay; fullscreen; picture-in-picture',
+            title: HTMLAttributes.title || (provider === 'youtube' ? 'YouTube video' : 'Vimeo video'),
+            allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
             allowfullscreen: 'true',
-            'data-video-provider': 'vimeo',
+            'data-video-provider': provider,
             class: 'h-full w-full',
           },
         ],
@@ -124,14 +139,17 @@ const Video = Node.create<VideoOptions>({
           return false
         }
         const src = typeof attrs.src === 'string' ? attrs.src : ''
-        const provider = attrs.provider || (src.includes('vimeo.com') ? 'vimeo' : null)
+        const isVimeo = src.includes('vimeo.com')
+        const isYoutube = src.includes('youtube.com') || src.includes('youtu.be')
+        const provider = attrs.provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)
+
         return chain()
           .insertContent({
             type: this.name,
             attrs: {
               ...attrs,
               provider,
-              controls: provider === 'vimeo' ? false : true,
+              controls: (provider === 'vimeo' || provider === 'youtube') ? false : true,
             },
           })
           .run()

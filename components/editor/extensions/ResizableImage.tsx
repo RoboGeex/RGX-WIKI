@@ -10,7 +10,7 @@ const ResizableImageComponent = (props: any) => {
   const [align, setAlign] = useState(node.attrs.align || 'center') // left | center | right
   const [caption, setCaption] = useState(node.attrs.title || '')
   const imageRef = useRef<HTMLImageElement>(null)
-  
+
   useEffect(() => {
     setWidth(node.attrs.width || '100%')
     setAlign(node.attrs.align || 'center')
@@ -19,7 +19,7 @@ const ResizableImageComponent = (props: any) => {
 
   const handleBlur = () => {
     if (caption !== node.attrs.title) {
-       updateAttributes({ title: caption })
+      updateAttributes({ title: caption })
     }
   }
 
@@ -40,20 +40,22 @@ const ResizableImageComponent = (props: any) => {
     // Get current width in pixels
     const startWidth = imageRef.current?.offsetWidth || 0
     // Get parent width to potentially calculate percentage? No, stick to pixels for free drag.
-    
+
+    let latestWidthStr = `${startWidth}px`
+
     const onMouseMove = (moveEvent: MouseEvent) => {
-        const delta = moveEvent.clientX - startX
-        const newW = Math.max(50, startWidth + delta) // Min 50px
-        const wStr = `${newW}px`
-        setWidth(wStr)
-        // Defer attribute update to mouse up for performance? 
-        // TipTap handles updates fine usually. Live update feels better.
-        updateAttributes({ width: wStr }) 
+      const delta = moveEvent.clientX - startX
+      const newW = Math.max(50, startWidth + delta) // Min 50px
+      const wStr = `${newW}px`
+      latestWidthStr = wStr
+      setWidth(wStr)
+      // Deferred attribute update to mouse up to prevent 'Maximum update depth exceeded' error
     }
 
     const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove)
-        window.removeEventListener('mouseup', onMouseUp)
+      updateAttributes({ width: latestWidthStr })
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
     }
 
     window.addEventListener('mousemove', onMouseMove)
@@ -61,17 +63,17 @@ const ResizableImageComponent = (props: any) => {
   }
 
   return (
-    <NodeViewWrapper className={`my-10 flex flex-col ${align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'} w-full`} style={{ textAlign: align as any }}>
+    <NodeViewWrapper className={`mt-2 mb-6 flex flex-col ${align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'} w-full`} style={{ textAlign: align as any }}>
       <div className="relative inline-block group w-full" style={{ width: width, maxWidth: '100%' }}>
-        <div className={`relative w-full aspect-[3/2] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center ${selected ? 'ring-2 ring-primary' : ''}`}>
+        <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center ${selected ? 'ring-2 ring-primary' : ''}`}>
           <img
             ref={imageRef}
             src={node.attrs.src}
             alt={node.attrs.alt}
-            className="h-full w-full object-contain"
+            className="w-full h-auto object-contain block"
           />
         </div>
-        
+
         {/* Caption Input */}
         <div className="mt-2 w-full flex justify-center">
           <input
@@ -97,41 +99,41 @@ const ResizableImageComponent = (props: any) => {
 
         {/* Resize Handle (Free Drag) */}
         {selected && (
-           <div 
-             className="absolute bottom-2 right-2 p-1.5 bg-white/90 shadow-sm border border-gray-200 rounded cursor-ew-resize hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
-             onMouseDown={handleMouseDown}
-             title="Drag to resize"
-           >
-             <Maximize size={14} className="text-gray-500 rotate-90" />
-           </div>
+          <div
+            className="absolute bottom-2 right-2 p-1.5 bg-white/90 shadow-sm border border-gray-200 rounded cursor-ew-resize hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={handleMouseDown}
+            title="Drag to resize"
+          >
+            <Maximize size={14} className="text-gray-500 rotate-90" />
+          </div>
         )}
 
         {/* Toolbar */}
         {selected && (
-           <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/95 backdrop-blur shadow-lg rounded-lg border border-gray-200 p-1.5 z-50">
-             
-             {/* Alignment */}
-             <div className="flex gap-0.5 border-r border-gray-200 pr-1 mr-1">
-               <button onClick={() => setAlignment('left')} className={`p-1 rounded hover:bg-gray-100 ${align === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
-                 <AlignLeft size={16} />
-               </button>
-               <button onClick={() => setAlignment('center')} className={`p-1 rounded hover:bg-gray-100 ${align === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
-                 <AlignCenter size={16} />
-               </button>
-               <button onClick={() => setAlignment('right')} className={`p-1 rounded hover:bg-gray-100 ${align === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
-                 <AlignRight size={16} />
-               </button>
-             </div>
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/95 backdrop-blur shadow-lg rounded-lg border border-gray-200 p-1.5 z-50">
 
-             {/* Presets */}
-             <div className="flex gap-1">
-                <button onClick={() => setSize('25%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>25%</button>
-                <button onClick={() => setSize('50%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>50%</button>
-                <button onClick={() => setSize('75%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '75%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>75%</button>
-                <button onClick={() => setSize('100%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>
-             </div>
+            {/* Alignment */}
+            <div className="flex gap-0.5 border-r border-gray-200 pr-1 mr-1">
+              <button onClick={() => setAlignment('left')} className={`p-1 rounded hover:bg-gray-100 ${align === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+                <AlignLeft size={16} />
+              </button>
+              <button onClick={() => setAlignment('center')} className={`p-1 rounded hover:bg-gray-100 ${align === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+                <AlignCenter size={16} />
+              </button>
+              <button onClick={() => setAlignment('right')} className={`p-1 rounded hover:bg-gray-100 ${align === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+                <AlignRight size={16} />
+              </button>
+            </div>
 
-           </div>
+            {/* Presets */}
+            <div className="flex gap-1">
+              <button onClick={() => setSize('25%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>25%</button>
+              <button onClick={() => setSize('50%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>50%</button>
+              <button onClick={() => setSize('75%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '75%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>75%</button>
+              <button onClick={() => setSize('100%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>
+            </div>
+
+          </div>
         )}
       </div>
     </NodeViewWrapper>
@@ -140,7 +142,7 @@ const ResizableImageComponent = (props: any) => {
 
 export default Image.extend({
   name: 'image',
-  
+
   addAttributes() {
     return {
       // @ts-ignore

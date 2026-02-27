@@ -89,8 +89,17 @@ export default async function WikiDashboardPage({ params }: Params) {
                   className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between shadow-sm"
                 >
                   <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {lesson.title_en || lesson.title_ar || lesson.slug}
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium text-gray-900">
+                        {lesson.title_en || lesson.title_ar || lesson.slug}
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        lesson.status === 'published' 
+                          ? 'bg-emerald-100 text-emerald-700' 
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {lesson.status === 'published' ? 'Published' : 'Draft'}
+                      </span>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       {lesson.duration_min} min · {lesson.difficulty}

@@ -6,10 +6,15 @@ export interface ImageSliderOptions {
   HTMLAttributes: Record<string, any>
 }
 
+export interface ImageSlideData {
+  url: string
+  caption?: string
+}
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     imageSlider: {
-      insertImageSlider: (options: { images: string[] }) => ReturnType
+      insertImageSlider: (options: { images: (string | ImageSlideData)[] }) => ReturnType
     }
   }
 }
@@ -38,7 +43,15 @@ const ImageSlider = Node.create<ImageSliderOptions>({
           if (!raw) return []
           try {
             const parsed = JSON.parse(raw)
-            return Array.isArray(parsed) ? parsed : []
+            if (!Array.isArray(parsed)) return []
+
+            // Normalize strings to { url, caption } objects for backwards compatibility
+            return parsed.map(item => {
+              if (typeof item === 'string') {
+                return { url: item, caption: '' }
+              }
+              return item
+            })
           } catch {
             return []
           }
@@ -65,10 +78,20 @@ const ImageSlider = Node.create<ImageSliderOptions>({
   },
 
   renderHTML({ HTMLAttributes, node }) {
-    const images: string[] = Array.isArray(node.attrs?.images) ? node.attrs.images : []
+    const images = Array.isArray(node.attrs?.images) ? node.attrs.images : []
     const slides = images
-      .filter(Boolean)
-      .map((src: string) => ['div', { class: 'tiptap-image-slide' }, ['img', { src }]])
+      .filter((img) => img && (typeof img === 'string' || img.url))
+      .map((img) => {
+        const url = typeof img === 'string' ? img : img.url
+        const caption = typeof img === 'string' ? '' : (img.caption || '')
+
+        const children = [['img', { src: url }]] as any[]
+        if (caption) {
+          children.push(['div', { class: 'tiptap-image-caption' }, caption])
+        }
+
+        return ['div', { class: 'tiptap-image-slide' }, ...children]
+      })
 
     return [
       'div',
@@ -92,9 +115,15 @@ const ImageSlider = Node.create<ImageSliderOptions>({
         if (!validImages.length) {
           return false
         }
+
+        const normalizedImages = validImages.map(img => {
+          if (typeof img === 'string') return { url: img, caption: '' }
+          return img
+        })
+
         return chain().insertContent({
           type: this.name,
-          attrs: { images: validImages },
+          attrs: { images: normalizedImages },
         }).run()
       },
     }

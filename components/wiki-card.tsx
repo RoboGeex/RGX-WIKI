@@ -49,7 +49,9 @@ export default function WikiCard({ href, displayName, gradeLabel, domainLabel, i
           <p className="text-sm text-white/70">{gradeLabel}</p>
         </div>
         <div className="pt-4 text-sm text-white/80 flex items-center justify-between">
-          <span className="font-mono text-xs tracking-wider text-white/60">{domainLabel}</span>
+          {domainLabel && (
+            <span className="font-mono text-xs tracking-wider text-white/60">{domainLabel}</span>
+          )}
           <span className="text-[#f05d4e] font-semibold group-hover:translate-x-1 transition">Visit →</span>
         </div>
       </div>

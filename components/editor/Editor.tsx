@@ -4,6 +4,7 @@ import NextLink from 'next/link'
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EditorContent, useEditor, ReactNodeViewRenderer } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import { posToDOMRect, isTextSelection } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -34,7 +35,7 @@ import { Columns, Column } from './extensions/Columns'
 import CodeBlockView from './CodeBlockView'
 import type { EditorView } from '@tiptap/pm/view'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, ShieldAlert, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, ShieldAlert, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft, ArrowRight, Download, Upload, ArrowUpToLine, ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, MinusCircle, Merge, Split, Heading as HeadingIcon } from 'lucide-react'
 import './hljs.css'
 import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
 import DeveloperLogin from './DeveloperLogin'
@@ -42,6 +43,9 @@ import Sidebar from '../sidebar'
 import { HUB_DOMAIN } from '@/lib/domains'
 
 const ENABLE_SEGMENTS_EDITOR = false
+
+// Stable reference for BubbleMenu to prevent flickering on Editor renders
+const bubbleMenuOptions: any = { placement: 'top', offset: 8 };
 
 const CELL_DRAG_THRESHOLD = 4
 
@@ -185,7 +189,7 @@ export default function WikiEditor() {
   const [tocTrigger, setTocTrigger] = useState(0)
   const [autosaveProgress, setAutosaveProgress] = useState(0)
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  
+
   const [meta, setMeta] = useState(() => {
     const base = {
       id: '',
@@ -199,8 +203,9 @@ export default function WikiEditor() {
       difficulty: 'Beginner',
       isNew: false,
       ownerId: '',
+      status: 'draft',
     }
-    
+
     // Check for URL parameters first
     if (typeof window !== 'undefined' && searchParams) {
       const urlWiki = searchParams.get('wiki')?.trim()
@@ -208,7 +213,7 @@ export default function WikiEditor() {
       const urlSlug = searchParams.get('slug')?.trim()
       const urlId = searchParams.get('id')?.trim()
       const urlTitle = searchParams.get('title')?.trim()
-      
+
       if (urlWiki || urlKit || urlSlug || urlId || urlTitle) {
         let storedMeta: any = null
         try {
@@ -216,7 +221,7 @@ export default function WikiEditor() {
           if (rawStored) {
             storedMeta = JSON.parse(rawStored)
           }
-        } catch {}
+        } catch { }
 
         const urlMeta = {
           ...base,
@@ -228,16 +233,16 @@ export default function WikiEditor() {
           coverImage: storedMeta?.coverImage || '',
           isNew: searchParams.get('new') === 'true',
         }
-        
+
         // Store in sessionStorage so it persists
         try {
           sessionStorage.setItem('lessonMeta', JSON.stringify(urlMeta))
-        } catch {}
-        
+        } catch { }
+
         return urlMeta
       }
     }
-    
+
     // Fallback to sessionStorage
     if (typeof window !== 'undefined') {
       try {
@@ -252,7 +257,7 @@ export default function WikiEditor() {
             coverImage: parsed.coverImage || '',
           }
         }
-      } catch {}
+      } catch { }
     }
     return base
   })
@@ -298,7 +303,7 @@ export default function WikiEditor() {
             lessonId: meta.id,
           })
         })
-        
+
         const data = await res.json()
         if (!isMounted) return
 
@@ -332,7 +337,7 @@ export default function WikiEditor() {
           method: 'DELETE',
           headers: applyDeveloperHeader(),
           keepalive: true
-        }).catch(() => {})
+        }).catch(() => { })
         weOwnLockRef.current = false
       }
     }
@@ -353,6 +358,35 @@ export default function WikiEditor() {
       releaseLock()
     }
   }, [meta.id, meta.wikiSlug, developerId, hasWikiAccess])
+  const handleTakeover = async () => {
+    try {
+      const res = await fetch('/api/lessons/lock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...applyDeveloperHeader()
+        },
+        body: JSON.stringify({
+          wikiSlug: meta.wikiSlug,
+          lessonId: meta.id,
+          forceTakeover: true
+        })
+      })
+      if (res.ok) {
+        setIsLockedByOther(false)
+        setLockedBy(null)
+        weOwnLockRef.current = true
+      }
+    } catch (err) {
+      console.error('Takeover failed', err)
+    }
+  }
+
+  const handleConfirmEditPublished = () => {
+    setMeta((prev: any) => ({ ...prev, status: 'draft' }))
+    setShowDraftConfirmation(false)
+    setStatus('Lesson status reverted to Draft for editing.')
+  }
   // -------------------------------
   useEffect(() => {
     let cancelled = false
@@ -386,8 +420,12 @@ export default function WikiEditor() {
   }, [developerId])
 
 
-  const isOwner = Boolean(meta.ownerId && developerId && meta.ownerId === developerId)
-  const saveDisabled = !isAdmin && !isOwner && !meta.isNew && (Boolean(meta.ownerId) || !hasWikiAccess)
+  const isSuperAdmin = developer?.role === 'superadmin'
+  const isEditor = developer?.role === 'editor'
+  const isOwner = Boolean(meta.ownerId && developerId && String(meta.ownerId) === String(developerId))
+
+  const canEdit = !isLockedByOther && (isSuperAdmin || (hasWikiAccess && (isAdmin || (isEditor && (isOwner || !meta.ownerId || !!meta.isNew)))))
+  const saveDisabled = !canEdit
 
   // Publish confirmation modal state
   const [showPublishModal, setShowPublishModal] = useState(false)
@@ -406,12 +444,46 @@ export default function WikiEditor() {
     readability: false
   })
 
+  // Confirmation for editing published lessons
+  const [showDraftConfirmation, setShowDraftConfirmation] = useState(false)
+
   const [activeEditorTab, setActiveEditorTab] = useState<'en' | 'ar'>('en')
   const activeTabRef = useRef(activeEditorTab)
   useEffect(() => {
     activeTabRef.current = activeEditorTab
   }, [activeEditorTab])
+
+  const shouldShowTableEn = useCallback(({ editor }: any) => {
+    if (activeEditorTab !== 'en') return false
+    return editor.isActive('table')
+  }, [activeEditorTab])
+
+  const shouldShowTextEn = useCallback(({ editor, state, from, to }: any) => {
+    if (activeEditorTab !== 'en') return false
+    if (!isTextSelection(state.selection)) return false
+    if (editor.isActive('table')) return false
+    if (editor.isActive('codeBlock')) return false
+    if (from === to) return false
+    const selectedText = state.doc.textBetween(from, to, ' ', ' ').trim()
+    return selectedText.length > 0
+  }, [activeEditorTab])
+
+  const shouldShowTableAr = useCallback(({ editor }: any) => {
+    if (activeEditorTab !== 'ar') return false
+    return editor.isActive('table')
+  }, [activeEditorTab])
+
+  const shouldShowTextAr = useCallback(({ editor, state, from, to }: any) => {
+    if (activeEditorTab !== 'ar') return false
+    if (!isTextSelection(state.selection)) return false
+    if (editor.isActive('table')) return false
+    if (editor.isActive('codeBlock')) return false
+    if (from === to) return false
+    const selectedText = state.doc.textBetween(from, to, ' ', ' ').trim()
+    return selectedText.length > 0
+  }, [activeEditorTab])
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [settingsSnapshot, setSettingsSnapshot] = useState<any>(null)
   const [isUploadingCover, setIsUploadingCover] = useState(false)
   const coverInputRef = useRef<HTMLInputElement>(null)
 
@@ -471,15 +543,6 @@ export default function WikiEditor() {
     return english || arabic || slug || id
   }, [meta.title_en, meta.title_ar, meta.slug, meta.id])
 
-  const bubbleElementEnRef = useRef<HTMLElement | null>(null)
-  const textBubbleElementEnRef = useRef<HTMLElement | null>(null)
-  const [bubbleElementEn, setBubbleElementEn] = useState<HTMLElement | null>(null)
-  const [textBubbleElementEn, setTextBubbleElementEn] = useState<HTMLElement | null>(null)
-
-  const bubbleElementArRef = useRef<HTMLElement | null>(null)
-  const textBubbleElementArRef = useRef<HTMLElement | null>(null)
-  const [bubbleElementAr, setBubbleElementAr] = useState<HTMLElement | null>(null)
-  const [textBubbleElementAr, setTextBubbleElementAr] = useState<HTMLElement | null>(null)
   const [isSigningIn, setIsSigningIn] = useState(!developerId)
 
   useEffect(() => {
@@ -497,24 +560,6 @@ export default function WikiEditor() {
     setIsSigningIn(false)
   }
 
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-    // English
-    const tableElement = document.getElementById(bubbleIdEn) as HTMLElement | null
-    const textElement = document.getElementById(textBubbleIdEn) as HTMLElement | null
-    bubbleElementEnRef.current = tableElement
-    textBubbleElementEnRef.current = textElement
-    setBubbleElementEn(tableElement)
-    setTextBubbleElementEn(textElement)
-
-    // Arabic
-    const tableElementAr = document.getElementById(bubbleIdAr) as HTMLElement | null
-    const textElementAr = document.getElementById(textBubbleIdAr) as HTMLElement | null
-    bubbleElementArRef.current = tableElementAr
-    textBubbleElementArRef.current = textElementAr
-    setBubbleElementAr(tableElementAr)
-    setTextBubbleElementAr(textElementAr)
-  }, [])
 
   const initialTitleRef = useRef<string | null>(null)
   if (initialTitleRef.current === null) {
@@ -538,9 +583,12 @@ export default function WikiEditor() {
     extensions: [
       StarterKit.configure({
         heading: false,
+        codeBlock: false,
+        link: false,
+        underline: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
       }),
-      Heading.configure({ 
+      Heading.configure({
         levels: [1, 2, 3],
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
@@ -597,64 +645,6 @@ export default function WikiEditor() {
       ImageSlider,
       Columns,
       Column,
-      ...(bubbleElementEn ? [SafeBubbleMenu.configure({
-        element: bubbleElementEn,
-        pluginKey: 'table-bubble-en',
-        shouldShow: ({ editor, view }) => {
-          try {
-            if (!view || view.isDestroyed || editor.isDestroyed || !view.dom || !view.dom.isConnected || !(view as any).docView) return false
-            if (activeTabRef.current !== 'en') return false
-            if (!view.dom.offsetParent) return false
-            return editor.isActive('table')
-          } catch {
-            return false
-          }
-        },
-        getReferencedVirtualElement: function(this: any) {
-          try {
-            const v = this?.view
-            if (!v || v.isDestroyed || !(v as any).docView) return null
-            const { selection } = v.state
-            const domRect = posToDOMRect(v, selection.from, selection.to)
-            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
-          } catch { return null }
-        },
-        options: { placement: 'top', offset: 8 },
-      })] : []),
-      ...(textBubbleElementEn ? [SafeBubbleMenu.configure({
-        element: textBubbleElementEn,
-        pluginKey: 'text-bubble-en',
-        shouldShow: ({ editor, view, state, from, to }) => {
-          try {
-            if (!view || view.isDestroyed || editor.isDestroyed || !view.dom || !view.dom.isConnected || !(view as any).docView) return false
-            if (activeTabRef.current !== 'en') return false
-            if (!view.dom.offsetParent) return false
-
-            // Must be a text selection — excludes NodeSelection (images, videos, sliders, etc.)
-            if (!isTextSelection(state.selection)) return false
-            // Must not span into a table (table has its own bubble menu)
-            if (editor.isActive('table')) return false
-            // Must not be inside a code block
-            if (editor.isActive('codeBlock')) return false
-            // Must have actual text characters selected (excludes empty line selections)
-            if (from === to) return false
-            const selectedText = state.doc.textBetween(from, to, ' ', ' ').trim()
-            return selectedText.length > 0
-          } catch {
-            return false
-          }
-        },
-        getReferencedVirtualElement: function(this: any) {
-          try {
-            const v = this?.view
-            if (!v || v.isDestroyed || !(v as any).docView) return null
-            const { selection } = v.state
-            const domRect = posToDOMRect(v, selection.from, selection.to)
-            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
-          } catch { return null }
-        },
-        options: { placement: 'top', offset: 8 },
-      })] : []),
       Placeholder.configure({ placeholder: "type '/' to add a new element" }),
       SlashCommand.configure({
         getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
@@ -668,10 +658,10 @@ export default function WikiEditor() {
         dragstart: handleTableDragStart,
       },
     },
-  }, [bubbleElementEn, textBubbleElementEn])
+  }, [])
 
   const [isVerified, setIsVerified] = useState(false)
-  
+
 
 
   const editorAr = useEditor({
@@ -680,9 +670,12 @@ export default function WikiEditor() {
     extensions: [
       StarterKit.configure({
         heading: false,
+        codeBlock: false,
+        link: false,
+        underline: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
       }),
-      Heading.configure({ 
+      Heading.configure({
         levels: [1, 2, 3],
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
@@ -739,64 +732,6 @@ export default function WikiEditor() {
       ImageSlider,
       Columns,
       Column,
-      ...(bubbleElementAr ? [SafeBubbleMenu.configure({
-        element: bubbleElementAr,
-        pluginKey: 'table-bubble-ar',
-        shouldShow: ({ editor, view }) => {
-          try {
-            if (!view || view.isDestroyed || editor.isDestroyed || !view.dom || !view.dom.isConnected || !(view as any).docView) return false
-            if (activeTabRef.current !== 'ar') return false
-            if (!view.dom.offsetParent) return false
-            return editor.isActive('table')
-          } catch {
-            return false
-          }
-        },
-        getReferencedVirtualElement: function(this: any) {
-          try {
-            const v = this?.view
-            if (!v || v.isDestroyed || !(v as any).docView) return null
-            const { selection } = v.state
-            const domRect = posToDOMRect(v, selection.from, selection.to)
-            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
-          } catch { return null }
-        },
-        options: { placement: 'top', offset: 8 },
-      })] : []),
-      ...(textBubbleElementAr ? [SafeBubbleMenu.configure({
-        element: textBubbleElementAr,
-        pluginKey: 'text-bubble-ar',
-        shouldShow: ({ editor, view, state, from, to }) => {
-          try {
-            if (!view || view.isDestroyed || editor.isDestroyed || !view.dom || !view.dom.isConnected || !(view as any).docView) return false
-            if (activeTabRef.current !== 'ar') return false
-            if (!view.dom.offsetParent) return false
-
-            // Must be a text selection — excludes NodeSelection (images, videos, sliders, etc.)
-            if (!isTextSelection(state.selection)) return false
-            // Must not span into a table (table has its own bubble menu)
-            if (editor.isActive('table')) return false
-            // Must not be inside a code block
-            if (editor.isActive('codeBlock')) return false
-            // Must have actual text characters selected (excludes empty line selections)
-            if (from === to) return false
-            const selectedText = state.doc.textBetween(from, to, ' ', ' ').trim()
-            return selectedText.length > 0
-          } catch {
-            return false
-          }
-        },
-        getReferencedVirtualElement: function(this: any) {
-          try {
-            const v = this?.view
-            if (!v || v.isDestroyed || !(v as any).docView) return null
-            const { selection } = v.state
-            const domRect = posToDOMRect(v, selection.from, selection.to)
-            return { getBoundingClientRect: () => domRect, getClientRects: () => [domRect] }
-          } catch { return null }
-        },
-        options: { placement: 'top', offset: 8 },
-      })] : []),
       Placeholder.configure({ placeholder: "اكتب '/' للإدراج" }),
       SlashCommand.configure({
         getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
@@ -810,19 +745,19 @@ export default function WikiEditor() {
         dragstart: handleTableDragStart,
       },
     },
-  }, [bubbleElementAr, textBubbleElementAr])
+  }, [])
 
   const handleVerifyAndMirror = () => {
     if (!editorEn || !editorAr) return
     const json = editorEn.getJSON()
     setIsVerified(true)
     editorAr.setEditable(true)
-    
+
     // Mirror content
     syncingArRef.current = true
     editorAr.commands.setContent(json, { emitUpdate: false })
     setTimeout(() => { syncingArRef.current = false }, 0)
-    
+
     setStatus('English Verified! Content mirrored to Arabic pane.')
   }
 
@@ -883,11 +818,11 @@ export default function WikiEditor() {
   const escapeHtml = (value: string): string =>
     typeof value === 'string'
       ? value
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
       : ''
 
   const escapeAttribute = (value: string): string => escapeHtml(value)
@@ -1063,10 +998,10 @@ export default function WikiEditor() {
   const stripHtml = (value: string): string =>
     typeof value === 'string'
       ? value
-          .replace(/<[^>]*>/g, ' ')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
       : ''
 
   const deriveCalloutVariant = (value: string): CalloutVariant => {
@@ -1111,16 +1046,16 @@ export default function WikiEditor() {
         }
         const textValue = typeof item[textKey] === 'string' ? item[textKey] : ''
         switch (item.type) {
-        case 'heading':
-          nodes.push({
-            type: 'heading',
-            attrs: { level: Number(item.level) || 2 },
-            content: textValue ? [{ type: 'text', text: textValue }] : [],
-          })
-          break
-        case 'horizontalRule':
-          nodes.push({ type: 'horizontalRule' })
-          break
+          case 'heading':
+            nodes.push({
+              type: 'heading',
+              attrs: { level: Number(item.level) || 2 },
+              content: textValue ? [{ type: 'text', text: textValue }] : [],
+            })
+            break
+          case 'horizontalRule':
+            nodes.push({ type: 'horizontalRule' })
+            break
           case 'paragraph': {
             const htmlValue = typeof item[htmlKey] === 'string' ? item[htmlKey] : ''
             const plain = htmlValue ? stripHtml(htmlValue) : textValue
@@ -1228,23 +1163,23 @@ export default function WikiEditor() {
               })
             }
             break
-        case 'video':
-          if (item.url) {
-            const provider = item.provider || (item.url.includes('vimeo.com') ? 'vimeo' : null)
-            nodes.push({
-              type: 'video',
-              attrs: {
-                src: item.url,
-                poster: item.poster || null,
-                title: item[titleKey] || item[captionKey] || null,
-                controls: provider === 'vimeo' ? false : true,
-                provider,
-                width: item.width || '100%',
-                align: item.align || 'center',
-              },
-            })
-          }
-          break
+          case 'video':
+            if (item.url) {
+              const provider = item.provider || (item.url.includes('vimeo.com') ? 'vimeo' : null)
+              nodes.push({
+                type: 'video',
+                attrs: {
+                  src: item.url,
+                  poster: item.poster || null,
+                  title: item[titleKey] || item[captionKey] || null,
+                  controls: provider === 'vimeo' ? false : true,
+                  provider,
+                  width: item.width || '100%',
+                  align: item.align || 'center',
+                },
+              })
+            }
+            break
           case 'code': {
             const codeText = typeof item[htmlKey] === 'string' ? stripHtml(item[htmlKey]) : textValue
             if (codeText) {
@@ -1294,7 +1229,7 @@ export default function WikiEditor() {
       return
     }
     if (!editorEn || !editorAr) return
-    if (!developerId) return
+    if (!developerId || !hasWikiAccess) return
 
     const identifier = (meta.slug || meta.id || '').trim()
     if (!identifier) return
@@ -1338,7 +1273,7 @@ export default function WikiEditor() {
 
         syncingEnRef.current = true
         editorEn.commands.setContent(docEn, { emitUpdate: false })
-        
+
         syncingArRef.current = true
         editorAr.commands.setContent(docAr, { emitUpdate: false })
 
@@ -1349,11 +1284,11 @@ export default function WikiEditor() {
         }, 500)
 
         if (hasArabicContent) {
-           setIsVerified(true) // Auto-verify/unlock if we already have Arabic content
+          setIsVerified(true) // Auto-verify/unlock if we already have Arabic content
         } else {
-           setIsVerified(false)
+          setIsVerified(false)
         }
-        
+
         arabicDirtyRef.current = hasArabicContent
         forceArabicDirtyRender((prev) => !prev)
         setStatus((prev) => prev === 'Failed to load lesson content.' ? '' : prev)
@@ -1390,6 +1325,10 @@ export default function WikiEditor() {
             next.ownerId = lesson.ownerId.trim()
             changed = true
           }
+          if (typeof lesson?.status === 'string' && lesson.status !== prev.status) {
+            next.status = lesson.status
+            changed = true
+          }
           if (next.isNew) {
             next.isNew = false
             changed = true
@@ -1412,7 +1351,7 @@ export default function WikiEditor() {
     return () => {
       cancelled = true
     }
-  }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId])
+  }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId, hasWikiAccess])
 
   // --- Enforce Read-Only Mode on Document Lock ---
   useEffect(() => {
@@ -1423,23 +1362,23 @@ export default function WikiEditor() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    
+
     // Check if we have URL parameters that can create lesson metadata
     const hasUrlParams = searchParams && (
-      searchParams.get('wiki') || 
-      searchParams.get('kit') || 
-      searchParams.get('slug') || 
-      searchParams.get('id') || 
+      searchParams.get('wiki') ||
+      searchParams.get('kit') ||
+      searchParams.get('slug') ||
+      searchParams.get('id') ||
       searchParams.get('title')
     )
-    
+
     try {
       const raw = sessionStorage.getItem('lessonMeta')
       if (!raw && !hasUrlParams) {
         router.replace('/editor/properties')
         return
       }
-      
+
       if (raw) {
         const parsed = JSON.parse(raw)
         setMeta((m: typeof meta) => {
@@ -1467,14 +1406,14 @@ export default function WikiEditor() {
 
   useEffect(() => {
     if (!editorEn && !editorAr) return;
-    
+
     const handler = () => {
       setTocTrigger(prev => prev + 1);
     };
 
     editorEn?.on('update', handler);
     editorAr?.on('update', handler);
-    
+
     return () => {
       editorEn?.off('update', handler);
       editorAr?.off('update', handler);
@@ -1500,7 +1439,7 @@ export default function WikiEditor() {
     const slug = typeof meta.slug === 'string' ? meta.slug.trim() : ''
     const id = typeof meta.id === 'string' ? meta.id.trim() : ''
     if (!slug && !id) return
-    try { sessionStorage.setItem('lessonMeta', JSON.stringify(meta)) } catch {}
+    try { sessionStorage.setItem('lessonMeta', JSON.stringify(meta)) } catch { }
   }, [meta])
 
   const supportsColorEn = useMemo(() => Boolean(editorEn?.schema?.marks?.textStyle), [editorEn])
@@ -1513,8 +1452,8 @@ export default function WikiEditor() {
     { name: 'Red', value: '#FEE2E2' },
     { name: 'Purple', value: '#EDE9FE' },
   ]
-  const textColors = ['#111827','#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6']
-  const highlightColors = ['#fff59d','#bbf7d0','#bfdbfe','#fecaca','#e9d5ff']
+  const textColors = ['#111827', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
+  const highlightColors = ['#fff59d', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff']
 
   function markExcelLikeFocus(editor: any) {
     if (!editor) return
@@ -1645,7 +1584,11 @@ export default function WikiEditor() {
           return block
         }
         case 'imageSlider': {
-          const images = Array.isArray(node.attrs?.images) ? node.attrs.images.filter((src: string) => typeof src === 'string' && src.trim().length) : []
+          const images = Array.isArray(node.attrs?.images) ? node.attrs.images.filter((item: any) => {
+            if (typeof item === 'string') return item.trim().length > 0;
+            if (item && typeof item === 'object') return typeof item.url === 'string' && item.url.trim().length > 0;
+            return false;
+          }) : []
           const title = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
           const block: any = {
             type: 'imageSlider',
@@ -1715,7 +1658,7 @@ export default function WikiEditor() {
             type: 'columns',
             count: Number(node.attrs?.count) || 2,
             [jsonKey]: cloneNode(node),
-            content: Array.isArray(node.content) 
+            content: Array.isArray(node.content)
               ? node.content.map((child: any) => handleNodeInternal(child)).filter(Boolean)
               : []
           }
@@ -1772,7 +1715,7 @@ export default function WikiEditor() {
     const secondaryBody = activeEditorTab === 'ar' ? bodyEn : bodyAr
     const mergedBody = [] as any[]
     for (let i = 0; i < primaryBody.length; i++) {
-        mergedBody.push({ ...(secondaryBody[i] || {}), ...(primaryBody[i] || {}) })
+      mergedBody.push({ ...(secondaryBody[i] || {}), ...(primaryBody[i] || {}) })
     }
     if (bodyEn.length !== bodyAr.length) {
       setStatus('Warning: English and Arabic content differ in structure. Please review the Arabic translation.')
@@ -1780,19 +1723,19 @@ export default function WikiEditor() {
     // Generate ID and slug if they don't exist
     const titleEn = meta.title_en || meta.title_ar || 'Untitled'
     const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'
-    
+
     // Generate ID and slug - API will handle uniqueness
     const baseSlug = slugify(titleEn) || 'lesson'
     const uniqueToken = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
     const generatedId = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.id && meta.id.trim()) || baseSlug)
     const generatedSlug = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.slug && meta.slug.trim()) || baseSlug)
-    
+
     // Ensure we have valid IDs and slugs
     if (!generatedId || !generatedSlug) {
       setStatus('Error: Could not generate valid ID or slug from title')
       return
     }
-    
+
     const payload = {
       id: generatedId,
       wikiSlug: meta.wikiSlug,
@@ -1816,7 +1759,8 @@ export default function WikiEditor() {
         return
       }
 
-      const desiredStatus = statusOverride && isAdmin ? statusOverride : 'draft'
+      const currentStatus = meta.status || 'draft'
+      const desiredStatus = (statusOverride || currentStatus) === 'published' && isAdmin ? 'published' : 'draft'
 
       if (saveDisabled) {
         setStatus('You can only edit lessons you own (or admin).')
@@ -1854,6 +1798,7 @@ export default function WikiEditor() {
         ownerId: typeof savedLesson.ownerId === 'string' && savedLesson.ownerId.trim()
           ? savedLesson.ownerId
           : meta.ownerId || developerId || '',
+        status: typeof savedLesson.status === 'string' ? savedLesson.status : desiredStatus,
       }
 
       setMeta(updatedMeta)
@@ -1864,7 +1809,7 @@ export default function WikiEditor() {
       }
       try {
         sessionStorage.setItem('lessonMeta', JSON.stringify(updatedMeta))
-      } catch {}
+      } catch { }
 
       const params = new URLSearchParams(searchParams?.toString() ?? '')
       params.set('slug', updatedMeta.slug)
@@ -1881,11 +1826,11 @@ export default function WikiEditor() {
       } else {
         setStatus(desiredStatus === 'published' ? 'Lesson published!' : isUpdate ? 'Changes saved!' : 'Lesson saved!')
       }
-  } catch (e: any) {
-    console.error('Publish error:', e)
-    setStatus(`Error: ${e.message}`)
+    } catch (e: any) {
+      console.error('Publish error:', e)
+      setStatus(`Error: ${e.message}`)
+    }
   }
-}
 
   // Autosave Implementation
   useEffect(() => { publishRef.current = publish })
@@ -1896,15 +1841,15 @@ export default function WikiEditor() {
   useEffect(() => {
     const wiki = meta.wikiSlug
     if (!wiki || (lessonsWikiSlugRef.current === wiki && wikiLessons.length > 0)) return
-    
+
     lessonsWikiSlugRef.current = wiki
-    
+
     async function load() {
       try {
         const res = await fetch(`/api/lessons?wiki=${wiki}`)
         if (res.ok) {
-           const data = await res.json()
-           if (Array.isArray(data)) setWikiLessons(data)
+          const data = await res.json()
+          if (Array.isArray(data)) setWikiLessons(data)
         }
       } catch (e) {
         console.error(e)
@@ -1915,7 +1860,7 @@ export default function WikiEditor() {
 
   const handleLessonClick = useCallback((lesson: any) => {
     if (lesson.slug === meta.slug) return
-    
+
     // CRITICAL: Block autosave immediately to prevent stale meta
     // (e.g. old cover image) from being saved to the new lesson
     initialLoadRef.current = true
@@ -1946,24 +1891,118 @@ export default function WikiEditor() {
       coverImage: lesson.coverImage || '',
       order: lesson.order || 0,
       ownerId: lesson.ownerId || '',
+      status: lesson.status || 'draft',
       isNew: false,
     }
     try {
       sessionStorage.setItem('lessonMeta', JSON.stringify(cleanMeta))
-    } catch {}
+    } catch { }
 
     // Also update local meta state immediately so the UI reflects the switch
     setMeta((prev: typeof meta) => ({ ...prev, ...cleanMeta }))
 
     setStatus('Loading lesson...')
-    
+
     const params = new URLSearchParams()
     if (lesson.wikiSlug) params.set('wiki', lesson.wikiSlug)
     params.set('id', lesson.id)
     params.set('slug', lesson.slug)
-    
+
     router.push(`/editor/lesson?${params.toString()}`)
   }, [meta.slug, meta.wikiSlug, router])
+
+  const handleDownloadJSON = useCallback(() => {
+    if (!editorEn || !editorAr) return
+
+    const docEn = editorEn.getJSON()
+    const docAr = editorAr.getJSON()
+    const bodyEn = extractBody(docEn, 'en', editorEn)
+    const bodyAr = extractBody(docAr, 'ar', editorAr)
+
+    const mergedBody = [] as any[]
+    const maxLen = Math.max(bodyEn.length, bodyAr.length)
+    for (let i = 0; i < maxLen; i++) {
+      mergedBody.push({ ...(bodyEn[i] || {}), ...(bodyAr[i] || {}) })
+    }
+
+    const titleEn = meta.title_en || meta.title_ar || 'Untitled'
+    const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'
+
+    const payload = {
+      id: meta.id || slugify(titleEn),
+      wikiSlug: meta.wikiSlug || 'export',
+      order: Number(meta.order) || 0,
+      slug: meta.slug || slugify(titleEn),
+      title_en: titleEn,
+      title_ar: titleAr,
+      coverImage: meta.coverImage || '',
+      duration_min: Number(meta.duration_min) || 30,
+      difficulty: meta.difficulty || 'Beginner',
+      prerequisites_en: [],
+      prerequisites_ar: [],
+      materials: [],
+      body: mergedBody,
+      version: documentVersion,
+      ownerId: meta.ownerId || developerId || ''
+    }
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${payload.slug || 'lesson'}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [editorEn, editorAr, meta, documentVersion, developerId])
+
+  const handleImportJSON = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !editorEn || !editorAr) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string)
+        if (!json.body || !Array.isArray(json.body)) {
+          throw new Error('Invalid lesson JSON format')
+        }
+
+        // Hydrate Meta (Preserving Identity fields: title, slug, coverImage)
+        setMeta((prev: typeof meta) => ({
+          ...prev,
+          duration_min: json.duration_min || prev.duration_min,
+          difficulty: json.difficulty || prev.difficulty,
+          // ownerId and other metadata are also preserved from the current session
+        }))
+
+        // Hydrate Editors
+        const docEn = bodyToDocument(json.body, 'en')
+        const docAr = bodyToDocument(json.body, 'ar')
+
+        syncingEnRef.current = true
+        editorEn.commands.setContent(docEn, { emitUpdate: false })
+        syncingArRef.current = true
+        editorAr.commands.setContent(docAr, { emitUpdate: false })
+
+        setTimeout(() => {
+          syncingEnRef.current = false
+          syncingArRef.current = false
+        }, 500)
+
+        setStatus('Lesson imported successfully!')
+      } catch (err: any) {
+        console.error('Import error:', err)
+        setStatus(`Import failed: ${err.message}`)
+      }
+    }
+    reader.readAsText(file)
+    // Reset input
+    event.target.value = ''
+  }, [editorEn, editorAr, meta])
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const triggerAutosave = useCallback(() => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
@@ -1973,7 +2012,7 @@ export default function WikiEditor() {
 
     const duration = 3000
     const start = Date.now()
-    
+
     setAutosaveProgress(0)
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - start
@@ -1985,13 +2024,13 @@ export default function WikiEditor() {
     autosaveTimerRef.current = setTimeout(() => {
       if (initialLoadRef.current) return
       if (isLockedByOther) return
-      
+
       setStatus('Autosaving...')
       setAutosaveProgress(0)
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-      
+
       if (publishRef.current) {
-        publishRef.current('draft').catch(() => {})
+        publishRef.current('draft').catch(() => { })
       }
     }, duration)
   }, [isLockedByOther])
@@ -2030,6 +2069,48 @@ export default function WikiEditor() {
     return <DeveloperLogin onSignedIn={handleDeveloperSignedIn} />
   }
 
+  // 1. Loading State (Session/Developer fetching)
+  if (!developer && !meta.isNew) {
+    return (
+      <div className="revolutionary-editor-container bg-slate-50 min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-slate-400" />
+          <p className="text-slate-500 font-medium tracking-tight">Verifying access...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. Access Denied State (Unauthorized user)
+  // This early return ensures that the main editor UI is NEVER rendered for unauthorized users,
+  // making it impossible to reveal content via "Inspect Element".
+  if (!hasWikiAccess && !meta.isNew) {
+    return (
+      <div className="revolutionary-editor-container bg-slate-50 min-h-screen flex items-center justify-center p-6">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-3xl p-10 max-w-lg w-full text-center shadow-2xl border border-slate-200"
+        >
+          <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-500">
+            <ShieldAlert size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">Access Denied</h2>
+          <p className="text-slate-600 mb-8 leading-relaxed">
+            You don't have permission to manage lessons in the <span className="font-bold text-slate-900">"{meta.wikiSlug || 'this'}"</span> wiki.
+            Please contact an administrator to request access.
+          </p>
+          <button
+            onClick={() => router.push(`/editor/dashboard/${developer?.wikiSlugs?.[0] || 'student-kit'}`)}
+            className="w-full py-3.5 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
+          >
+            Return to Dashboard
+          </button>
+        </motion.div>
+      </div>
+    )
+  }
+
   return (
     <div className="revolutionary-editor-container bg-transparent min-h-screen">
       {/* Document Warning Banners (Lock & Version Conflicts) */}
@@ -2042,48 +2123,65 @@ export default function WikiEditor() {
             className="fixed top-0 left-0 right-0 z-[100] bg-rose-500 text-white px-6 py-2.5 text-sm font-semibold flex items-center justify-center gap-3 shadow-md"
           >
             <AlertTriangle size={18} />
-            Hold up! {lockedBy ? `Developer "${lockedBy}"` : "Another developer"} is currently editing this lesson. Your changes cannot be saved to prevent overwriting their work.
+            <span className="flex-1 text-center">
+              Hold up! {lockedBy ? `Developer "${lockedBy}"` : "Another developer"} is currently editing this lesson. Your changes cannot be saved to prevent overwriting their work.
+            </span>
+            {isAdmin && (
+              <button
+                onClick={handleTakeover}
+                className="bg-white text-rose-600 px-3 py-1 rounded-lg text-xs font-bold hover:bg-rose-50 transition-colors shadow-sm"
+              >
+                Takeover
+              </button>
+            )}
           </motion.div>
         )}
 
-        {/* Access Denied Overlay */}
-        {!hasWikiAccess && !meta.isNew && developer && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6"
-          >
+      </AnimatePresence>
+
+      {/* Revert to Draft Confirmation Modal */}
+      <AnimatePresence>
+        {showDraftConfirmation && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-3xl p-10 max-w-lg w-full text-center shadow-2xl border border-slate-200"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200"
             >
-              <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-500">
-                <ShieldAlert size={40} />
+              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-6 text-amber-500">
+                <Unlock size={32} />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-3">Access Denied</h2>
+              <h2 className="text-2xl font-bold text-slate-900 mb-3">Edit Published Lesson?</h2>
               <p className="text-slate-600 mb-8 leading-relaxed">
-                You don't have permission to manage lessons in the <span className="font-bold text-slate-900">"{meta.wikiSlug || 'this'}"</span> wiki. 
-                Please contact an administrator to request access.
+                Editing this lesson will change its status back to <span className="font-bold text-amber-600">Draft</span>.
+                You will need to <span className="font-bold">Publish</span> it again to make your changes visible to users.
               </p>
-              <button
-                onClick={() => router.push(`/editor/dashboard/${developer.wikiSlugs?.[0] || 'student-kit'}`)}
-                className="w-full py-3.5 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
-              >
-                Return to Dashboard
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDraftConfirmation(false)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmEditPublished}
+                  className="flex-1 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all"
+                >
+                  Start Editing
+                </button>
+              </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
       {/* Premium Header/Navbar area */}
-      <div className={`fixed left-0 right-0 z-[60] bg-white border-b border-slate-200 px-6 py-3 shadow-sm transition-all duration-300 ${
-        isLockedByOther ? 'top-10' : 'top-0'
-      }`}>
+      <div className={`fixed left-0 right-0 z-[60] bg-white border-b border-slate-200 px-6 py-3 shadow-sm transition-all duration-300 ${isLockedByOther ? 'top-10' : 'top-0'
+        }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
-            <NextLink 
+            <NextLink
               href={`/editor/dashboard/${meta.wikiSlug || 'student-kit'}`}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600 flex-shrink-0"
               title="Back to wiki"
@@ -2097,28 +2195,78 @@ export default function WikiEditor() {
                 <span>{meta.wikiSlug || 'Wiki'}</span>
                 <span>/</span>
                 <span>Classic</span>
+                <span className="h-3 w-px bg-slate-200 mx-1" />
+                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${meta.status === 'published'
+                  ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
+                  : 'bg-amber-100 text-amber-600 border border-amber-200'
+                  }`}>
+                  {meta.status === 'published' ? 'Published' : 'Draft'}
+                </span>
               </div>
-              <input
-                type="text"
-                disabled={isLockedByOther}
-                value={meta.title_en || ''}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setMeta((m: typeof meta) => {
-                    const next = { ...m, title_en: val }
-                    try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch {}
-                    return next
-                  })
-                }}
-                placeholder="Untitled Lesson"
-                className="text-lg font-bold text-slate-900 leading-none bg-transparent border-none outline-none w-full placeholder:text-slate-300 hover:bg-white/50 focus:bg-white/80 rounded px-1 -mx-1 py-0.5 transition-colors"
-              />
+              {activeEditorTab === 'en' ? (
+                <input
+                  type="text"
+                  disabled={isLockedByOther}
+                  value={meta.title_en || ''}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setMeta((m: typeof meta) => {
+                      const next = { ...m, title_en: val }
+                      try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
+                      return next
+                    })
+                  }}
+                  placeholder="Untitled English Lesson"
+                  className="text-lg font-bold text-slate-900 leading-none bg-transparent border-none outline-none w-full placeholder:text-slate-300 hover:bg-white/50 focus:bg-white/80 rounded px-1 -mx-1 py-0.5 transition-colors"
+                />
+              ) : (
+                <input
+                  type="text"
+                  disabled={isLockedByOther}
+                  value={meta.title_ar || ''}
+                  dir="rtl"
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setMeta((m: typeof meta) => {
+                      const next = { ...m, title_ar: val }
+                      try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
+                      return next
+                    })
+                  }}
+                  placeholder="عنوان الدرس (Arabic Title)"
+                  className="text-lg font-bold text-slate-900 leading-none bg-transparent border-none outline-none w-full placeholder:text-slate-300 hover:bg-white/50 focus:bg-white/80 rounded px-1 -mx-1 py-0.5 transition-colors text-right"
+                />
+              )}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3 flex-shrink-0">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportJSON}
+              accept=".json"
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Import JSON"
+              type="button"
+            >
+              <Upload size={18} />
+            </button>
+
+            <button
+              onClick={handleDownloadJSON}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border-l border-slate-200 ml-1 pl-3"
+              title="Download JSON"
+              type="button"
+            >
+              <Download size={18} />
+            </button>
             {ENABLE_SEGMENTS_EDITOR && (
-              <NextLink 
+              <NextLink
                 href={`/editor/segment?wiki=${meta.wikiSlug}&id=${meta.id}&title=${encodeURIComponent(meta.title_en || '')}`}
                 className="text-xs font-bold text-[#f05d4e] hover:text-[#f05d4e]/80 transition-colors mr-2 hidden xl:block"
               >
@@ -2127,45 +2275,53 @@ export default function WikiEditor() {
             )}
 
             <div className="hidden md:flex flex-col items-end mr-4">
-               {/* Last Saved Status */}
-               {status.includes('Saving') || status.includes('Autosaving') ? (
-                 <div className="text-[10px] text-slate-400 font-medium italic animate-pulse">Saving...</div>
-               ) : autosaveProgress > 0 && autosaveProgress < 100 ? (
-                 <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                   Syncing in {Math.ceil((3000 - (autosaveProgress * 3000 / 100)) / 1000)}s...
-                 </div>
-                ) : status && (status.toLowerCase().includes('error') || status.toLowerCase().includes('only owner') || status.toLowerCase().includes('sign in')) ? (
-                  <div className="flex items-center gap-1.5 text-[10px] text-rose-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]" title={status}>
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    {status.replace('Error: ', '')}
-                  </div>
-                ) : status && status === 'Autosaving...' ? (
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Autosaving...
-                  </div>
-                ) : status && (status.includes('saved') || status.includes('published') || status === 'Synced') ? (
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Synced
-                  </div>
-               ) : (
-                 <div className="text-[10px] text-slate-400 font-medium italic">Not saved yet</div>
-               )}
-               {meta.slug && <p className="text-[10px] text-slate-300 font-mono leading-none mt-0.5">{meta.slug}</p>}
+              {/* Last Saved Status */}
+              {status.includes('Saving') || status.includes('Autosaving') ? (
+                <div className="text-[10px] text-slate-400 font-medium italic animate-pulse">Saving...</div>
+              ) : autosaveProgress > 0 && autosaveProgress < 100 ? (
+                <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                  Syncing in {Math.ceil((3000 - (autosaveProgress * 3000 / 100)) / 1000)}s...
+                </div>
+              ) : status && (status.toLowerCase().includes('error') || status.toLowerCase().includes('only owner') || status.toLowerCase().includes('sign in')) ? (
+                <div className="flex items-center gap-1.5 text-[10px] text-rose-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]" title={status}>
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  {status.replace('Error: ', '')}
+                </div>
+              ) : status && status === 'Autosaving...' ? (
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Autosaving...
+                </div>
+              ) : status && (status.includes('saved') || status.includes('published') || status === 'Synced') ? (
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Synced
+                </div>
+              ) : (
+                <div className="text-[10px] text-slate-400 font-medium italic">Not saved yet</div>
+              )}
+              {meta.slug && <p className="text-[10px] text-slate-300 font-mono leading-none mt-0.5">{meta.slug}</p>}
             </div>
 
             <button
-               onClick={() => setShowSettingsModal(true)}
-               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-               title="Lesson Settings"
-               type="button"
+              onClick={() => {
+                setSettingsSnapshot({
+                  title_en: meta.title_en,
+                  title_ar: meta.title_ar,
+                  slug: meta.slug,
+                  coverImage: meta.coverImage
+                })
+                setShowSettingsModal(true)
+              }}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Lesson Settings"
+              type="button"
             >
-               <Settings size={18} />
+              <Settings size={18} />
             </button>
-            
+
             {meta.slug && (
-              <button 
+              <button
                 onClick={async () => {
                   setStatus('Preparing preview...')
                   await publish('draft')
@@ -2183,7 +2339,7 @@ export default function WikiEditor() {
                 <span className="hidden sm:inline">Preview</span>
               </button>
             )}
-            
+
             <div className="relative inline-flex items-center">
               <AnimatePresence>
                 {autosaveProgress > 0 && autosaveProgress < 100 && (
@@ -2214,26 +2370,26 @@ export default function WikiEditor() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <button 
-                  onClick={() => {
-                    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-                    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-                    setAutosaveProgress(0);
-                    publish('draft');
-                  }}
-                  disabled={saveDisabled}
-                  className="relative z-0 flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                  style={{ borderRadius: '8px' }}
-                  title={saveDisabled ? 'Only owner/admin can save' : 'Save Draft'}
-                  type="button"
+              <button
+                onClick={() => {
+                  if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+                  if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+                  setAutosaveProgress(0);
+                  publish();
+                }}
+                disabled={saveDisabled}
+                className="relative z-0 flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                style={{ borderRadius: '8px' }}
+                title={saveDisabled ? 'Only owner/admin can save' : 'Save'}
+                type="button"
               >
-                  <Save size={14} className={autosaveProgress > 0 ? 'animate-bounce' : ''} />
-                  <span className="hidden sm:inline">Save</span>
+                <Save size={14} className={autosaveProgress > 0 ? 'animate-bounce' : ''} />
+                <span className="hidden sm:inline">Save</span>
               </button>
             </div>
 
             {isAdmin && (
-              <button 
+              <button
                 onClick={() => setShowPublishModal(true)}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-[#f05d4e] hover:bg-[#f05d4e]/90 rounded-lg transition-colors shadow-sm"
                 type="button"
@@ -2250,200 +2406,252 @@ export default function WikiEditor() {
       <div className="mx-auto w-full max-w-[1920px] px-6 sm:px-10 lg:px-16 pt-20 pb-12">
         <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
           <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
-          <div className="hidden lg:block relative">
-            <Sidebar
-              locale={activeEditorTab === 'ar' ? 'ar' : 'en'}
-              kitSlug={meta.wikiSlug || 'student-kit'}
-              isOpen={true}
-              onClose={() => {}}
-              lessons={wikiLessons}
-              className="!static !w-full !h-auto !shadow-none lg:!sticky lg:!top-24"
-              onLessonClick={handleLessonClick}
-              activeSlug={meta.slug}
-              hideLessons={true}
-              tocMaxLevel={1}
-              refreshTocTrigger={tocTrigger}
-            />
-          </div>
-          <div className="flex-1 space-y-6">
-
-
-        {/* Language Tab Switcher */}
-        <div className="editor-tab-bar">
-          <button
-            type="button"
-            onClick={() => setActiveEditorTab('en')}
-            className={`editor-tab-btn ${activeEditorTab === 'en' ? 'active !border-[#f05d4e] !text-[#f05d4e]' : ''}`}
-          >
-            <span className="glass-lang-indicator en">EN</span>
-            <span>English</span>
-            <span className="editor-tab-direction">LTR</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveEditorTab('ar')}
-            className={`editor-tab-btn ${activeEditorTab === 'ar' ? 'active !border-[#f05d4e] !text-[#f05d4e]' : ''}`}
-          >
-            <span className="glass-lang-indicator ar">AR</span>
-            <span>العربية</span>
-            <span className="editor-tab-direction">RTL</span>
-            {!isVerified && <span className="editor-tab-lock">🔒</span>}
-          </button>
-        </div>
-
-        <div className="revolutionary-editor-single">
-          {/* English Editor Pane */}
-          <div className="glass-editor-panel" style={{ display: activeEditorTab === 'en' ? 'block' : 'none' }}>
-            <div className="glass-editor-header">
-              <div className="glass-editor-header-title">
-                <span className="glass-lang-indicator en">EN</span>
-                <span>English</span>
-                <span className="text-slate-400 text-xs font-normal">• Left to Right</span>
-              </div>
-              <div className="glass-shortcut-hint">
-                Press <span className="glass-shortcut-key">/</span> for commands
-              </div>
+            <div className="hidden lg:block relative">
+              <Sidebar
+                locale={activeEditorTab === 'ar' ? 'ar' : 'en'}
+                kitSlug={meta.wikiSlug || 'student-kit'}
+                isOpen={true}
+                onClose={() => { }}
+                lessons={wikiLessons}
+                className="!static !w-full !h-auto !shadow-none lg:!sticky lg:!top-24"
+                onLessonClick={handleLessonClick}
+                activeSlug={meta.slug}
+                hideLessons={true}
+                tocMaxLevel={1}
+                refreshTocTrigger={tocTrigger}
+              />
             </div>
-            
-            
+            <div className="flex-1 space-y-6">
 
-            <div className="glass-editor-content p-5 md:p-8 xl:p-10 space-y-6" data-editor-lang="en">
 
-              {/* Table Bubble Menu */}
-              <div id={bubbleIdEn} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addRowBefore().run()} title="Add row above">↑+</button>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addRowAfter().run()} title="Add row below">↓+</button>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addColumnBefore().run()} title="Add column left">←+</button>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addColumnAfter().run()} title="Add column right">→+</button>
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteRow().run()} title="Delete row" style={{color: '#ef4444'}}>⊖</button>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteColumn().run()} title="Delete column" style={{color: '#ef4444'}}>⊝</button>
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().toggleHeaderRow().run()} title="Toggle header row">H̲</button>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().mergeCells().run()} title="Merge cells">⊞</button>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().splitCell().run()} title="Split cell">⊟</button>
-                <span className="glass-bubble-divider" />
-                {tableColors.map(c => (
-                  <button key={c.name} className="glass-bubble-color" style={{ background: c.value || '#f8fafc' }} onClick={() => editorEn?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} title={c.name} />
-                ))}
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteTable().run()} title="Delete table" style={{color: '#dc2626'}}><Trash2 className="inline w-3.5 h-3.5" /></button>
-              </div>
-
-              {/* Text Bubble Menu */}
-              <div id={textBubbleIdEn} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999, visibility: 'hidden' }}>
-                <button className="glass-bubble-btn" style={{fontWeight: 700}} onClick={() => editorEn?.chain().focus().toggleBold().run()} title="Bold">B</button>
-                <button className="glass-bubble-btn" style={{fontStyle: 'italic'}} onClick={() => editorEn?.chain().focus().toggleItalic().run()} title="Italic">I</button>
-                <button className="glass-bubble-btn" style={{textDecoration: 'underline'}} onClick={() => editorEn?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
-                <button className="glass-bubble-btn" style={{textDecoration: 'line-through'}} onClick={() => editorEn?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => promptForLink(editorEn)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
-                <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
-                <span className="glass-bubble-divider" />
-                {textColors.map(col => (
-                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} title="Text color" />
-                ))}
-                <button className="glass-bubble-btn text-xs" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
-                <span className="glass-bubble-divider" />
-                {highlightColors.map(col => (
-                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
-                ))}
-                <button className="glass-bubble-btn text-xs" onClick={() => editorEn?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
-              </div>
-
-              <EditorContent editor={editorEn} />
-            </div>
-          </div>
-
-          {/* Arabic Editor Pane */}
-          <div className={`glass-editor-panel ${!isVerified ? 'glass-editor-locked' : ''}`} style={{ display: activeEditorTab === 'ar' ? 'block' : 'none' }}>
-            <div className="glass-editor-header">
-              <div className="glass-editor-header-title">
-                <span className="glass-lang-indicator ar">AR</span>
-                <span>العربية</span>
-                <span className="text-slate-400 text-xs font-normal">• Right to Left</span>
-              </div>
-              <div className="flex items-center gap-3">
-                {isVerified && (
-                  <span className="glass-editor-header-badge synced"><Check className="inline w-3.5 h-3.5 mr-0.5" /> Synced</span>
-                )}
-                <button 
-                  onClick={() => setShowVerifyModal(true)} 
-                  className="glass-verify-btn" 
-                  title={isVerified ? "Overwrite Arabic with current English content" : "Verify English and unlock Arabic"}
+              {/* Language Tab Switcher */}
+              <div className="editor-tab-bar">
+                <button
+                  type="button"
+                  onClick={() => setActiveEditorTab('en')}
+                  className={`editor-tab-btn ${activeEditorTab === 'en' ? 'active !border-[#f05d4e] !text-[#f05d4e]' : ''}`}
                 >
-                  <Unlock className="inline w-4 h-4 mr-1" /> {isVerified ? 'Re-Mirror English' : 'Verify & Mirror'}
+                  <span className="glass-lang-indicator en">EN</span>
+                  <span>English</span>
+                  <span className="editor-tab-direction">LTR</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEditorTab('ar')}
+                  className={`editor-tab-btn ${activeEditorTab === 'ar' ? 'active !border-[#f05d4e] !text-[#f05d4e]' : ''}`}
+                >
+                  <span className="glass-lang-indicator ar">AR</span>
+                  <span>العربية</span>
+                  <span className="editor-tab-direction">RTL</span>
+                  {!isVerified && <span className="editor-tab-lock">🔒</span>}
                 </button>
               </div>
-            </div>
-            
-            {meta.coverImage && (
-              <div className="w-full bg-gray-100 border-b border-slate-200">
-                <img
-                  src={meta.coverImage}
-                  alt="Cover"
-                  className="w-full h-[150px] md:h-[240px] object-cover"
-                />
-              </div>
-            )}
 
-            <div className="glass-editor-content p-5 md:p-8 xl:p-10 space-y-6" data-editor-lang="ar">
-              {arabicDirtyRef.current && (
-                <div className="glass-sync-ribbon needs-sync">
-                  <AlertTriangle className="inline w-3.5 h-3.5 mr-1" /> Arabic content has diverged from English
+              <div className="revolutionary-editor-single relative">
+                {/* Overlay to intercept edits on published lessons */}
+                {meta.status === 'published' && (
+                  <div className="absolute inset-0 z-50 bg-white/40 backdrop-blur-[2px] rounded-3xl flex items-center justify-center">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white/90 p-8 rounded-3xl shadow-xl border border-slate-200 text-center max-w-sm mx-4"
+                    >
+                      <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Check size={24} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">Lesson is Published</h3>
+                      <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                        This lesson is currently live. You can view the content, but editing requires reverting it to Draft status.
+                      </p>
+                      <button
+                        onClick={() => setShowDraftConfirmation(true)}
+                        className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold shadow-md hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Unlock size={16} />
+                        Unlock for Editing
+                      </button>
+                    </motion.div>
+                  </div>
+                )}
+                {/* English Editor Pane */}
+                <div className="glass-editor-panel" style={{ display: activeEditorTab === 'en' ? 'block' : 'none' }}>
+                  <div className="glass-editor-header">
+                    <div className="glass-editor-header-title">
+                      <span className="glass-lang-indicator en">EN</span>
+                      <span>English</span>
+                      <span className="text-slate-400 text-xs font-normal">• Left to Right</span>
+                    </div>
+                    <div className="glass-shortcut-hint">
+                      Press <span className="glass-shortcut-key">/</span> for commands
+                    </div>
+                  </div>
+
+
+
+                  <div className="glass-editor-content p-5 md:p-8 xl:p-10 space-y-6" data-editor-lang="en">
+
+                    {/* Table Bubble Menu */}
+                    {editorEn && (
+                      <BubbleMenu
+                        editor={editorEn}
+                        pluginKey="table-bubble-en"
+                        shouldShow={shouldShowTableEn}
+                        options={bubbleMenuOptions}
+                      >
+                        <div className="glass-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addRowBefore().run()} title="Add row above"><ArrowUpToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addRowAfter().run()} title="Add row below"><ArrowDownToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addColumnBefore().run()} title="Add column left"><ArrowLeftToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().addColumnAfter().run()} title="Add column right"><ArrowRightToLine className="w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteRow().run()} title="Delete row" style={{ color: '#ef4444' }}><MinusCircle className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteColumn().run()} title="Delete column" style={{ color: '#ef4444' }}><MinusCircle className="w-3.5 h-3.5 rotate-90" /></button>
+                          <span className="glass-bubble-divider" />
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().toggleHeaderRow().run()} title="Toggle header row"><HeadingIcon className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().mergeCells().run()} title="Merge cells"><Merge className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().splitCell().run()} title="Split cell"><Split className="w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
+                          {tableColors.map(c => (
+                            <button key={c.name} className="glass-bubble-color" style={{ background: c.value || '#f8fafc' }} onClick={() => editorEn?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} title={c.name} />
+                          ))}
+                          <span className="glass-bubble-divider" />
+                          <button className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().deleteTable().run()} title="Delete table" style={{ color: '#dc2626' }}><Trash2 className="inline w-3.5 h-3.5" /></button>
+                        </div>
+                      </BubbleMenu>
+                    )}
+
+                    {/* Text Bubble Menu */}
+                    {editorEn && (
+                      <BubbleMenu
+                        editor={editorEn}
+                        pluginKey="text-bubble-en"
+                        shouldShow={shouldShowTextEn}
+                        options={bubbleMenuOptions}
+                      >
+                        <div className="glass-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
+                          <button type="button" className="glass-bubble-btn" style={{ fontWeight: 700 }} onClick={() => editorEn?.chain().focus().toggleBold().run()} title="Bold">B</button>
+                          <button type="button" className="glass-bubble-btn" style={{ fontStyle: 'italic' }} onClick={() => editorEn?.chain().focus().toggleItalic().run()} title="Italic">I</button>
+                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'underline' }} onClick={() => editorEn?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
+                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'line-through' }} onClick={() => editorEn?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
+                          <span className="glass-bubble-divider" />
+                          <button type="button" className="glass-bubble-btn" onClick={() => promptForLink(editorEn)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
+                          {textColors.map(col => (
+                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} title="Text color" />
+                          ))}
+                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
+                          <span className="glass-bubble-divider" />
+                          {highlightColors.map(col => (
+                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                          ))}
+                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => editorEn?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
+                        </div>
+                      </BubbleMenu>
+                    )}
+
+                    <EditorContent editor={editorEn} />
+                  </div>
                 </div>
-              )}
-              {/* Table Bubble Menu AR */}
-              <div id={bubbleIdAr} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999 }}>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowBefore().run()} title="Add row above">↑+</button>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowAfter().run()} title="Add row below">↓+</button>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnBefore().run()} title="Add column left">←+</button>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnAfter().run()} title="Add column right">→+</button>
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteRow().run()} title="Delete row" style={{color: '#ef4444'}}>⊖</button>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteColumn().run()} title="Delete column" style={{color: '#ef4444'}}>⊝</button>
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().toggleHeaderRow().run()} title="Toggle header row">H̲</button>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().mergeCells().run()} title="Merge cells">⊞</button>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().splitCell().run()} title="Split cell">⊟</button>
-                <span className="glass-bubble-divider" />
-                {tableColors.map(c => (
-                  <button key={c.name} className="glass-bubble-color" style={{ background: c.value || '#f8fafc' }} onClick={() => editorAr?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} title={c.name} />
-                ))}
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteTable().run()} title="Delete table" style={{color: '#dc2626'}}><Trash2 className="inline w-3.5 h-3.5" /></button>
-              </div>
 
-              {/* Text Bubble Menu AR */}
-              <div id={textBubbleIdAr} className="glass-bubble-menu" style={{ position: 'absolute', left: -9999, top: -9999 }}>
-                <button className="glass-bubble-btn" style={{fontWeight: 700}} onClick={() => editorAr?.chain().focus().toggleBold().run()} title="Bold">B</button>
-                <button className="glass-bubble-btn" style={{fontStyle: 'italic'}} onClick={() => editorAr?.chain().focus().toggleItalic().run()} title="Italic">I</button>
-                <button className="glass-bubble-btn" style={{textDecoration: 'underline'}} onClick={() => editorAr?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
-                <button className="glass-bubble-btn" style={{textDecoration: 'line-through'}} onClick={() => editorAr?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
-                <span className="glass-bubble-divider" />
-                <button className="glass-bubble-btn" onClick={() => promptForLink(editorAr)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
-                <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
-                <span className="glass-bubble-divider" />
-                {textColors.map(col => (
-                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr || !supportsColorAr) return; editorAr.chain().focus().setColor(col).run() }} title="Text color" />
-                ))}
-                <button className="glass-bubble-btn text-xs" onClick={() => supportsColorAr ? editorAr?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
-                <span className="glass-bubble-divider" />
-                {highlightColors.map(col => (
-                  <button key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr) return; editorAr.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
-                ))}
-                <button className="glass-bubble-btn text-xs" onClick={() => editorAr?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
-              </div>
+                {/* Arabic Editor Pane */}
+                <div className={`glass-editor-panel ${!isVerified ? 'glass-editor-locked' : ''}`} style={{ display: activeEditorTab === 'ar' ? 'block' : 'none' }}>
+                  <div className="glass-editor-header">
+                    <div className="glass-editor-header-title">
+                      <span className="glass-lang-indicator ar">AR</span>
+                      <span>العربية</span>
+                      <span className="text-slate-400 text-xs font-normal">• Right to Left</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isVerified && (
+                        <span className="glass-editor-header-badge synced"><Check className="inline w-3.5 h-3.5 mr-0.5" /> Synced</span>
+                      )}
+                      <button
+                        onClick={() => setShowVerifyModal(true)}
+                        className="glass-verify-btn"
+                        title={isVerified ? "Overwrite Arabic with current English content" : "Verify English and unlock Arabic"}
+                      >
+                        <Unlock className="inline w-4 h-4 mr-1" /> {isVerified ? 'Re-Mirror English' : 'Verify & Mirror'}
+                      </button>
+                    </div>
+                  </div>
 
-              <EditorContent editor={editorAr} />
+
+
+                  <div className="glass-editor-content p-5 md:p-8 xl:p-10 space-y-6" data-editor-lang="ar">
+                    {arabicDirtyRef.current && (
+                      <div className="glass-sync-ribbon needs-sync">
+                        <AlertTriangle className="inline w-3.5 h-3.5 mr-1" /> Arabic content has diverged from English
+                      </div>
+                    )}
+                    {/* Table Bubble Menu AR */}
+                    {editorAr && (
+                      <BubbleMenu
+                        editor={editorAr}
+                        pluginKey="table-bubble-ar"
+                        shouldShow={shouldShowTableAr}
+                        options={bubbleMenuOptions}
+                      >
+                        <div className="glass-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowBefore().run()} title="إضافة صف للأعلى"><ArrowUpToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowAfter().run()} title="إضافة صف للأسفل"><ArrowDownToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnBefore().run()} title="إضافة عمود لليسار"><ArrowLeftToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnAfter().run()} title="إضافة عمود لليمين"><ArrowRightToLine className="w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteRow().run()} title="حذف صف" style={{ color: '#ef4444' }}><MinusCircle className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteColumn().run()} title="حذف عمود" style={{ color: '#ef4444' }}><MinusCircle className="w-3.5 h-3.5 rotate-90" /></button>
+                          <span className="glass-bubble-divider" />
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().toggleHeaderRow().run()} title="تبديل صف الرأس"><HeadingIcon className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().mergeCells().run()} title="دمج الخلايا"><Merge className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().splitCell().run()} title="تقسيم الخلية"><Split className="w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
+                          {tableColors.map(c => (
+                            <button key={c.name} className="glass-bubble-color" style={{ background: c.value || '#f8fafc' }} onClick={() => editorAr?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} title={c.name} />
+                          ))}
+                          <span className="glass-bubble-divider" />
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteTable().run()} title="Delete table" style={{ color: '#dc2626' }}><Trash2 className="inline w-3.5 h-3.5" /></button>
+                        </div>
+                      </BubbleMenu>
+                    )}
+
+                    {/* Text Bubble Menu AR */}
+                    {editorAr && (
+                      <BubbleMenu
+                        editor={editorAr}
+                        pluginKey="text-bubble-ar"
+                        shouldShow={shouldShowTextAr}
+                        options={bubbleMenuOptions}
+                      >
+                        <div className="glass-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
+                          <button type="button" className="glass-bubble-btn" style={{ fontWeight: 700 }} onClick={() => editorAr?.chain().focus().toggleBold().run()} title="Bold">B</button>
+                          <button type="button" className="glass-bubble-btn" style={{ fontStyle: 'italic' }} onClick={() => editorAr?.chain().focus().toggleItalic().run()} title="Italic">I</button>
+                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'underline' }} onClick={() => editorAr?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
+                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'line-through' }} onClick={() => editorAr?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
+                          <span className="glass-bubble-divider" />
+                          <button type="button" className="glass-bubble-btn" onClick={() => promptForLink(editorAr)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
+                          {textColors.map(col => (
+                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr || !supportsColorAr) return; editorAr.chain().focus().setColor(col).run() }} title="Text color" />
+                          ))}
+                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorAr ? editorAr?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
+                          <span className="glass-bubble-divider" />
+                          {highlightColors.map(col => (
+                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr) return; editorAr.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                          ))}
+                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => editorAr?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
+                        </div>
+                      </BubbleMenu>
+                    )}
+
+                    <EditorContent editor={editorAr} />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
       {/* Verify & Mirror Confirmation Modal */}
       <AnimatePresence>
         {showVerifyModal && (
@@ -2572,14 +2780,14 @@ export default function WikiEditor() {
       <AnimatePresence>
         {showPublishModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setShowPublishModal(false)}
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -2614,15 +2822,15 @@ export default function WikiEditor() {
                       className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${isChecked ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'}`}
                     >
                       <div className="mt-1 relative flex items-center justify-center w-6 h-6">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={isChecked}
                           onChange={(e) => setPublishCheckpoints(prev => ({ ...prev, [item.id]: e.target.checked }))}
                           className="absolute inset-0 opacity-0 cursor-pointer z-10"
                         />
-                        <motion.div 
+                        <motion.div
                           initial={false}
-                          animate={{ 
+                          animate={{
                             backgroundColor: isChecked ? 'rgb(16 185 129)' : 'rgb(255 255 255)',
                             borderColor: isChecked ? 'rgb(16 185 129)' : 'rgb(226 232 240)',
                             scale: isChecked ? [1, 1.15, 1] : 1
@@ -2638,7 +2846,7 @@ export default function WikiEditor() {
                         </motion.div>
                         {/* Shine effect for checkbox */}
                         {isChecked && (
-                          <motion.div 
+                          <motion.div
                             initial={{ x: '-100%', opacity: 0 }}
                             animate={{ x: '200%', opacity: [0, 0.5, 0] }}
                             transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
@@ -2650,10 +2858,10 @@ export default function WikiEditor() {
                         <div className="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{item.title}</div>
                         <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.desc}</p>
                       </div>
-                      
+
                       {/* Subtle background shine for the whole card when checked */}
                       {isChecked && (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent pointer-events-none"
@@ -2682,7 +2890,7 @@ export default function WikiEditor() {
                 >
                   <span className="relative z-10">Confirm & Publish Now</span>
                   {!Object.values(publishCheckpoints).every(Boolean) ? null : (
-                    <motion.div 
+                    <motion.div
                       initial={{ x: '-100%' }}
                       animate={{ x: '100%' }}
                       transition={{ duration: 2, repeat: Infinity }}
@@ -2698,14 +2906,13 @@ export default function WikiEditor() {
       <AnimatePresence>
         {showSettingsModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-              onClick={() => setShowSettingsModal(false)}
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -2733,12 +2940,34 @@ export default function WikiEditor() {
                       const val = e.target.value
                       setMeta((m: typeof meta) => {
                         const next = { ...m, title_en: val }
-                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch {}
+                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
                         return next
                       })
                     }}
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all"
                     placeholder="Enter lesson title..."
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-end gap-1 mb-1">
+                    <span className="text-sm font-semibold text-slate-700" dir="ltr">(Arabic Title)</span>
+                    <label className="text-sm font-semibold text-slate-700" dir="rtl">عنوان الدرس</label>
+                  </div>
+                  <input
+                    type="text"
+                    value={meta.title_ar || ''}
+                    dir="rtl"
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setMeta((m: typeof meta) => {
+                        const next = { ...m, title_ar: val }
+                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
+                        return next
+                      })
+                    }}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all text-right"
+                    placeholder="عنوان الدرس..."
                   />
                 </div>
 
@@ -2753,7 +2982,7 @@ export default function WikiEditor() {
                       const val = e.target.value
                       setMeta((m: typeof meta) => {
                         const next = { ...m, slug: val }
-                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch {}
+                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
                         return next
                       })
                     }}
@@ -2769,17 +2998,17 @@ export default function WikiEditor() {
                       <ImageIcon size={16} /> Cover Image
                     </div>
                   </label>
-                  
+
                   {!meta.coverImage ? (
-                    <div 
+                    <div
                       onClick={triggerCoverUpload}
                       className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isUploadingCover ? 'border-[#f05d4e]/40 bg-[#f05d4e]/5' : 'border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
                     >
-                      <input 
-                        type="file" 
-                        ref={coverInputRef} 
-                        className="hidden" 
-                        accept="image/*" 
+                      <input
+                        type="file"
+                        ref={coverInputRef}
+                        className="hidden"
+                        accept="image/*"
                         onChange={handleCoverFileChange}
                       />
                       <div className="bg-[#f05d4e]/10 text-[#f05d4e] p-3 rounded-full mb-3">
@@ -2793,14 +3022,14 @@ export default function WikiEditor() {
                   ) : (
                     <div className="space-y-3">
                       <div className="rounded-xl overflow-hidden border border-slate-200 aspect-video relative group">
-                        <img 
+                        <img
                           key={meta.coverImage}
-                          src={meta.coverImage} 
-                          alt="Cover Preview" 
+                          src={meta.coverImage}
+                          alt="Cover Preview"
                           className="absolute inset-0 w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <button 
+                          <button
                             onClick={triggerCoverUpload}
                             className="px-4 py-2 bg-white text-slate-900 rounded-lg text-sm font-bold shadow-lg hover:bg-slate-100 transition-colors"
                           >
@@ -2809,18 +3038,20 @@ export default function WikiEditor() {
                         </div>
                       </div>
                       <div className="flex justify-end">
-                         <button
-                           onClick={() => setMeta((prev: any) => ({ ...prev, coverImage: '' }))}
-                           className="text-xs text-red-500 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                         >
-                           Remove Image
-                         </button>
+                        <button
+                          onClick={() => {
+                            setMeta((prev: any) => ({ ...prev, coverImage: '' }))
+                          }}
+                          className="text-xs text-red-500 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                        >
+                          Remove Image
+                        </button>
                       </div>
-                      <input 
-                        type="file" 
-                        ref={coverInputRef} 
-                        className="hidden" 
-                        accept="image/*" 
+                      <input
+                        type="file"
+                        ref={coverInputRef}
+                        className="hidden"
+                        accept="image/*"
                         onChange={handleCoverFileChange}
                       />
                     </div>
@@ -2829,12 +3060,30 @@ export default function WikiEditor() {
 
               </div>
 
-              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
-                  onClick={() => setShowSettingsModal(false)}
+                  onClick={() => {
+                    if (settingsSnapshot) {
+                      setMeta((prev: typeof meta) => {
+                        const next = { ...prev, ...settingsSnapshot }
+                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
+                        return next
+                      })
+                    }
+                    setShowSettingsModal(false)
+                  }}
+                  className="px-6 py-2.5 text-slate-600 hover:text-slate-900 font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSettingsModal(false)
+                    publish('draft')
+                  }}
                   className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-200/50 hover:bg-slate-800 transition-all active:scale-95"
                 >
-                  Done
+                  Save Settings
                 </button>
               </div>
             </motion.div>

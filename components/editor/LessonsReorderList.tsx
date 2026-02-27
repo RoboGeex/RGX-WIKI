@@ -124,7 +124,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     setIndicator(null)
     setIsDragging(false)
     setDragOffset({ x: 0, y: 0 })
-    
+
     // Clean up drag image
     if (dragImageRef.current && document.body.contains(dragImageRef.current)) {
       document.body.removeChild(dragImageRef.current)
@@ -137,7 +137,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
     setStatus(null)
     setError(null)
     const sequence = nextOrder.map((lesson) => lesson.slug)
-    
+
     const headers = applyDeveloperHeader({ "Content-Type": "application/json" })
 
     fetch("/api/lessons/reorder", {
@@ -151,7 +151,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
           try {
             const data = await res.json()
             if (data?.error) message = data.error
-          } catch {}
+          } catch { }
           throw new Error(message)
         }
         const result = await res.json()
@@ -177,23 +177,23 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
       event.preventDefault()
       return
     }
-    
+
     const dragElement = event.currentTarget.closest('[data-lesson-item]') as HTMLElement
     if (!dragElement) return
-    
+
     // Calculate drag offset for smooth positioning
     const rect = dragElement.getBoundingClientRect()
-    
+
     setDragOffset({
       x: event.clientX - rect.left,
       y: event.clientY - rect.top
     })
-    
+
     setDraggingSlug(slug)
     setIsDragging(true)
     setIndicator({ slug, position: "before" })
     event.dataTransfer.effectAllowed = "move"
-    
+
     // Create a smooth drag image
     try {
       const dragImage = dragElement.cloneNode(true) as HTMLElement
@@ -210,11 +210,11 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
       dragImage.style.pointerEvents = 'none'
       dragImage.style.zIndex = '9999'
       dragImage.style.transition = 'none'
-      
+
       document.body.appendChild(dragImage)
       dragImageRef.current = dragImage as HTMLDivElement
       event.dataTransfer.setDragImage(dragImage, dragOffset.x, dragOffset.y)
-    } catch {}
+    } catch { }
   }
 
   const handleDragEnd = () => {
@@ -224,12 +224,12 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
   const handleDragOverItem = (slug: string) => (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     if (!draggingSlug || saving || draggingSlug === slug) return
-    
+
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
     const mouseY = event.clientY - rect.top
     const itemHeight = rect.height
     const threshold = itemHeight * 0.4 // More sensitive threshold
-    
+
     let position: "before" | "after"
     if (mouseY < threshold) {
       position = "before"
@@ -240,7 +240,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
       const indicatorPosition = indicator?.slug === slug ? indicator.position : "before"
       position = indicatorPosition === "end" ? "before" : indicatorPosition
     }
-    
+
     if (indicator?.slug !== slug || indicator.position !== position) {
       setIndicator({ slug, position })
     }
@@ -249,27 +249,27 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
   const handleDropOnItem = (slug: string) => (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     if (!draggingSlug || saving || draggingSlug === slug) return
-    
+
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
     const mouseY = event.clientY - rect.top
     const itemHeight = rect.height
     const threshold = itemHeight * 0.4
     const placeAfter = mouseY > itemHeight - threshold
-    
+
     const sourceSlug = draggingSlug
     setItems((prev) => {
       const previous = prev.map((lesson) => ({ ...lesson }))
       const targetIndex = prev.findIndex((lesson) => lesson.slug === slug)
       if (targetIndex === -1) return prev
-      
+
       const desiredIndex = targetIndex + (placeAfter ? 1 : 0)
       const next = reorderToIndex(prev, sourceSlug, desiredIndex)
-      
+
       if (ordersMatch(prev, next)) return prev
-      
+
       // Persist order immediately without delay
       persistOrder(next, previous)
-      
+
       return next
     })
     resetDragState()
@@ -335,143 +335,148 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
 
   return (
     <>
-    <div ref={containerRef} className="space-y-2">
-      {(saving || status || error) && (
-        <div className="flex items-center gap-3 text-xs">
-          {saving && <span className="text-gray-500">Saving order...</span>}
-          {status && <span className="text-emerald-600">{status}</span>}
-          {error && <span className="text-red-600">{error}</span>}
-        </div>
-      )}
-      {items.map((lesson, index) => {
-        const duration = typeof lesson.duration_min === "number" && lesson.duration_min > 0 ? lesson.duration_min : 30
-        const difficulty = lesson.difficulty || "Beginner"
-        const isDragging = draggingSlug === lesson.slug
-        const isIndicatorBefore = indicator?.slug === lesson.slug && indicator.position === "before"
-        const isIndicatorAfter = indicator?.slug === lesson.slug && indicator.position === "after"
-        const isHovered = indicator?.slug === lesson.slug
-        const isDraft = lesson.status && lesson.status !== 'published'
-        const viewPath = viewBaseUrl
-          ? `${viewBaseUrl.replace(/\/$/, '')}/${defaultLocale}/${lesson.slug}`
-          : `/${defaultLocale}/${kitSlug}/lesson/${lesson.slug}`
-        const previewSuffix = isDraft ? (viewPath.includes('?') ? '&preview=1' : '?preview=1') : ''
-        const viewHref = `${viewPath}${previewSuffix}`
-        
-        const isOwner = isGlobalAdmin || (currentDev?.id && lesson.ownerId === currentDev.id)
-        
-        const tileClasses = isDragging
-          ? "border-primary/60 opacity-50 scale-95 ring-2 ring-primary/40 transform-gpu"
-          : isHovered
-          ? "border-primary/40 ring-1 ring-primary/20 scale-[1.01] transform-gpu"
-          : "border-gray-200 hover:border-gray-300"
-
-        return (
-          <div
-            key={lesson.slug}
-            data-lesson-item
-            onDragOver={handleDragOverItem(lesson.slug)}
-            onDrop={handleDropOnItem(lesson.slug)}
-            className={`relative flex items-center justify-between gap-4 rounded-xl border bg-white p-4 shadow-sm transition-all duration-300 ease-out transform-gpu ${tileClasses}`}
-          >
-            {isIndicatorBefore && (
-              <div className="pointer-events-none absolute left-4 right-4 -top-1 h-0.5 rounded-full bg-primary shadow-lg animate-pulse">
-                <div className="h-full w-full rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"></div>
-              </div>
-            )}
-            {isIndicatorAfter && (
-              <div className="pointer-events-none absolute left-4 right-4 -bottom-1 h-0.5 rounded-full bg-primary shadow-lg animate-pulse">
-                <div className="h-full w-full rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"></div>
-              </div>
-            )}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="w-6 text-right text-xs font-medium text-gray-400">{index + 1}</span>
-                <button
-                  type="button"
-                  draggable
-                  onDragStart={handleDragStart(lesson.slug)}
-                  onDragEnd={handleDragEnd}
-                  disabled={saving}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 cursor-grab active:cursor-grabbing transform-gpu"
-                  aria-label={`Reorder ${lesson.title_en || lesson.title_ar || lesson.slug}`}
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M4 7h12M4 10h12M4 13h12" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                  {lesson.title_en || lesson.title_ar || lesson.slug}
-                </div>
-                <div className="mt-1 text-xs text-gray-500">
-                  {duration} min | {difficulty}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {isOwner && (
-                <>
-                  <Link
-                    href={`/editor/lesson?wiki=${wikiSlug}&kit=${kitSlug}&slug=${lesson.slug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
-                    className="rounded-md border border-primary/40 px-3 py-1.5 text-sm text-primary hover:bg-primary/10"
-                  >
-                    Edit
-                  </Link>
-                  {ENABLE_SEGMENTS_EDITOR && (
-                    <Link
-                      href={`/editor/segment?wiki=${wikiSlug}&kit=${kitSlug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
-                      className="rounded-md border border-amber-400 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-50"
-                      title="Bilingual Segment Editor"
-                    >
-                      Content
-                    </Link>
-                  )}
-                </>
-              )}
-              <Link
-                href={viewHref}
-                target="_blank"
-                className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-              >
-                {isOwner ? 'View' : 'Preview'}
-              </Link>
-              {isSuperAdmin && (
-                <button
-                  type="button"
-                  disabled={deletingId === (lesson.id || lesson.slug)}
-                  onClick={() => {
-                    setDeleteConfirmSlug(lesson.slug)
-                    setDeleteConfirmText('')
-                  }}
-                  className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
-                  title="Delete lesson (Super Admin)"
-                >
-                  {deletingId === (lesson.id || lesson.slug) ? 'Deleting\u2026' : 'Delete'}
-                </button>
-              )}
-            </div>
+      <div ref={containerRef} className="space-y-2">
+        {(saving || status || error) && (
+          <div className="flex items-center gap-3 text-xs">
+            {saving && <span className="text-gray-500">Saving order...</span>}
+            {status && <span className="text-emerald-600">{status}</span>}
+            {error && <span className="text-red-600">{error}</span>}
           </div>
-        )
-      })}
-      {draggingSlug && (
-        <div
-          onDragOver={handleDragOverEnd}
-          onDrop={handleDropAtEnd}
-          className={`h-12 rounded-xl border-2 border-dashed transition-all duration-300 ease-out flex items-center justify-center transform-gpu ${
-            indicator?.slug === null && indicator?.position === "end" 
-              ? "border-primary bg-primary/10 scale-105 shadow-lg" 
-              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-          }`}
-        >
-          <span className="text-sm text-gray-500 font-medium transition-colors">
-            {indicator?.slug === null && indicator?.position === "end" 
-              ? "Drop here to move to end" 
-              : "Drop here to move to end"}
-          </span>
-        </div>
-      )}
-    </div>
+        )}
+        {items.map((lesson, index) => {
+          const duration = typeof lesson.duration_min === "number" && lesson.duration_min > 0 ? lesson.duration_min : 30
+          const difficulty = lesson.difficulty || "Beginner"
+          const isDragging = draggingSlug === lesson.slug
+          const isIndicatorBefore = indicator?.slug === lesson.slug && indicator.position === "before"
+          const isIndicatorAfter = indicator?.slug === lesson.slug && indicator.position === "after"
+          const isHovered = indicator?.slug === lesson.slug
+          const isDraft = lesson.status && lesson.status !== 'published'
+          const viewPath = viewBaseUrl
+            ? `${viewBaseUrl.replace(/\/$/, '')}/${defaultLocale}/${lesson.slug}`
+            : `/${defaultLocale}/${kitSlug}/lesson/${lesson.slug}`
+          const previewSuffix = isDraft ? (viewPath.includes('?') ? '&preview=1' : '?preview=1') : ''
+          const viewHref = `${viewPath}${previewSuffix}`
+
+          const canEdit = isGlobalAdmin || isSuperAdmin || (currentDev?.id && lesson.ownerId === currentDev.id)
+
+          const tileClasses = isDragging
+            ? "border-primary/60 opacity-50 scale-95 ring-2 ring-primary/40 transform-gpu"
+            : isHovered
+              ? "border-primary/40 ring-1 ring-primary/20 scale-[1.01] transform-gpu"
+              : "border-gray-200 hover:border-gray-300"
+
+          return (
+            <div
+              key={lesson.slug}
+              data-lesson-item
+              onDragOver={handleDragOverItem(lesson.slug)}
+              onDrop={handleDropOnItem(lesson.slug)}
+              className={`relative flex items-center justify-between gap-4 rounded-xl border bg-white p-4 shadow-sm transition-all duration-300 ease-out transform-gpu ${tileClasses}`}
+            >
+              {isIndicatorBefore && (
+                <div className="pointer-events-none absolute left-4 right-4 -top-1 h-0.5 rounded-full bg-primary shadow-lg animate-pulse">
+                  <div className="h-full w-full rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"></div>
+                </div>
+              )}
+              {isIndicatorAfter && (
+                <div className="pointer-events-none absolute left-4 right-4 -bottom-1 h-0.5 rounded-full bg-primary shadow-lg animate-pulse">
+                  <div className="h-full w-full rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"></div>
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 text-right text-xs font-medium text-gray-400">{index + 1}</span>
+                  <button
+                    type="button"
+                    draggable={canEdit}
+                    onDragStart={canEdit ? handleDragStart(lesson.slug) : undefined}
+                    onDragEnd={handleDragEnd}
+                    disabled={saving || !canEdit}
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-all duration-200 ${canEdit ? 'hover:bg-gray-100 hover:border-gray-300 hover:scale-105 cursor-grab active:cursor-grabbing' : 'opacity-30 cursor-not-allowed'} transform-gpu focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
+                    aria-label={`Reorder ${lesson.title_en || lesson.title_ar || lesson.slug}`}
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M4 7h12M4 10h12M4 13h12" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                    <span>{lesson.title_en || lesson.title_ar || lesson.slug}</span>
+                    <span className={`px-1 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${lesson.status === 'published'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-amber-100 text-amber-700'
+                      }`}>
+                      {lesson.status === 'published' ? 'Pub' : 'Draft'}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {duration} min | {difficulty}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {canEdit && (
+                  <>
+                    <Link
+                      href={`/editor/lesson?wiki=${wikiSlug}&kit=${kitSlug}&slug=${lesson.slug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
+                      className="rounded-md border border-primary/40 px-3 py-1.5 text-sm text-primary hover:bg-primary/10"
+                    >
+                      Edit
+                    </Link>
+                    {ENABLE_SEGMENTS_EDITOR && (
+                      <Link
+                        href={`/editor/segment?wiki=${wikiSlug}&kit=${kitSlug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.slug)}`}
+                        className="rounded-md border border-amber-400 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-50"
+                        title="Bilingual Segment Editor"
+                      >
+                        Content
+                      </Link>
+                    )}
+                  </>
+                )}
+                <Link
+                  href={viewHref}
+                  target="_blank"
+                  className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  {canEdit ? 'View' : 'Preview'}
+                </Link>
+                {isSuperAdmin && lesson.slug !== 'getting-started' && (
+                  <button
+                    type="button"
+                    disabled={deletingId === (lesson.id || lesson.slug)}
+                    onClick={() => {
+                      setDeleteConfirmSlug(lesson.slug)
+                      setDeleteConfirmText('')
+                    }}
+                    className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    title="Delete lesson (Super Admin)"
+                  >
+                    {deletingId === (lesson.id || lesson.slug) ? 'Deleting\u2026' : 'Delete'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+        {draggingSlug && (
+          <div
+            onDragOver={handleDragOverEnd}
+            onDrop={handleDropAtEnd}
+            className={`h-12 rounded-xl border-2 border-dashed transition-all duration-300 ease-out flex items-center justify-center transform-gpu ${indicator?.slug === null && indicator?.position === "end"
+                ? "border-primary bg-primary/10 scale-105 shadow-lg"
+                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+          >
+            <span className="text-sm text-gray-500 font-medium transition-colors">
+              {indicator?.slug === null && indicator?.position === "end"
+                ? "Drop here to move to end"
+                : "Drop here to move to end"}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Delete Confirmation Dialog */}
       {deleteConfirmSlug && (

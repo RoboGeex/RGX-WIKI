@@ -49,15 +49,18 @@ function wikiSlugForKit(kitSlug: string): string {
   return kit?.wikiSlug || kitSlug
 }
 
+const normalizeSlug = (s: string) => s.replace(/_/g, '-')
+
 export function getWikis(): Wiki[] { return loadWikis() }
 
 export function getWiki(slug: string) {
-  const wiki = loadWikis().find(w => w.slug === slug);
+  const normalized = normalizeSlug(slug)
+  const wiki = loadWikis().find(w => w.slug === normalized);
   if (wiki) {
     return wiki;
   }
   // If no wiki is found by slug, try to find by kit slug
-  const wikiSlug = wikiSlugForKit(slug);
+  const wikiSlug = wikiSlugForKit(normalized);
   return loadWikis().find(w => w.slug === wikiSlug);
 }
 
@@ -81,22 +84,26 @@ export function getKits(wikiSlug?: string): Kit[] {
 export function getKit(slug: string, wikiSlug?: string) {
   // If a wikiSlug is provided, find the exact kit for that wiki.
   const kits = loadKits()
-  if (wikiSlug) {
-    return kits.find(k => k.slug === slug && k.wikiSlug === wikiSlug);
+  const normSlug = normalizeSlug(slug)
+  const normWiki = wikiSlug ? normalizeSlug(wikiSlug) : undefined
+
+  if (normWiki) {
+    return kits.find(k => k.slug === normSlug && k.wikiSlug === normWiki);
   }
   // Otherwise, just find the first kit with the given slug.
-  const found = kits.find(k => k.slug === slug);
+  const found = kits.find(k => k.slug === normSlug);
   if (found) return found
-  const wiki = getWiki(slug) || (wikiSlug ? getWiki(wikiSlug) : undefined)
+  const wiki = getWiki(normSlug) || (normWiki ? getWiki(normWiki) : undefined)
   if (wiki) return createKitFromWiki(wiki)
   return undefined;
 }
 
 export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boolean }): Promise<Lesson[]> {
-  const wikiSlug = wikiSlugForKit(kitSlug)
-  const enforcementDisabled = process.env.ENFORCE_DEV_OWNERSHIP !== 'true'
-  const includeDrafts = opts?.includeDrafts === true || process.env.NODE_ENV === 'development' || enforcementDisabled
   try {
+    const normKit = normalizeSlug(kitSlug)
+    const wikiSlug = wikiSlugForKit(normKit)
+    const enforcementDisabled = process.env.ENFORCE_DEV_OWNERSHIP !== 'true'
+    const includeDrafts = opts?.includeDrafts === true || process.env.NODE_ENV === 'development' || enforcementDisabled
     const prisma = getPrisma(wikiSlug)
     const lessons = await prisma.lesson.findMany({
       where: { wikiSlug, ...(includeDrafts ? {} : { status: 'published' }) },
@@ -120,15 +127,24 @@ export async function getLesson(
   opts?: { includeDrafts?: boolean }
 ): Promise<Lesson | undefined> {
   const lessons = await getLessons(kit, opts)
-  return lessons.find(l => l.slug === lessonSlug)
+  const normSlug = normalizeSlug(lessonSlug)
+  return lessons.find(l => l.slug === normSlug || l.slug === lessonSlug)
 }
 
 function sortLessons(list: Lesson[]): Lesson[] {
   return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0))
 }
 
-export async function getFirstLesson(kit: string): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kit)
+export async function getFirstLesson(kitSlug: string): Promise<Lesson | undefined> {
+  const lessons = await getLessons(kitSlug)
+  const wikiSlug = wikiSlugForKit(kitSlug)
+  const wiki = getWiki(wikiSlug)
+  
+  if (wiki?.defaultLessonSlug) {
+    const defaultLesson = lessons.find(l => l.slug === wiki.defaultLessonSlug)
+    if (defaultLesson) return defaultLesson
+  }
+
   const list = sortLessons(lessons)
   return list[0]
 }

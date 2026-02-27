@@ -115,7 +115,7 @@ const items: SlashItem[] = [
     keywords: ['note', 'info', 'callout', 'warning', 'tip'],
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setBlockquote().run(),
   },
-  
+
   // CODE
   {
     title: 'Code Block',
@@ -126,7 +126,7 @@ const items: SlashItem[] = [
     keywords: ['code', 'pre', 'syntax', 'programming', 'javascript', 'python'],
     command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setCodeBlock().run(),
   },
-  
+
   // STRUCTURE
   {
     title: 'Separator',
@@ -185,7 +185,7 @@ const items: SlashItem[] = [
       }).run()
     },
   },
-  
+
   // MEDIA
   {
     title: 'Image',
@@ -223,7 +223,7 @@ const items: SlashItem[] = [
     title: 'Image Slider',
     description: 'Create an image carousel',
     shortcut: 'gallery',
-    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/><line x1="17" x2="22" y1="17" y2="17"/></svg>',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v4"/><path d="M22 10v4"/><rect width="12" height="18" x="6" y="3" rx="2"/></svg>',
     category: 'media',
     keywords: ['gallery', 'carousel', 'images', 'slider', 'slideshow'],
     command: ({ editor, range }: any) => {
@@ -251,7 +251,8 @@ const items: SlashItem[] = [
             if (!data?.url) {
               throw new Error('Upload failed')
             }
-            return data.url as string
+            // Initialize with an empty caption
+            return { url: data.url as string, caption: '' }
           }))
           if (!uploads.length) return
           editor.chain().focus().insertImageSlider({ images: uploads }).run()
@@ -261,6 +262,20 @@ const items: SlashItem[] = [
         }
       }
       input.click()
+    },
+  },
+  {
+    title: '🔗 Embed Link (YouTube/Vimeo)',
+    description: 'Insert a Vimeo, YouTube, or direct link',
+    shortcut: 'embed',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>',
+    category: 'media',
+    keywords: ['embed', 'video', 'link', 'youtube', 'vimeo', 'url'],
+    command: ({ editor, range }: any) => {
+      editor.chain().focus().deleteRange(range).run()
+      const url = window.prompt('Enter Video URL (YouTube, Vimeo, or direct link):')
+      if (!url) return
+      editor.chain().focus().insertVideo({ src: url }).run()
     },
   },
   {
@@ -440,7 +455,7 @@ function getCategoryLabel(category?: string): string {
 
 function renderList(container: HTMLDivElement, { items, command, clientRect }: any, selectedIndex: number) {
   container.innerHTML = ''
-  
+
   // Group items by category
   const grouped = items.reduce((acc: Record<string, SlashItem[]>, item: SlashItem) => {
     const cat = item.category || 'other'
@@ -466,7 +481,7 @@ function renderList(container: HTMLDivElement, { items, command, clientRect }: a
       const btn = document.createElement('button')
       btn.className = 'slash-command-item' + (itemIndex === selectedIndex ? ' slash-item-active' : '')
       btn.setAttribute('data-slash-item', 'true')
-      
+
       btn.innerHTML = `
         <div class="slash-item-icon">${item.icon || '•'}</div>
         <div class="slash-item-content">
@@ -475,7 +490,7 @@ function renderList(container: HTMLDivElement, { items, command, clientRect }: a
         </div>
         ${item.shortcut ? `<div class="slash-item-shortcut">${item.shortcut}</div>` : ''}
       `
-      
+
       btn.addEventListener('click', () => command(item))
       btn.addEventListener('mouseenter', () => {
         container.querySelectorAll('[data-slash-item]').forEach(el => el.classList.remove('slash-item-active'))
@@ -493,14 +508,14 @@ function renderList(container: HTMLDivElement, { items, command, clientRect }: a
     const scrollY = typeof window !== 'undefined' ? window.scrollY : 0
     const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
     const menuHeight = 400 // Approximate max height
-    
+
     // Determine if we should show above or below
     const spaceBelow = viewportHeight - rect.bottom
     const showAbove = spaceBelow < menuHeight && rect.top > menuHeight
 
     container.style.position = 'absolute'
     container.style.left = scrollX + rect.left + 'px'
-    
+
     if (showAbove) {
       container.style.bottom = (viewportHeight - rect.top - scrollY + 8) + 'px'
       container.style.top = 'auto'
@@ -508,7 +523,7 @@ function renderList(container: HTMLDivElement, { items, command, clientRect }: a
       container.style.top = scrollY + rect.bottom + 8 + 'px'
       container.style.bottom = 'auto'
     }
-    
+
     container.style.zIndex = '9999'
   }
 }

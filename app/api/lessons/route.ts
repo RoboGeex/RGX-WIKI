@@ -4,7 +4,7 @@ import path from 'path'
 import { promises as fs } from 'fs'
 import { getWiki } from '@/lib/data'
 import { getPrisma } from '@/lib/prisma-multi'
-import { canManageLesson, canManageWiki } from '@/lib/assignments'
+import { canEditLesson, canManageWiki } from '@/lib/assignments'
 import { findDeveloperById } from '@/lib/developers'
 import { getActorIdFromRequest } from '@/lib/api-auth'
 
@@ -98,7 +98,7 @@ function generateUniqueId(baseId: string, existingLessons: NewLesson[]): string 
   return candidate
 }
 
-const SHOULD_ENFORCE_DEV_OWNERSHIP = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
+// Removed SHOULD_ENFORCE_DEV_OWNERSHIP constant as it is superseded by strict RBAC
 
 export async function POST(req: Request) {
   try {
@@ -168,19 +168,12 @@ export async function POST(req: Request) {
     }
     const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
 
-    if (SHOULD_ENFORCE_DEV_OWNERSHIP && !developer) {
+    if (!developer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (SHOULD_ENFORCE_DEV_OWNERSHIP && !isAdmin && !canManageWiki(developer, lesson.wikiSlug)) {
+    if (!canManageWiki(developer, lesson.wikiSlug)) {
       return NextResponse.json({ error: 'Forbidden: You are not assigned to this wiki' }, { status: 403 })
-    }
-
-    if (
-      SHOULD_ENFORCE_DEV_OWNERSHIP &&
-      !canManageLesson(developer, lesson.wikiSlug, lesson.id || lesson.slug)
-    ) {
-      return NextResponse.json({ error: 'Forbidden for this wiki/lesson' }, { status: 403 })
     }
 
     if (!lesson.ownerId && developer?.id) {
@@ -191,9 +184,8 @@ export async function POST(req: Request) {
     }
 
     // Enforce publish rules:
-    // - If ownership enforcement is enabled, only admins can publish
-    // - If ownership enforcement is disabled (default), anyone can publish
-    if (SHOULD_ENFORCE_DEV_OWNERSHIP && !isAdmin) {
+    // Only admins or superadmins can publish
+    if (!isAdmin) {
       lesson.status = 'draft'
       lesson.publishedAt = undefined
     } else {
@@ -218,14 +210,8 @@ export async function POST(req: Request) {
         const isSameWiki = existingRecord?.wikiSlug === lesson.wikiSlug
         let isUpdate = !forceNew && !!existingRecord && isSameWiki
 
-        if (
-          isUpdate &&
-          SHOULD_ENFORCE_DEV_OWNERSHIP &&
-          !isAdmin &&
-          existingRecord?.ownerId &&
-          existingRecord.ownerId !== developer?.id
-        ) {
-          return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
+        if (isUpdate && !canEditLesson(developer, lesson.wikiSlug, existingRecord?.ownerId)) {
+          return NextResponse.json({ error: 'Forbidden: You do not have permission to edit this lesson' }, { status: 403 })
         }
 
         // --- Document Lock & Version Check ---
@@ -355,14 +341,8 @@ export async function POST(req: Request) {
       const existingLessonIndex = existingLessons.findIndex(l => l.id === lesson.id)
       const isUpdate = !forceNew && existingLessonIndex !== -1
 
-      if (
-        SHOULD_ENFORCE_DEV_OWNERSHIP &&
-        isUpdate &&
-        !isAdmin &&
-        existingLessons[existingLessonIndex]?.ownerId &&
-      existingLessons[existingLessonIndex]?.ownerId !== developer?.id
-      ) {
-        return NextResponse.json({ error: 'Only the lesson owner or admin can edit this lesson' }, { status: 403 })
+      if (isUpdate && !canEditLesson(developer, lesson.wikiSlug, existingLessons[existingLessonIndex]?.ownerId)) {
+        return NextResponse.json({ error: 'Forbidden: You do not have permission to edit this lesson' }, { status: 403 })
       }
 
       if (!isUpdate) {

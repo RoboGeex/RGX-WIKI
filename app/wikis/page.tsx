@@ -58,7 +58,7 @@ export default function WikisLandingPage() {
                     ? (wiki as any).grade
                     : 'All grades'
                 }
-                domainLabel={hasDedicatedDomain ? normalizedDomain || '' : `${wiki.slug}.hub`}
+                domainLabel={hasDedicatedDomain ? normalizedDomain || '' : ''}
                 initials={displayName.slice(0, 2).toUpperCase()}
               />
             )

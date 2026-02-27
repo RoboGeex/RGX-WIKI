@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma-multi'
 import { getActorIdFromRequest } from '@/lib/api-auth'
 import { findDeveloperById } from '@/lib/developers'
-import { canManageWiki } from '@/lib/assignments'
+import { canManageWiki, canEditLesson } from '@/lib/assignments'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,23 +21,21 @@ export async function POST(req: Request) {
     }
 
     const developer = await findDeveloperById(actorId)
-    const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
-    const isEnforcementOn = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
-
-    if (!isAdmin && !canManageWiki(developer, wikiSlug)) {
-      return NextResponse.json({ error: 'Access denied: You are not assigned to this wiki' }, { status: 403 })
-    }
-
+    
     const prisma = getPrisma(wikiSlug)
 
     // Find the lesson first
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId },
-      select: { activeEditorId: true, lockedUntil: true, version: true }
+      select: { activeEditorId: true, lockedUntil: true, version: true, ownerId: true }
     })
 
     if (!lesson) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
+    }
+
+    if (!canEditLesson(developer, wikiSlug, lesson.ownerId)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to edit (or lock) this lesson' }, { status: 403 })
     }
 
     const now = new Date()
@@ -52,7 +50,8 @@ export async function POST(req: Request) {
 
     if (isLockedBySomeoneElse && !forceTakeover) {
       const editorIdParsed = lesson.activeEditorId ? parseInt(lesson.activeEditorId) : NaN
-      const editor = !isNaN(editorIdParsed) ? await prisma.developer.findUnique({
+      const defaultPrisma = getPrisma()
+      const editor = !isNaN(editorIdParsed) ? await defaultPrisma.developer.findUnique({
         where: { id: editorIdParsed }
       }) : null
       
@@ -105,10 +104,8 @@ export async function DELETE(req: Request) {
     const prisma = getPrisma(wikiSlug)
 
     const developer = await findDeveloperById(actorId)
-    const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
-    const isEnforcementOn = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
 
-    if (!isAdmin && !canManageWiki(developer, wikiSlug)) {
+    if (!canManageWiki(developer, wikiSlug)) {
       return NextResponse.json({ error: 'Access denied: You are not assigned to this wiki' }, { status: 403 })
     }
 

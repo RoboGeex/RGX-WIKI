@@ -24,7 +24,7 @@ export default function SearchPanel(
       fetch(`/api/search?query=${query}&kit=${kitSlug}`)
         .then(res => res.json())
         .then(data => {
-          setResults(data);
+          setResults(Array.isArray(data) ? data : []);
           setLoading(false);
         })
         .catch(err => {
@@ -49,13 +49,20 @@ export default function SearchPanel(
             key={l.id}
             href={href}
             onClick={onClose}
-            className="block px-4 py-3 hover:bg-gray-100 text-sm"
+            className="block px-4 py-3 hover:bg-gray-100 text-sm transition-colors"
           >
-            <div className="font-medium">
-              {locale === 'ar' ? (l.title_ar || l.title_en) : (l.title_en || l.title_ar)}
+            <div className="flex items-center justify-between">
+              <div className="font-medium text-slate-900">
+                {locale === 'ar' ? (l.title_ar || l.title_en) : (l.title_en || l.title_ar)}
+              </div>
+              {l.status !== 'published' && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200 rounded uppercase tracking-wider">
+                  Draft
+                </span>
+              )}
             </div>
-            <div className="text-xs text-gray-500">
-              {l.duration_min}m - {l.difficulty}
+            <div className="text-xs text-slate-500 mt-1">
+              {l.duration_min}m • {l.difficulty}
             </div>
           </Link>
         );

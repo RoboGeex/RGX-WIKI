@@ -3,7 +3,7 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 
 type Props = {
-  images: string[]
+  images: any[]
 }
 
 export function LessonImageSlider({ images }: Props) {
@@ -13,31 +13,39 @@ export function LessonImageSlider({ images }: Props) {
   const goPrev = () => setIndex((prev) => (prev - 1 + images.length) % images.length)
   const goNext = () => setIndex((prev) => (prev + 1) % images.length)
 
-  const activeSrc = images[current]
+  const activeItem = images[current]
+  const activeSrc = typeof activeItem === 'string' ? activeItem : activeItem?.url
+  const activeCaption = typeof activeItem === 'string' ? '' : (activeItem?.caption || '')
+
+  if (!activeSrc) return null
+
   const containerStyle = useMemo<CSSProperties>(() => ({
     width: '100%',
     maxWidth: '720px',
   }), [])
 
   return (
-    <div className="space-y-3 flex flex-col items-center">
-      <div className="inline-flex max-w-full" style={containerStyle}>
+    <div className="space-y-3 flex flex-col items-center w-full">
+      <div className="inline-flex max-w-full w-full" style={containerStyle}>
         <div
           className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center"
           style={{ height: '462px' }}
         >
           <img
             src={activeSrc}
-            alt="Lesson slide"
+            alt={activeCaption || "Lesson slide"}
             className="block h-full w-full object-contain"
           />
+
+
+
           {images.length > 1 ? (
             <>
               <button
                 type="button"
                 aria-label="Previous image"
                 onClick={goPrev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white"
+                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors"
               >
                 <span className="text-lg leading-none text-gray-700">‹</span>
               </button>
@@ -45,18 +53,31 @@ export function LessonImageSlider({ images }: Props) {
                 type="button"
                 aria-label="Next image"
                 onClick={goNext}
-                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors"
               >
                 <span className="text-lg leading-none text-gray-700">›</span>
               </button>
             </>
           ) : null}
+
+
+
+
+          {/* Inner Image Counter Badge */}
+          {images.length > 1 ? (
+            <div className="absolute top-3 right-3 text-[10px] font-medium text-gray-400 pointer-events-none">
+              {current + 1} / {images.length}
+            </div>
+          ) : null}
         </div>
       </div>
-      {images.length > 1 ? (
-        <div className="flex items-center justify-center gap-3 text-xs text-gray-500">
-          {current + 1} / {images.length}
-        </div>
+
+      {/* Active caption displayed as a standard figure caption */}
+      {activeCaption ? (
+        <figcaption
+          className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: activeCaption }}
+        />
       ) : null}
     </div>
   )

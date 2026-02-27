@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma-multi'
 import { findDeveloperById } from '@/lib/developers'
-import { canManageLesson, canManageWiki } from '@/lib/assignments'
+import { canEditLesson, canDeleteLesson, canManageWiki } from '@/lib/assignments'
 
 function getActorIdFromRequest(req: Request): string | undefined {
   const headers = (req as any)?.headers as Headers | undefined
@@ -65,12 +65,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    if (!isAdmin && !canManageWiki(developer, existing.wikiSlug)) {
-      return NextResponse.json({ error: 'Forbidden: You are not assigned to this wiki' }, { status: 403 })
-    }
-
-    if (!isAdmin && (!existing.ownerId || existing.ownerId !== developer?.id)) {
-      return NextResponse.json({ error: 'Only owner or admin can edit this lesson' }, { status: 403 })
+    if (!canEditLesson(developer, existing.wikiSlug, existing.ownerId)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to edit this lesson' }, { status: 403 })
     }
 
     const prisma = getPrisma(existing.wikiSlug)
@@ -103,7 +99,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const actorId = getActorIdFromRequest(req)
     const developer = actorId ? await findDeveloperById(actorId) : undefined
 
-    if (!developer || developer.role !== 'superadmin') {
+    if (!canDeleteLesson(developer)) {
       return NextResponse.json({ error: 'Only Super Admins can delete lessons' }, { status: 403 })
     }
 
@@ -118,11 +114,15 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         ...(wikiSlug ? { wikiSlug } : {}),
         OR: [{ id }, { slug: id }],
       },
-      select: { id: true, wikiSlug: true, title_en: true },
+      select: { id: true, slug: true, wikiSlug: true, title_en: true },
     })
     if (!existing) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
 
     // Delete from the same prisma instance that found it
+    if (existing.slug === 'getting-started') {
+      return NextResponse.json({ error: 'The "Getting Started" lesson cannot be deleted as it is a required system lesson.' }, { status: 400 })
+    }
+
     await prisma.lesson.delete({ where: { id: existing.id } })
 
     return NextResponse.json({ ok: true, deleted: existing.id, title: existing.title_en })

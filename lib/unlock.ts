@@ -23,7 +23,8 @@ export function isUnlocked() {
     if (legacyKey && window.localStorage.getItem(legacyKey) !== null) {
       window.localStorage.removeItem(legacyKey)
     }
-    if (window.localStorage.getItem(key) === 'true') {
+    const stored = window.localStorage.getItem(key)
+    if (stored && stored !== 'false') {
       return true
     }
   } catch (err) {
@@ -38,13 +39,13 @@ export function isUnlocked() {
   }
 
   const cookieMatch = typeof document !== 'undefined'
-    ? document.cookie.match(/(?:^|;\s*)(wiki-[^=]+-access)=true/)
+    ? document.cookie.match(/(?:^|;\s*)(wiki-[^=]+-access)=([^;]+)/)
     : null
-  const hasCookie = Boolean(cookieMatch)
-
-  if (hasCookie) {
+  
+  if (cookieMatch && cookieMatch[2]) {
+    const code = cookieMatch[2]
     try {
-      window.localStorage.setItem(key, 'true')
+      window.localStorage.setItem(key, code)
     } catch (err) {
       console.warn('Failed to persist unlock state in localStorage', err)
     }
@@ -54,7 +55,7 @@ export function isUnlocked() {
   return false
 }
 
-export function setUnlocked(v: boolean) {
+export function setUnlocked(v: boolean | string) {
   if (typeof window === 'undefined') return
 
   const key = getUnlockKey()
@@ -70,8 +71,10 @@ export function setUnlocked(v: boolean) {
   }
 
   try {
-    if (v) {
+    if (v === true) {
       window.localStorage.setItem(key, 'true')
+    } else if (typeof v === 'string') {
+      window.localStorage.setItem(key, v)
     } else {
       window.localStorage.removeItem(key)
     }

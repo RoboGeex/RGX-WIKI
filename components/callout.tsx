@@ -14,12 +14,12 @@ export default function Callout({ callout, locale }: { callout: LessonBodyItem; 
   const text = locale === 'ar' ? callout.ar : callout.en
   const html = locale === 'ar' ? callout.html_ar : callout.html_en
   return (
-    <div className={clsx('rounded-xl p-4 border flex gap-3 items-start', variant.cls)}>
+    <div className={clsx('rounded-3xl p-5 border flex gap-3 items-start shadow-md', variant.cls)}>
       <Icon size={18} className="mt-0.5" />
       {html ? (
-        <div className="text-sm" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <p className="text-sm">{text}</p>
+        <p className="text-sm text-gray-700">{text}</p>
       )}
     </div>
   )

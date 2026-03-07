@@ -1774,11 +1774,19 @@ export default function SegmentEditor({
                               ) : segment.type === 'image' ? (
                                 <div className="space-y-3">
                                   {segment.image ? (
-                                    <div className="relative group w-full aspect-[1920/720] overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
+                                    <div className={`relative group w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-md ${
+                                      (segment.layoutMode === '1:1') ? 'aspect-square flex items-center justify-center' :
+                                      (segment.layoutMode === '3:4') ? 'aspect-[3/4] flex items-center justify-center' :
+                                      (segment.layoutMode === '2:3') ? 'aspect-[2/3] flex items-center justify-center' :
+                                      (segment.layoutMode === '16:9') ? 'aspect-video flex items-center justify-center' :
+                                      ''
+                                    }`}>
                                       <img 
                                         src={segment.image} 
                                         alt="Segment asset" 
-                                        className="h-full w-full object-contain"
+                                        className={`w-full block ${
+                                          (segment.layoutMode && segment.layoutMode !== 'fit') ? 'h-full object-cover' : 'h-auto object-cover'
+                                        }`}
                                       />
                                       <button
                                         type="button"
@@ -1832,11 +1840,18 @@ export default function SegmentEditor({
                               ) : segment.type === 'video' ? (
                                  <div className="space-y-3">
                                   {segment.url ? (
-                                    <div className="relative group w-full aspect-video overflow-hidden rounded-lg border border-gray-200 bg-black flex items-center justify-center">
+                                    <div className={`relative group w-full overflow-hidden rounded-2xl border border-gray-200 bg-black flex items-center justify-center ${
+                                      (segment.layoutMode || 'aspect-video') === '1:1' ? 'aspect-square' :
+                                      (segment.layoutMode || 'aspect-video') === '3:4' ? 'aspect-[3/4]' :
+                                      (segment.layoutMode || 'aspect-video') === '2:3' ? 'aspect-[2/3]' :
+                                      (segment.layoutMode || 'aspect-video') === '16:9' ? 'aspect-video' :
+                                      (segment.layoutMode === 'fit') ? '' :
+                                      'aspect-video'
+                                    }`}>
                                       <video 
                                         src={segment.url} 
                                         controls={!segment.url.includes('vimeo')}
-                                        className="h-full w-full"
+                                        className={`w-full block object-cover ${(segment.layoutMode === 'fit') ? 'h-auto' : 'h-full'}`}
                                       />
                                       <button
                                         type="button"
@@ -2153,8 +2168,16 @@ export default function SegmentEditor({
                                 <div className="space-y-4" dir="rtl">
                                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 opacity-75">
                                     {(segment.images || []).map((imgUrl, index) => (
-                                      <div key={index} className="relative aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-                                        <img src={imgUrl} alt={`Slide ${index + 1}`} className="w-full h-full object-cover" />
+                                      <div key={index} className={`relative rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm ${
+                                        (segment.layoutMode || 'fit') === '1:1' ? 'aspect-square' :
+                                        (segment.layoutMode || 'fit') === '3:4' ? 'aspect-[3/4]' :
+                                        (segment.layoutMode || 'fit') === '2:3' ? 'aspect-[2/3]' :
+                                        (segment.layoutMode || 'fit') === '16:9' ? 'aspect-video' :
+                                        'aspect-[4/3]'
+                                      }`}>
+                                        <img src={imgUrl} alt={`Slide ${index + 1}`} className={`w-full h-full ${
+                                          ((segment.layoutMode || 'fit') === '1:1' || (segment.layoutMode || 'fit') === '3:4' || (segment.layoutMode || 'fit') === '2:3' || (segment.layoutMode || 'fit') === '16:9') ? 'object-cover' : 'object-cover'
+                                        }`} />
                                       </div>
                                     ))}
                                   </div>
@@ -2165,11 +2188,19 @@ export default function SegmentEditor({
                               ) : segment.type === 'image' ? (
                                 <div className="space-y-3">
                                   {segment.image_ar ? (
-                                    <div className="relative group w-full aspect-[1920/720] overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
+                                    <div className={`relative group w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${
+                                      (segment.layoutMode === '1:1') ? 'aspect-square flex items-center justify-center' :
+                                      (segment.layoutMode === '3:4') ? 'aspect-[3/4] flex items-center justify-center' :
+                                      (segment.layoutMode === '2:3') ? 'aspect-[2/3] flex items-center justify-center' :
+                                      (segment.layoutMode === '16:9') ? 'aspect-video flex items-center justify-center' :
+                                      ''
+                                    }`}>
                                       <img 
                                         src={segment.image_ar} 
                                         alt="Arabic version asset" 
-                                        className="h-full w-full object-contain"
+                                        className={`w-full block ${
+                                          (segment.layoutMode && segment.layoutMode !== 'fit') ? 'h-full object-cover' : 'h-auto object-cover'
+                                        }`}
                                       />
                                       <button
                                         type="button"

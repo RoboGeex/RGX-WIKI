@@ -67,7 +67,7 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
         throw new Error(data.error || t('invalidAccessCode', locale))
       }
 
-      setUnlocked(true)
+      setUnlocked(accessCode)
       setFeedback({ status: 'success', message: t('accessCodeSuccess', locale) })
       setTimeout(() => {
         window.location.href = redirect

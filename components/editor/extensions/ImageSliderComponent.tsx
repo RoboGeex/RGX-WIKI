@@ -1,6 +1,6 @@
 import { NodeViewWrapper } from '@tiptap/react'
-import React, { useState, useEffect, memo } from 'react'
-import { ChevronLeft, ChevronRight, Trash2, LayoutGrid, Check, GripVertical, Plus, Loader2 } from 'lucide-react'
+import React, { useState, useEffect, useRef, memo } from 'react'
+import { ChevronLeft, ChevronRight, Trash2, LayoutGrid, Check, GripVertical, Plus, Loader2, RefreshCw } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -22,9 +22,10 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 
 import { ImageSlideData } from './ImageSlider'
+import { RichCaptionInput } from './RichCaptionInput'
 
 // Sortable Image Item Component
-const SortableImageItem = memo(function SortableImageItem(props: { id: string; item: ImageSlideData; index: number; onRemove: () => void; onCaptionChange: (newCaption: string) => void }) {
+const SortableImageItem = memo(function SortableImageItem(props: { id: string; item: ImageSlideData; index: number; onRemove: () => void; onReplace: (newUrl: string) => void; onCaptionChange: (newCaption: string) => void }) {
   const {
     attributes,
     listeners,
@@ -37,7 +38,53 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.3 : 1, // Reduced opacity for original item while dragging
+    opacity: isDragging ? 0.3 : 1,
+  }
+
+  const [isReplacing, setIsReplacing] = useState(false)
+  const [localCaption, setLocalCaption] = useState(props.item.caption || '')
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    setLocalCaption(props.item.caption || '')
+  }, [props.item.caption])
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    }
+  }, [])
+
+  const handleBlur = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+    }
+    if (localCaption !== props.item.caption) {
+      props.onCaptionChange(localCaption)
+    }
+  }
+
+  const handleReplace = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsReplacing(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const urlParams = new URLSearchParams(window.location.search)
+      const wikiSlug = urlParams.get('wiki')
+      if (wikiSlug) formData.append('wikiSlug', wikiSlug)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) throw new Error('Upload failed')
+      const data = await res.json()
+      props.onReplace(data.url)
+    } catch {
+      alert('Failed to replace image')
+    } finally {
+      setIsReplacing(false)
+      e.target.value = ''
+    }
   }
 
   return (
@@ -74,6 +121,15 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
           <Trash2 size={14} />
         </button>
 
+        {/* Replace Button */}
+        <label
+          className={`absolute bottom-2 right-2 p-1.5 bg-blue-500/90 text-white rounded-lg opacity-0 group-hover:opacity-100 hover:bg-blue-500 transition-all shadow-sm z-10 cursor-pointer ${isReplacing ? 'pointer-events-none opacity-70' : ''}`}
+          title="Replace image"
+        >
+          {isReplacing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          <input type="file" accept="image/*" className="hidden" onChange={handleReplace} disabled={isReplacing} />
+        </label>
+
         {/* Index Badge */}
         <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 backdrop-blur-sm text-white text-xs font-medium rounded-md pointer-events-none">
           {props.index + 1}
@@ -81,21 +137,21 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
       </div>
 
       {/* Individual Caption Input */}
-      <input
-        type="text"
-        className="w-full text-xs text-gray-600 bg-transparent border border-transparent hover:border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 outline-none transition-colors placeholder:text-gray-400"
-        placeholder="Add caption..."
-        value={props.item.caption || ''}
-        onChange={(e) => props.onCaptionChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            e.currentTarget.blur()
-          }
-          e.stopPropagation()
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      />
+      <div className="w-full relative z-10">
+        <RichCaptionInput
+          initialContent={localCaption}
+          onChange={(html) => {
+            setLocalCaption(html)
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+            debounceTimerRef.current = setTimeout(() => {
+              props.onCaptionChange(html)
+            }, 1000)
+          }}
+          onBlur={handleBlur}
+          placeholder="Add caption..."
+          className="max-w-none text-xs"
+        />
+      </div>
     </div>
   )
 })
@@ -282,6 +338,11 @@ export default function ImageSliderComponent(props: any) {
                     item={item}
                     index={index}
                     onRemove={() => removeImage(index)}
+                    onReplace={(newUrl: string) => {
+                      const newImages = [...images]
+                      newImages[index] = { ...newImages[index], url: newUrl }
+                      props.updateAttributes({ images: newImages })
+                    }}
                     onCaptionChange={(newCaption) => {
                       const newImages = [...images]
                       newImages[index] = { ...newImages[index], caption: newCaption }
@@ -305,28 +366,50 @@ export default function ImageSliderComponent(props: any) {
           </DndContext>
         </div>
       ) : (
-        <div className="inline-flex w-full max-w-[720px]">
-          <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center" style={{ height: '462px' }}>
-            {/* Current Image */}
-            <img
-              src={images[currentIndex]?.url}
-              alt={images[currentIndex]?.caption || `Slide ${currentIndex + 1}`}
-              className="block h-full w-full object-contain pointer-events-none"
-            />
+        <div className="inline-flex flex-col w-full max-w-[720px] mx-auto">
+          <div
+            className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-white not-prose shadow-md ${
+              props.node.attrs.layoutMode === '1:1' ? 'aspect-square' :
+              props.node.attrs.layoutMode === '3:4' ? 'aspect-[3/4]' :
+              props.node.attrs.layoutMode === '2:3' ? 'aspect-[2/3]' :
+              props.node.attrs.layoutMode === '16:9' ? 'aspect-video' :
+              ''
+            }`}
+            style={(!props.node.attrs.layoutMode || props.node.attrs.layoutMode === 'fit') ? { display: 'grid', gridTemplateAreas: '"stack"', fontSize: 0, lineHeight: 0 } : {}}
+          >
+            {/* All images stacked in the same grid cell — the tallest/widest one sizes the container */}
+            {images.map((img: any, idx: number) => {
+              const isActive = idx === currentIndex
 
-            {/* Display active caption overlay if present */}
-            {images[currentIndex]?.caption && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 max-w-[80%] px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg text-white text-sm text-center">
-                {images[currentIndex].caption}
-              </div>
-            )}
+              return (
+                <div
+                  key={idx}
+                  style={(!props.node.attrs.layoutMode || props.node.attrs.layoutMode === 'fit') ? { gridArea: 'stack', fontSize: 0, lineHeight: 0 } : {}}
+                  className={`w-full flex items-center justify-center !m-0 !p-0 ${isActive ? 'visible opacity-100 z-10' : 'invisible opacity-0 pointer-events-none z-0'} ${
+                    (props.node.attrs.layoutMode === '1:1' || props.node.attrs.layoutMode === '3:4' || props.node.attrs.layoutMode === '2:3' || props.node.attrs.layoutMode === '16:9') ? 'absolute inset-0 h-full' : ''
+                  }`}
+                  aria-hidden={!isActive}
+                >
+                  <img
+                    src={img.url}
+                    alt={img.caption || `Slide ${idx + 1}`}
+                    className={`block w-full pointer-events-none !m-0 !p-0 ${
+                      (props.node.attrs.layoutMode === '1:1' || props.node.attrs.layoutMode === '3:4' || props.node.attrs.layoutMode === '2:3' || props.node.attrs.layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'
+                    }`}
+                    style={{ display: 'block', margin: 0, padding: 0 }}
+                  />
+                </div>
+              )
+            })}
+
+            {/* Removed active caption overlay from here */}
 
             {/* Navigation */}
             {images.length > 1 && (
               <>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); prev(); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100 z-10"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100 z-20"
                   type="button"
                   title="Previous"
                 >
@@ -334,7 +417,7 @@ export default function ImageSliderComponent(props: any) {
                 </button>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); next(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100 z-10"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100 z-20"
                   type="button"
                   title="Next"
                 >
@@ -342,7 +425,7 @@ export default function ImageSliderComponent(props: any) {
                 </button>
 
                 {/* Dots */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 p-1 rounded-full bg-black/10 backdrop-blur-[2px]">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 p-1 rounded-full bg-black/10 backdrop-blur-[2px]">
                   {images.map((_: any, idx: number) => (
                     <button
                       key={idx}
@@ -354,16 +437,12 @@ export default function ImageSliderComponent(props: any) {
                   ))}
                 </div>
 
-                {/* Counter */}
-                <div className="absolute top-4 right-4 px-2 py-1 bg-black/50 backdrop-blur-sm rounded text-xs text-white font-medium">
-                  {currentIndex + 1} / {images.length}
-                </div>
               </>
             )}
 
             {/* Editor Controls */}
             {props.editor?.isEditable && (
-              <div className="absolute top-4 left-4 flex items-center gap-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-4 left-4 flex items-center gap-1.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsReordering(true); }}
                   className="px-2.5 py-1.5 bg-black/50 backdrop-blur-sm rounded-lg text-white hover:bg-black/70 transition-colors flex items-center gap-1.5 text-sm font-medium mr-2"
@@ -374,7 +453,43 @@ export default function ImageSliderComponent(props: any) {
                   Reorder
                 </button>
 
-
+                <div className="flex bg-black/50 backdrop-blur-sm rounded-lg p-0.5 ml-2 border border-white/10">
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: 'fit' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${(!props.node.attrs.layoutMode || props.node.attrs.layoutMode === 'fit') ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    type="button"
+                  >
+                    Fit
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '1:1' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '1:1' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    type="button"
+                  >
+                    1:1
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '3:4' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '3:4' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    type="button"
+                  >
+                    3:4
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '2:3' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '2:3' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    type="button"
+                  >
+                    2:3
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '16:9' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '16:9' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    type="button"
+                  >
+                    16:9
+                  </button>
+                </div>
                 <button
                   onClick={removeCurrentImage}
                   className="p-1.5 bg-red-500/80 backdrop-blur-sm rounded text-white hover:bg-red-500 transition-colors ml-2"
@@ -386,6 +501,14 @@ export default function ImageSliderComponent(props: any) {
               </div>
             )}
           </div>
+
+          {/* Active caption displayed as a standard figure caption below the box */}
+          {images[currentIndex]?.caption && (
+            <div
+              className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
+              dangerouslySetInnerHTML={{ __html: images[currentIndex].caption }}
+            />
+          )}
         </div>
       )}
 

@@ -81,6 +81,8 @@ export default memo(function SegmentTiptapEditor({
       heading: false,
       codeBlock: false,
       blockquote: false,
+      link: false,
+      underline: false,
     }),
     Underline,
     Link.configure({ openOnClick: true, autolink: true, linkOnPaste: true }),

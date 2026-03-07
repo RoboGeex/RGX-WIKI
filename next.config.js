@@ -3,6 +3,10 @@ const nextConfig = {
   experimental: {
     outputFileTracingRoot: undefined,
     serverComponentsExternalPackages: ['ssh2', 'ssh2-sftp-client'],
+    // Allow large video uploads (up to 500 MB) without 413 Payload Too Large errors
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
   },
   // Disable source maps in production for smaller builds
   productionBrowserSourceMaps: false,

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     maxAge: 0,
   })
 
-  response.cookies.set(`wiki-${wiki.slug}-access`, 'true', {
+  response.cookies.set(`wiki-${wiki.slug}-access`, process.env.USE_DB === 'true' ? rawCode : 'true', {
     path: '/',
     maxAge: ONE_YEAR_SECONDS,
     httpOnly: false,

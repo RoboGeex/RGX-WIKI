@@ -2,8 +2,9 @@ import KitNavbar from '@/components/kit-navbar'
 import { getKit, getLessons, getWiki } from '@/lib/data'
 import { redirect } from 'next/navigation'
 import type { Locale } from '@/lib/i18n'
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
+import { getPrisma } from '@/lib/prisma-multi'
 
 export default async function KitLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale; kit: string } }
@@ -15,6 +16,24 @@ export default async function KitLayout(
   // If kit not found, redirect to default kit
   if (!kitData) {
     redirect(`/${locale}/student-kit`)
+  }
+
+  // Access check
+  if (process.env.USE_DB === 'true' && wiki) {
+    const db = getPrisma(wiki.slug)
+    const codesCount = await db.accessCode.count({ where: { wikiSlug: wiki.slug } })
+    if (codesCount > 0) {
+      const accessCookieValue = cookies().get(`wiki-${wiki.slug}-access`)?.value
+      const isValid = accessCookieValue 
+        ? await db.accessCode.findFirst({ where: { code: accessCookieValue, wikiSlug: wiki.slug } })
+        : null
+      
+      if (!isValid) {
+        // Find current full path if possible for redirect, or just use kit root
+        const fallbackPath = `/${locale}/${kit}`
+        redirect(`/${locale}/unlock?kit=${kit}&redirect=${encodeURIComponent(fallbackPath)}`)
+      }
+    }
   }
 
   const lessons = await getLessons(kit)

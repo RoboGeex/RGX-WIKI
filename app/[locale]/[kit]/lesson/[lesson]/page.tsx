@@ -13,6 +13,7 @@ import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import Step from '@/components/step'
 import LessonToc from '@/components/lesson-toc'
 import { getListMarker } from '@/lib/segment-types'
+import { ZoomableImage } from '@/components/zoomable-image'
 
 export const dynamic = 'force-dynamic'
 
@@ -127,7 +128,7 @@ export default async function LessonPage(
         <div
           key={index}
           dir={locale === 'ar' ? 'rtl' : 'ltr'}
-          className={`text-base leading-7 text-gray-700 ${paddingClass} space-y-1 my-3`}
+          className={`text-xl leading-7 text-gray-700 ${paddingClass} space-y-1 my-3`}
         >
           {items.map((item: any, itemIndex: number) => {
             const text = typeof item === 'object' ? item.text : item
@@ -142,7 +143,7 @@ export default async function LessonPage(
                   [locale === 'ar' ? 'paddingRight' : 'paddingLeft']: `${indent * 2}rem`
                 }}
               >
-                <span className={`shrink-0 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-black`}>
+                <span className={`shrink-0 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-gray-700`}>
                   {marker}
                 </span>
                 <div
@@ -220,11 +221,11 @@ export default async function LessonPage(
       if (!images.length) return null
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (
-        <figure key={index} className="mt-2 mb-6 flex flex-col items-center w-full">
-          <LessonImageSlider images={images} />
+        <figure key={index} className="mt-2 mb-8 flex flex-col items-center w-full">
+          <LessonImageSlider images={images} layoutMode={block.layoutMode} />
           {caption ? (
             <figcaption
-              className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
+              className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
               dangerouslySetInnerHTML={{ __html: caption }}
             />
           ) : null}
@@ -242,6 +243,7 @@ export default async function LessonPage(
       const imageUrl = locale === 'ar' && block.image_ar ? block.image_ar : block.image
       const width = block.width || '100%'
       const align = block.align || 'center'
+      const layoutMode = block.layoutMode || 'fit'
 
       const alignClass =
         align === 'left' ? 'items-start' :
@@ -251,20 +253,33 @@ export default async function LessonPage(
       return (
         <figure
           key={index}
-          className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}
+          className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}
         >
           <div style={{ width, maxWidth: '100%' }}>
-            <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
-              <img
-                src={imageUrl}
-                alt={caption || ''}
-                className="w-full h-auto object-contain block"
-                loading="lazy"
-              />
+            <div className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-md ${
+              (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') 
+                ? `${
+                    layoutMode === '1:1' ? 'aspect-square' :
+                    layoutMode === '3:4' ? 'aspect-[3/4]' :
+                    layoutMode === '2:3' ? 'aspect-[2/3]' :
+                    'aspect-video'
+                  }`
+                : ''
+            }`}>
+              <ZoomableImage className="w-full h-full">
+                <img
+                  src={imageUrl}
+                  alt={caption || ''}
+                  className={`block w-full !m-0 !p-0 ${
+                    (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
+                  }`}
+                  loading="lazy"
+                />
+              </ZoomableImage>
             </div>
             {caption ? (
               <figcaption
-                className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
+                className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
                 dangerouslySetInnerHTML={{ __html: caption }}
               />
             ) : null}
@@ -283,17 +298,24 @@ export default async function LessonPage(
       const width = block.width || '100%'
       const align = block.align || 'center'
       const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
+      const layoutMode = block.layoutMode || 'aspect-video'
 
       return (
-        <figure key={index} className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}>
+        <figure key={index} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
           <div style={{ width, maxWidth: '100%' }}>
-            <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+            <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm ${
+              layoutMode === '1:1' ? 'aspect-square' :
+              layoutMode === '3:4' ? 'aspect-[3/4]' :
+              layoutMode === '2:3' ? 'aspect-[2/3]' :
+              layoutMode === '16:9' ? 'aspect-video' :
+              'aspect-video'
+            }`}>
               <iframe
                 src={embedUrl}
                 title={title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
-                className="h-full w-full block"
+                className="h-full w-full block object-cover"
               />
             </div>
           </div>
@@ -326,32 +348,46 @@ export default async function LessonPage(
       const width = block.width || '100%'
       const align = block.align || 'center'
       const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
+      const layoutMode = block.layoutMode || 'aspect-video'
 
       return (
-        <figure key={index} className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}>
+        <figure key={index} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
           <div style={{ width, maxWidth: '100%' }}>
             {provider === 'vimeo' || provider === 'youtube' ? (
-              <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+              <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm ${
+                layoutMode === '1:1' ? 'aspect-square' :
+                layoutMode === '3:4' ? 'aspect-[3/4]' :
+                layoutMode === '2:3' ? 'aspect-[2/3]' :
+                layoutMode === '16:9' ? 'aspect-video' :
+                'aspect-video'
+              }`}>
                 <iframe
                   src={getEmbedUrl(block.url)}
                   title={caption || lessonDisplayTitle || (provider === 'youtube' ? 'YouTube video' : 'Vimeo video')}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
-                  className="h-full w-full block"
+                  className="h-full w-full block object-cover"
                 />
               </div>
             ) : (
-              <div className="w-full aspect-video rounded-xl border border-gray-200 shadow-sm overflow-hidden bg-black flex items-center justify-center">
+              <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm flex items-center justify-center ${
+                layoutMode === '1:1' ? 'aspect-square' :
+                layoutMode === '3:4' ? 'aspect-[3/4]' :
+                layoutMode === '2:3' ? 'aspect-[2/3]' :
+                layoutMode === '16:9' ? 'aspect-video' :
+                layoutMode === 'fit' ? '' :
+                'aspect-video'
+              }`}>
                 <video
                   controls
-                  className="w-full h-full object-contain block"
+                  className={`w-full block object-cover ${layoutMode === 'fit' ? 'h-auto' : 'h-full'}`}
                   src={block.url}
                   poster={block.poster || undefined}
                 />
               </div>
             )}
             {caption ? (
-              <figcaption className="mt-3 text-xs text-gray-500 text-center leading-relaxed" dangerouslySetInnerHTML={{ __html: caption }} />
+              <figcaption className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight" dangerouslySetInnerHTML={{ __html: caption }} />
             ) : null}
           </div>
         </figure>
@@ -433,13 +469,15 @@ export default async function LessonPage(
         <div className="flex-1 space-y-6">
           <div className="bg-white border border-gray-200 rounded-3xl shadow-md overflow-hidden">
             <div className="w-full bg-gray-100">
-              <img
-                src={coverSrc}
-                alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
-                className="w-full h-[150px] md:h-[240px] object-cover"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
+              <ZoomableImage>
+                <img
+                  src={coverSrc}
+                  alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
+                  className="w-full h-[150px] md:h-[240px] object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
+              </ZoomableImage>
             </div>
             <div className="p-5 md:p-8 xl:p-10 space-y-6">
               <header className="space-y-2 border-b border-gray-200 pb-4">

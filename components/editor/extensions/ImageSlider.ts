@@ -66,6 +66,12 @@ const ImageSlider = Node.create<ImageSliderOptions>({
       title: {
         default: null,
       },
+      layoutMode: {
+        default: 'fit',
+        renderHTML: (attributes: Record<string, any>) => ({
+          'data-layout-mode': attributes.layoutMode,
+        }),
+      },
     }
   },
 

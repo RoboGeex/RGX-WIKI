@@ -1063,6 +1063,15 @@ export default function WikiEditor() {
           nodes.push(cloneNode(jsonNode))
           return
         }
+
+        // If it lacks our language's json but has the other language's json,
+        // it means this block is exclusive to the other language (e.g. was deleted here).
+        // Do NOT reconstruct it from shared/legacy fields.
+        const oppositeKey = language === 'en' ? 'json_ar' : 'json_en'
+        if (item[oppositeKey]) {
+          return
+        }
+
         const textValue = typeof item[textKey] === 'string' ? item[textKey] : ''
         switch (item.type) {
           case 'heading':
@@ -1745,21 +1754,67 @@ export default function WikiEditor() {
     return blocks
   }
 
-  function deepMergeBlocks(primary: any[], secondary: any[]): any[] {
+  // ---- Locale-safe field sets ----
+  const EN_ONLY_FIELDS = new Set([
+    'en', 'html_en', 'title_en', 'caption_en', 'items_en', 'json_en',
+  ])
+  const AR_ONLY_FIELDS = new Set([
+    'ar', 'html_ar', 'title_ar', 'caption_ar', 'items_ar', 'json_ar',
+  ])
+  const SHARED_FIELDS = new Set([
+    'type', 'image', 'image_ar', 'url', 'poster', 'provider',
+    'width', 'align', 'layoutMode', 'images', 'level', 'ordered',
+    'count', 'language', 'variant',
+  ])
+
+  /**
+   * Locale-safe merge: EN fields come only from the EN extraction,
+   * AR fields come only from the AR extraction, shared/media fields
+   * are taken from the primary (active-tab) editor to avoid last-write-wins.
+   * Nested `content` arrays (columns) are merged recursively.
+   */
+  function deepMergeBlocks(enBlocks: any[], arBlocks: any[]): any[] {
     const merged: any[] = []
-    const length = Math.max(primary.length, secondary.length)
-    
+    const length = Math.max(enBlocks.length, arBlocks.length)
+
     for (let i = 0; i < length; i++) {
-      const pBlock = primary[i] || {}
-      const sBlock = secondary[i] || {}
-      
-      const mergedBlock = { ...sBlock, ...pBlock }
-      
-      // If both blocks have an array of children (like columns/column), merge them recursively
-      if (Array.isArray(pBlock.content) && Array.isArray(sBlock.content)) {
-        mergedBlock.content = deepMergeBlocks(pBlock.content, sBlock.content)
+      const enBlock = enBlocks[i] || {}
+      const arBlock = arBlocks[i] || {}
+
+      const mergedBlock: any = {}
+
+      // 1. Collect all keys from both blocks
+      const allKeys = new Set([...Object.keys(enBlock), ...Object.keys(arBlock)])
+
+      for (const key of allKeys) {
+        if (key === 'content') continue // handled below
+
+        if (EN_ONLY_FIELDS.has(key)) {
+          // EN-only → always from EN block
+          if (key in enBlock) mergedBlock[key] = enBlock[key]
+        } else if (AR_ONLY_FIELDS.has(key)) {
+          // AR-only → always from AR block
+          if (key in arBlock) mergedBlock[key] = arBlock[key]
+        } else {
+          // Shared field → prefer primary (active tab) editor's value, fall back to the other
+          const primaryBlock = activeEditorTab === 'ar' ? arBlock : enBlock
+          const secondaryBlock = activeEditorTab === 'ar' ? enBlock : arBlock
+          if (key in primaryBlock) {
+            mergedBlock[key] = primaryBlock[key]
+          } else if (key in secondaryBlock) {
+            mergedBlock[key] = secondaryBlock[key]
+          }
+        }
       }
-      
+
+      // 2. Recursively merge nested content (columns / column children)
+      if (Array.isArray(enBlock.content) || Array.isArray(arBlock.content)) {
+        mergedBlock.content = deepMergeBlocks(
+          enBlock.content || [],
+          arBlock.content || [],
+        )
+      }
+
       merged.push(mergedBlock)
     }
     return merged
@@ -1776,9 +1831,9 @@ export default function WikiEditor() {
     const docAr = editorAr.getJSON()
     const bodyEn = extractBody(docEn, 'en', editorEn)
     const bodyAr = extractBody(docAr, 'ar', editorAr)
-    const primaryBody = activeEditorTab === 'ar' ? bodyAr : bodyEn
-    const secondaryBody = activeEditorTab === 'ar' ? bodyEn : bodyAr
-    const mergedBody = deepMergeBlocks(primaryBody, secondaryBody)
+    // Locale-safe merge: EN fields from bodyEn, AR fields from bodyAr,
+    // shared fields prefer the active tab's editor. No primary/secondary swap needed.
+    const mergedBody = deepMergeBlocks(bodyEn, bodyAr)
     if (bodyEn.length !== bodyAr.length) {
       setStatus('Warning: English and Arabic content differ in structure. Please review the Arabic translation.')
     }
@@ -1981,11 +2036,7 @@ export default function WikiEditor() {
     const bodyEn = extractBody(docEn, 'en', editorEn)
     const bodyAr = extractBody(docAr, 'ar', editorAr)
 
-    const mergedBody = [] as any[]
-    const maxLen = Math.max(bodyEn.length, bodyAr.length)
-    for (let i = 0; i < maxLen; i++) {
-      mergedBody.push({ ...(bodyEn[i] || {}), ...(bodyAr[i] || {}) })
-    }
+    const mergedBody = deepMergeBlocks(bodyEn, bodyAr)
 
     const titleEn = meta.title_en || meta.title_ar || 'Untitled'
     const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'

@@ -95,6 +95,163 @@ export default async function LessonPage(
     }
   }
 
+  // ─── Locale-safe block normalization ───────────────────────────────
+  // The body[] array stores blocks merged by index from EN + AR editors.
+  // When EN and AR have different structure (different block count/types),
+  // the shared `type` field and media attributes may be WRONG for one locale.
+  //
+  // Each block carries json_en / json_ar — the original TipTap JSON node
+  // from each editor. These are the source of truth for each locale.
+  //
+  // normalizeBlockForLocale reconstructs a block using the current locale's
+  // json node, making EN and AR completely independent in the wiki.
+  // Old lessons without json nodes pass through unchanged (backward compat).
+
+  const localeJsonKey = locale === 'ar' ? 'json_ar' : 'json_en'
+  const localeTextKey = locale === 'ar' ? 'ar' : 'en'
+  const localeHtmlKey = locale === 'ar' ? 'html_ar' : 'html_en'
+  const localeTitleKey = locale === 'ar' ? 'title_ar' : 'title_en'
+  const localeCaptionKey = locale === 'ar' ? 'caption_ar' : 'caption_en'
+  const localeItemsKey = locale === 'ar' ? 'items_ar' : 'items_en'
+
+  /**
+   * Reconstruct a body block from the current locale's json node.
+   * Returns null if this block has no content for the current locale
+   * (meaning it only exists in the other language).
+   * Returns the original block unchanged if there are no json nodes (old format).
+   */
+  function normalizeBlockForLocale(block: any): any | null {
+    if (!block || typeof block !== 'object') return null
+
+    const jsonNode = block[localeJsonKey]
+
+    // Old-format block (no json nodes at all) → pass through unchanged
+    if (!jsonNode && !block.json_en && !block.json_ar) {
+      return block
+    }
+
+    // Block has json nodes but NOT for this locale → skip it
+    if (!jsonNode) return null
+
+    // Map TipTap JSON node type → body block type
+    const jType = jsonNode.type
+    switch (jType) {
+      case 'paragraph':
+        return {
+          type: 'paragraph',
+          [localeTextKey]: block[localeTextKey] || '',
+          [localeHtmlKey]: block[localeHtmlKey] || '',
+        }
+      case 'heading':
+        return {
+          type: 'heading',
+          level: jsonNode.attrs?.level || block.level || 2,
+          [localeTextKey]: block[localeTextKey] || '',
+          [localeHtmlKey]: block[localeHtmlKey] || '',
+        }
+      case 'blockquote':
+        return {
+          type: 'callout',
+          variant: block.variant || 'info',
+          [localeTextKey]: block[localeTextKey] || '',
+          [localeHtmlKey]: block[localeHtmlKey] || '',
+        }
+      case 'bulletList':
+      case 'orderedList':
+        return {
+          type: 'list',
+          ordered: jType === 'orderedList',
+          [localeItemsKey]: block[localeItemsKey] || [],
+          [localeTextKey]: block[localeTextKey] || '',
+        }
+      case 'table':
+        return {
+          type: 'table',
+          [localeHtmlKey]: block[localeHtmlKey] || '',
+        }
+      case 'image':
+        return {
+          type: 'image',
+          image: jsonNode.attrs?.src || block.image,
+          width: jsonNode.attrs?.width || block.width,
+          align: jsonNode.attrs?.textAlign || jsonNode.attrs?.align || block.align || 'center',
+          layoutMode: jsonNode.attrs?.layoutMode || block.layoutMode || 'fit',
+          [localeTitleKey]: block[localeTitleKey] || jsonNode.attrs?.alt || jsonNode.attrs?.title || '',
+          [localeCaptionKey]: block[localeCaptionKey] || jsonNode.attrs?.alt || jsonNode.attrs?.title || '',
+        }
+      case 'video':
+        return {
+          type: 'video',
+          url: jsonNode.attrs?.src || block.url,
+          poster: jsonNode.attrs?.poster || block.poster,
+          provider: jsonNode.attrs?.provider || block.provider,
+          width: jsonNode.attrs?.width || block.width,
+          align: jsonNode.attrs?.textAlign || jsonNode.attrs?.align || block.align || 'center',
+          layoutMode: jsonNode.attrs?.layoutMode || block.layoutMode || 'aspect-video',
+          [localeTitleKey]: block[localeTitleKey] || jsonNode.attrs?.title || '',
+          [localeCaptionKey]: block[localeCaptionKey] || jsonNode.attrs?.title || '',
+        }
+      case 'youtube':
+        return {
+          type: 'youtube',
+          url: jsonNode.attrs?.src || block.url,
+          width: jsonNode.attrs?.width || block.width,
+          align: jsonNode.attrs?.textAlign || jsonNode.attrs?.align || block.align || 'center',
+          layoutMode: jsonNode.attrs?.layoutMode || block.layoutMode || 'aspect-video',
+          [localeTitleKey]: block[localeTitleKey] || '',
+        }
+      case 'imageSlider':
+        return {
+          type: 'imageSlider',
+          images: jsonNode.attrs?.images || block.images || [],
+          layoutMode: jsonNode.attrs?.layoutMode || block.layoutMode || 'fit',
+          align: jsonNode.attrs?.textAlign || jsonNode.attrs?.align || block.align || 'center',
+          [localeTitleKey]: block[localeTitleKey] || '',
+          [localeCaptionKey]: block[localeCaptionKey] || '',
+          [localeHtmlKey]: block[localeHtmlKey] || '',
+        }
+      case 'codeBlock':
+        return {
+          type: 'code',
+          language: jsonNode.attrs?.language || block.language || 'typescript',
+          [localeTextKey]: block[localeTextKey] || '',
+          [localeHtmlKey]: block[localeHtmlKey] || '',
+        }
+      case 'horizontalRule':
+        return { type: 'horizontalRule' }
+      case 'columns':
+        return {
+          type: 'columns',
+          count: jsonNode.attrs?.count || block.count || 2,
+          content: Array.isArray(block.content)
+            ? block.content.map((child: any) => normalizeBlockForLocale(child)).filter(Boolean)
+            : [],
+        }
+      case 'column':
+        return {
+          type: 'column',
+          content: Array.isArray(block.content)
+            ? block.content.map((child: any) => normalizeBlockForLocale(child)).filter(Boolean)
+            : [],
+        }
+      default:
+        // Unknown json type — pass through unchanged for backward compat
+        return block
+    }
+  }
+
+  /**
+   * Build a locale-specific block list from the body array.
+   * - Blocks with json nodes for this locale → normalized (independent per locale)
+   * - Blocks with json nodes only for the OTHER locale → skipped
+   * - Blocks without any json nodes (old format) → passed through unchanged
+   */
+  const localeBody: any[] = Array.isArray(lesson.body)
+    ? lesson.body.map((block: any) => normalizeBlockForLocale(block)).filter(Boolean)
+    : []
+
+  // ─── End locale-safe normalization ─────────────────────────────────
+
   const renderBlock = (block: any, index: number) => {
     if (!block || !block.type) return null
 
@@ -239,8 +396,7 @@ export default async function LessonPage(
 
     if (block.type === 'image' && block.image) {
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
-      // Use Arabic image if available in Arabic locale, otherwise use English image
-      const imageUrl = locale === 'ar' && block.image_ar ? block.image_ar : block.image
+      const imageUrl = block.image
       const width = block.width || '100%'
       const align = block.align || 'center'
       const layoutMode = block.layoutMode || 'fit'
@@ -439,9 +595,8 @@ export default async function LessonPage(
     return null
   }
 
-  const renderedBlocks = Array.isArray(lesson.body)
-    ? lesson.body.map((block, index) => renderBlock(block, index)).filter(Boolean)
-    : []
+  // Use locale-normalized blocks instead of raw body
+  const renderedBlocks = localeBody.map((block, index) => renderBlock(block, index)).filter(Boolean)
 
   const clientTocEntries = tocEntries.map((entry) => ({ ...entry }))
 

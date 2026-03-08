@@ -122,6 +122,16 @@ export default function YoutubeComponent(props: any) {
               <button onClick={() => setSize('100%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>
             </div>
 
+            {/* Remove */}
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (typeof deleteNode === 'function') deleteNode(); }}
+              className="p-1 rounded hover:bg-red-50 text-red-500 hover:text-red-600 ml-0.5"
+              title="Remove video"
+              type="button"
+            >
+              <Trash2 size={14} />
+            </button>
+
           </div>
         )}
       </div>

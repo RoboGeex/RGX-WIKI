@@ -51,8 +51,16 @@ export default function VideoComponent(props: any) {
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = null
     }
-    if (caption !== node.attrs.title) {
-      updateAttributes({ title: caption })
+    // Always flush latest caption on blur
+    try {
+      if (caption !== node.attrs.title) {
+        updateAttributes({ title: caption })
+      }
+    } catch {
+      // Retry once if updateAttributes fails due to stale node
+      setTimeout(() => {
+        try { updateAttributes({ title: caption }) } catch { /* give up */ }
+      }, 50)
     }
   }
 
@@ -336,6 +344,16 @@ export default function VideoComponent(props: any) {
               </label>
             )}
 
+            {/* Remove */}
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (typeof deleteNode === 'function') deleteNode(); }}
+              className="p-1 rounded hover:bg-red-50 text-red-500 hover:text-red-600 ml-0.5"
+              title="Remove video"
+              type="button"
+            >
+              <Trash2 size={14} />
+            </button>
+
           </div>
         )}
 
@@ -349,7 +367,7 @@ export default function VideoComponent(props: any) {
                 if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
                 debounceTimerRef.current = setTimeout(() => {
                   updateAttributes({ title: html })
-                }, 1000)
+                }, 300)
               }}
               onBlur={handleBlur}
               placeholder="Add a caption..."

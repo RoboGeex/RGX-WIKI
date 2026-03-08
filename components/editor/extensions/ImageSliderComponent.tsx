@@ -60,8 +60,15 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = null
     }
-    if (localCaption !== props.item.caption) {
-      props.onCaptionChange(localCaption)
+    // Always flush latest caption on blur
+    try {
+      if (localCaption !== props.item.caption) {
+        props.onCaptionChange(localCaption)
+      }
+    } catch {
+      setTimeout(() => {
+        try { props.onCaptionChange(localCaption) } catch { /* give up */ }
+      }, 50)
     }
   }
 
@@ -145,7 +152,7 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
             if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
             debounceTimerRef.current = setTimeout(() => {
               props.onCaptionChange(html)
-            }, 1000)
+            }, 300)
           }}
           onBlur={handleBlur}
           placeholder="Add caption..."
@@ -497,6 +504,15 @@ export default function ImageSliderComponent(props: any) {
                   type="button"
                 >
                   <Trash2 size={16} />
+                </button>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (typeof props.deleteNode === 'function') props.deleteNode(); }}
+                  className="px-2.5 py-1.5 bg-red-500/80 backdrop-blur-sm rounded-lg text-white hover:bg-red-500 transition-colors flex items-center gap-1.5 text-sm font-medium ml-1"
+                  title="Remove entire slider"
+                  type="button"
+                >
+                  <Trash2 size={14} />
+                  Remove
                 </button>
               </div>
             )}

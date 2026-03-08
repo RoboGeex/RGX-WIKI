@@ -2,12 +2,12 @@
 import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import Image from '@tiptap/extension-image'
 import React, { useEffect, useState, useRef } from 'react'
-import { AlignLeft, AlignCenter, AlignRight, Maximize, RefreshCw, Loader2 } from 'lucide-react'
+import { AlignLeft, AlignCenter, AlignRight, Maximize, RefreshCw, Loader2, Trash2 } from 'lucide-react'
 import { RichCaptionInput } from './RichCaptionInput'
 import { NodeViewErrorBoundary } from './NodeViewErrorBoundary'
 
 const ResizableImageComponent = (props: any) => {
-  const { node, updateAttributes, selected } = props
+  const { node, updateAttributes, selected, deleteNode } = props
   const [width, setWidth] = useState(node.attrs.width || '100%')
   const [textAlign, setTextAlign] = useState(node.attrs.textAlign || 'center') // left | center | right
   const [caption, setCaption] = useState(node.attrs.title || '')
@@ -36,9 +36,16 @@ const ResizableImageComponent = (props: any) => {
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = null
     }
-    // Final sync
-    if (caption !== node.attrs.title) {
-      updateAttributes({ title: caption })
+    // Always flush latest caption on blur (even if debounce hasn't fired)
+    try {
+      if (caption !== node.attrs.title) {
+        updateAttributes({ title: caption })
+      }
+    } catch {
+      // Retry once if updateAttributes fails due to stale node
+      setTimeout(() => {
+        try { updateAttributes({ title: caption }) } catch { /* give up */ }
+      }, 50)
     }
   }
 
@@ -151,7 +158,7 @@ const ResizableImageComponent = (props: any) => {
                 if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
                 debounceTimerRef.current = setTimeout(() => {
                   updateAttributes({ title: html })
-                }, 1000)
+                }, 300)
               }}
               onBlur={handleBlur}
               placeholder="Add a caption..."
@@ -199,6 +206,16 @@ const ResizableImageComponent = (props: any) => {
               <span>Replace</span>
               <input ref={replaceInputRef} type="file" accept="image/*" className="hidden" onChange={handleReplace} disabled={isReplacing} />
             </label>
+
+            {/* Remove */}
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (typeof deleteNode === 'function') deleteNode(); }}
+              className="p-1 rounded hover:bg-red-50 text-red-500 hover:text-red-600 ml-0.5"
+              title="Remove image"
+              type="button"
+            >
+              <Trash2 size={14} />
+            </button>
 
           </div>
         )}

@@ -39,6 +39,9 @@ body {
 
 html {
   scroll-behavior: smooth;
+  /* Always reserve scrollbar space so content width is consistent
+     between pages that may or may not need scrolling (wiki vs editor). */
+  scrollbar-gutter: stable;
 }
 
 /* Prevent long unbroken text from overflowing */
@@ -869,20 +872,9 @@ html {
 }
 
 .glass-editor-content {
-  padding: 1.25rem;
   min-height: 400px;
-}
-
-@media (min-width: 768px) {
-  .glass-editor-content {
-    padding: 2rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .glass-editor-content {
-    padding: 2.5rem;
-  }
+  /* Padding is set via Tailwind classes (p-5 md:p-8 xl:p-10) on the element
+     to match the wiki layout exactly. Do NOT add CSS padding here. */
 }
 
 /* Floating Toolbar - Glassmorphic */

@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
+import { buildLessonHref } from "@/lib/wikiPaths";
 import type { Module } from "@/lib/types";
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
   hideLessons?: boolean;
   tocMaxLevel?: number;
   refreshTocTrigger?: number;
+  isHubDomain?: boolean;
 }
 
 interface TocItem {
@@ -40,6 +42,7 @@ export default function Sidebar({
   hideLessons,
   tocMaxLevel = 1,
   refreshTocTrigger,
+  isHubDomain = false,
 }: Props) {
   const pathname = usePathname();
   const safeLocale: Locale =
@@ -219,7 +222,7 @@ export default function Sidebar({
                   return (
                     <a
                       key={lesson.slug}
-                      href={onLessonClick ? "#" : `/${locale}/${lesson.slug}`}
+                      href={onLessonClick ? "#" : buildLessonHref({ locale: safeLocale, kitSlug, lessonSlug: lesson.slug, isHubDomain })}
                       onClick={(e) => {
                         if (onLessonClick) {
                           e.preventDefault();
@@ -265,3 +268,4 @@ export default function Sidebar({
     </>
   );
 }
+

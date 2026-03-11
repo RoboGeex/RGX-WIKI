@@ -62,6 +62,15 @@ const insertListWithFallback = (editor: Editor, range: { from: number; to: numbe
 const items: SlashItem[] = [
   // TEXT FORMATTING
   {
+    title: 'Text',
+    description: 'Just start writing with plain text',
+    shortcut: 'text',
+    icon: 'T',
+    category: 'text',
+    keywords: ['text', 'paragraph', 'p', 'plain', 'normal'],
+    command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setParagraph().run(),
+  },
+  {
     title: 'Heading 1',
     description: 'Large section heading',
     shortcut: '#',
@@ -216,7 +225,7 @@ const items: SlashItem[] = [
           alert('Upload error: ' + (e?.message || 'unknown'))
         }
       }
-      input.click()
+      setTimeout(() => input.click(), 10)
     },
   },
   {
@@ -261,7 +270,7 @@ const items: SlashItem[] = [
           alert(error?.message || 'Failed to upload images for slider')
         }
       }
-      input.click()
+      setTimeout(() => input.click(), 10)
     },
   },
   {
@@ -273,9 +282,10 @@ const items: SlashItem[] = [
     keywords: ['embed', 'video', 'link', 'youtube', 'vimeo', 'url'],
     command: ({ editor, range }: any) => {
       editor.chain().focus().deleteRange(range).run()
-      const url = window.prompt('Enter Video URL (YouTube, Vimeo, or direct link):')
-      if (!url) return
-      editor.chain().focus().insertVideo({ src: url }).run()
+      setTimeout(() => {
+        const url = window.prompt('Enter Video URL (YouTube, Vimeo, or direct link):')
+        if (url) editor.chain().focus().insertVideo({ src: url }).run()
+      }, 10)
     },
   },
   {
@@ -379,7 +389,7 @@ const items: SlashItem[] = [
           document.body.style.cursor = originalCursor
         }
       }
-      input.click()
+      setTimeout(() => input.click(), 10)
     },
   },
 ]
@@ -564,7 +574,11 @@ function renderList(container: HTMLDivElement, { items, command, clientRect }: a
         ${item.shortcut ? `<div class="slash-item-shortcut">${item.shortcut}</div>` : ''}
       `
 
-      btn.addEventListener('click', () => command(item))
+      btn.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        command(item)
+      })
       btn.addEventListener('mouseenter', () => {
         container.querySelectorAll('[data-slash-item]').forEach(el => el.classList.remove('slash-item-active'))
         btn.classList.add('slash-item-active')

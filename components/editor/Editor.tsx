@@ -8,7 +8,8 @@ import { BubbleMenu } from '@tiptap/react/menus'
 import { posToDOMRect, isTextSelection } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Heading from '@tiptap/extension-heading'
+import HeadingBase from '@tiptap/extension-heading'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Image from './extensions/ResizableImage'
 import Youtube from '@tiptap/extension-youtube'
 import YoutubeComponent from './extensions/YoutubeComponent'
@@ -322,7 +323,7 @@ export default function WikiEditor() {
           }
           // Update local version to stay in sync
           if (typeof data.version === 'number') {
-            setDocumentVersion(data.version)
+            setDocumentVersion((prev) => Math.max(prev, data.version))
           }
         }
       } catch (err) {
@@ -564,7 +565,44 @@ export default function WikiEditor() {
         underline: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
       }),
-      Heading.configure({
+      HeadingBase.extend({
+        addProseMirrorPlugins() {
+          const parentPlugins = this.parent?.() || []
+          return [
+            ...parentPlugins,
+            new Plugin({
+              key: new PluginKey('heading-align-reset'),
+              appendTransaction(transactions, oldState, newState) {
+                if (!transactions.some(tr => tr.docChanged)) return null
+                let tr: any = null
+                newState.doc.descendants((node, pos) => {
+                  if (node.type.name !== 'heading') return
+                  const align = node.attrs.textAlign
+                  if (!align || align === 'left') return
+                  // Check if this was already a heading in the old state
+                  let wasHeading = false
+                  try {
+                    const mappedPos = transactions.reduce(
+                      (p, t) => t.mapping.map(p, -1), pos
+                    )
+                    const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
+                    if (oldNode && oldNode.type.name === 'heading') {
+                      wasHeading = true
+                    }
+                  } catch { /* position doesn't exist in old state */ }
+                  
+                  // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
+                  if (!wasHeading) {
+                    if (!tr) tr = newState.tr
+                    tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                  }
+                })
+                return tr
+              },
+            }),
+          ]
+        },
+      }).configure({
         levels: [1, 2, 3],
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
@@ -656,7 +694,43 @@ export default function WikiEditor() {
         underline: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
       }),
-      Heading.configure({
+      HeadingBase.extend({
+        addProseMirrorPlugins() {
+          const parentPlugins = this.parent?.() || []
+          return [
+            ...parentPlugins,
+            new Plugin({
+              key: new PluginKey('heading-align-reset-ar'),
+              appendTransaction(transactions, oldState, newState) {
+                if (!transactions.some(tr => tr.docChanged)) return null
+                let tr: any = null
+                newState.doc.descendants((node, pos) => {
+                  if (node.type.name !== 'heading') return
+                  const align = node.attrs.textAlign
+                  if (!align || align === 'left') return
+                  let wasHeading = false
+                  try {
+                    const mappedPos = transactions.reduce(
+                      (p, t) => t.mapping.map(p, -1), pos
+                    )
+                    const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
+                    if (oldNode && oldNode.type.name === 'heading') {
+                      wasHeading = true
+                    }
+                  } catch { /* position doesn't exist in old state */ }
+                  
+                  // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
+                  if (!wasHeading) {
+                    if (!tr) tr = newState.tr
+                    tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                  }
+                })
+                return tr
+              },
+            }),
+          ]
+        },
+      }).configure({
         levels: [1, 2, 3],
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
@@ -787,6 +861,7 @@ export default function WikiEditor() {
   }, [isVerified, editorAr])
 
   const [status, setStatus] = useState<string>('')
+  const [isSaving, setIsSaving] = useState(false)
 
 
 
@@ -798,6 +873,8 @@ export default function WikiEditor() {
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const initialLoadRef = useRef(!meta.isNew)
   const publishRef = useRef<any>(null)
+  const publishQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const pendingPublishCountRef = useRef(0)
 
   function getFirstHeadingText(editor: any): string {
     const json: any = editor?.getJSON()
@@ -1293,6 +1370,9 @@ export default function WikiEditor() {
         }
         const lesson = await res.json()
         if (cancelled) return
+        if (typeof lesson?.version === 'number') {
+          setDocumentVersion(lesson.version)
+        }
 
         loadedLessonKeyRef.current = cacheKey
 
@@ -1790,13 +1870,13 @@ export default function WikiEditor() {
         if (key === 'content') continue // handled below
 
         if (EN_ONLY_FIELDS.has(key)) {
-          // EN-only → always from EN block
+          // EN-only -> always from EN block
           if (key in enBlock) mergedBlock[key] = enBlock[key]
         } else if (AR_ONLY_FIELDS.has(key)) {
-          // AR-only → always from AR block
+          // AR-only -> always from AR block
           if (key in arBlock) mergedBlock[key] = arBlock[key]
         } else {
-          // Shared field → prefer primary (active tab) editor's value, fall back to the other
+          // Shared field -> prefer primary (active tab) editor's value, fall back to the other
           const primaryBlock = activeEditorTab === 'ar' ? arBlock : enBlock
           const secondaryBlock = activeEditorTab === 'ar' ? enBlock : arBlock
           if (key in primaryBlock) {
@@ -1820,7 +1900,7 @@ export default function WikiEditor() {
     return merged
   }
 
-  async function publish(statusOverride?: 'draft' | 'published') {
+  async function publishNow(statusOverride?: 'draft' | 'published') {
     if (!editorEn || !editorAr) return
     if (!meta.wikiSlug) {
       setStatus('Missing wiki selection. Open the properties panel to choose a wiki.')
@@ -1839,7 +1919,7 @@ export default function WikiEditor() {
     }
     // Generate ID and slug if they don't exist
     const titleEn = meta.title_en || meta.title_ar || 'Untitled'
-    const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'
+    const titleAr = meta.title_ar || meta.title_en || '\u0639\u0646\u0648\u0627\u0646 \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631'
 
     // Generate ID and slug - API will handle uniqueness
     const baseSlug = slugify(titleEn) || 'lesson'
@@ -1922,7 +2002,7 @@ export default function WikiEditor() {
 
       // Update local documentVersion to match what the backend just saved
       if (typeof savedLesson.version === 'number') {
-        setDocumentVersion(savedLesson.version)
+        setDocumentVersion((prev) => Math.max(prev, savedLesson.version))
       }
       try {
         sessionStorage.setItem('lessonMeta', JSON.stringify(updatedMeta))
@@ -1947,6 +2027,26 @@ export default function WikiEditor() {
       console.error('Publish error:', e)
       setStatus(`Error: ${e.message}`)
     }
+  }
+
+  function publish(statusOverride?: 'draft' | 'published') {
+    pendingPublishCountRef.current += 1
+    setIsSaving(true)
+
+    const run = async () => {
+      try {
+        await publishNow(statusOverride)
+      } finally {
+        pendingPublishCountRef.current = Math.max(0, pendingPublishCountRef.current - 1)
+        if (pendingPublishCountRef.current === 0) {
+          setIsSaving(false)
+        }
+      }
+    }
+
+    const queued = publishQueueRef.current.then(run, run)
+    publishQueueRef.current = queued.catch(() => { })
+    return queued
   }
 
   // Autosave Implementation
@@ -2039,7 +2139,7 @@ export default function WikiEditor() {
     const mergedBody = deepMergeBlocks(bodyEn, bodyAr)
 
     const titleEn = meta.title_en || meta.title_ar || 'Untitled'
-    const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'
+    const titleAr = meta.title_ar || meta.title_en || '\u0639\u0646\u0648\u0627\u0646 \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631'
 
     const payload = {
       id: meta.id || slugify(titleEn),
@@ -2424,13 +2524,13 @@ export default function WikiEditor() {
                 href={`/editor/segment?wiki=${meta.wikiSlug}&id=${meta.id}&title=${encodeURIComponent(meta.title_en || '')}`}
                 className="text-xs font-bold text-[#f05d4e] hover:text-[#f05d4e]/80 transition-colors mr-2 hidden xl:block"
               >
-                Switch to Segment Editor →
+                Switch to Segment Editor
               </NextLink>
             )}
 
             <div className="hidden md:flex flex-col items-end mr-4">
               {/* Last Saved Status */}
-              {status.includes('Saving') || status.includes('Autosaving') ? (
+              {isSaving || status.includes('Saving') || status.includes('Autosaving') ? (
                 <div className="text-[10px] text-slate-400 font-medium italic animate-pulse">Saving...</div>
               ) : autosaveProgress > 0 && autosaveProgress < 100 ? (
                 <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
@@ -2536,10 +2636,10 @@ export default function WikiEditor() {
                   setAutosaveProgress(0);
                   publish();
                 }}
-                disabled={saveDisabled}
+                disabled={saveDisabled || isSaving}
                 className="relative z-0 flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-sm disabled:opacity-50"
                 style={{ borderRadius: '8px' }}
-                title={saveDisabled ? 'Only owner/admin can save' : 'Save'}
+                title={saveDisabled ? 'Only owner/admin can save' : isSaving ? 'Save in progress...' : 'Save'}
                 type="button"
               >
                 <Save size={14} className={autosaveProgress > 0 ? 'animate-bounce' : ''} />
@@ -2612,7 +2712,7 @@ export default function WikiEditor() {
                     <div className="glass-editor-header-title">
                       <span className="glass-lang-indicator en">EN</span>
                       <span>English</span>
-                      <span className="text-slate-400 text-xs font-normal">• Left to Right</span>
+                      <span className="text-slate-400 text-xs font-normal">- Left to Right</span>
                     </div>
                     <div className="glass-shortcut-hint">
                       Press <span className="glass-shortcut-key">/</span> for commands
@@ -2698,7 +2798,7 @@ export default function WikiEditor() {
                     <div className="glass-editor-header-title">
                       <span className="glass-lang-indicator ar">AR</span>
                       <span>العربية</span>
-                      <span className="text-slate-400 text-xs font-normal">• Right to Left</span>
+                      <span className="text-slate-400 text-xs font-normal">- Right to Left</span>
                     </div>
                     <div className="flex items-center gap-3">
                       {isVerified && (
@@ -2731,17 +2831,17 @@ export default function WikiEditor() {
                         options={bubbleMenuOptions}
                       >
                         <div className="glass-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowBefore().run()} title="إضافة صف للأعلى"><ArrowUpToLine className="w-3.5 h-3.5" /></button>
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowAfter().run()} title="إضافة صف للأسفل"><ArrowDownToLine className="w-3.5 h-3.5" /></button>
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnBefore().run()} title="إضافة عمود لليسار"><ArrowLeftToLine className="w-3.5 h-3.5" /></button>
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnAfter().run()} title="إضافة عمود لليمين"><ArrowRightToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowBefore().run()} title="إضافة صف ��أع��0"><ArrowUpToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addRowAfter().run()} title="إضافة صف ��أسف�"><ArrowDownToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnBefore().run()} title="إضافة ع�&��د ���`سار"><ArrowLeftToLine className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().addColumnAfter().run()} title="إضافة ع�&��د ���`�&�`� "><ArrowRightToLine className="w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteRow().run()} title="حذف صف" style={{ color: '#ef4444' }}><MinusCircle className="w-3.5 h-3.5" /></button>
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteColumn().run()} title="حذف عمود" style={{ color: '#ef4444' }}><MinusCircle className="w-3.5 h-3.5 rotate-90" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().deleteColumn().run()} title="حذف ع�&��د" style={{ color: '#ef4444' }}><MinusCircle className="w-3.5 h-3.5 rotate-90" /></button>
                           <span className="glass-bubble-divider" />
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().toggleHeaderRow().run()} title="تبديل صف الرأس"><HeadingIcon className="w-3.5 h-3.5" /></button>
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().mergeCells().run()} title="دمج الخلايا"><Merge className="w-3.5 h-3.5" /></button>
-                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().splitCell().run()} title="تقسيم الخلية"><Split className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().toggleHeaderRow().run()} title="تبد�`� صف ا�رأس"><HeadingIcon className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().mergeCells().run()} title="د�&ج ا�خ�ا�`ا"><Merge className="w-3.5 h-3.5" /></button>
+                          <button className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().splitCell().run()} title="ت�س�`�& ا�خ��`ة"><Split className="w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {tableColors.map(c => (
                             <button key={c.name} className="glass-bubble-color" style={{ background: c.value || '#f8fafc' }} onClick={() => editorAr?.chain().focus().setCellAttribute('backgroundColor', c.value || null).run()} title={c.name} />
@@ -2774,9 +2874,9 @@ export default function WikiEditor() {
                           ))}
                           <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorAr ? editorAr?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
                           <span className="glass-bubble-divider" />
-                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'right' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('right').run()} title="محاذاة لليمين"><AlignRight className="inline w-3.5 h-3.5" /></button>
-                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'center' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('center').run()} title="توسيط"><AlignCenter className="inline w-3.5 h-3.5" /></button>
-                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'left' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('left').run()} title="محاذاة لليسار"><AlignLeft className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'right' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('right').run()} title="�&حاذاة ���`�&�`� "><AlignRight className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'center' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('center').run()} title="ت��س�`ط"><AlignCenter className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'left' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('left').run()} title="�&حاذاة ���`سار"><AlignLeft className="inline w-3.5 h-3.5" /></button>
                           <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'justify' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('justify').run()} title="ضبط"><AlignJustify className="inline w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {highlightColors.map(col => (
@@ -3236,11 +3336,3 @@ export default function WikiEditor() {
     </div>
   )
 }
-
-
-
-
-
-
-
-

@@ -613,28 +613,28 @@ export default async function LessonPage(
   const coverSrc = coverCandidates.find((c) => typeof c === 'string' && c.trim().length > 0)?.trim() || placeholder
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
-      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
-        <aside className="lg:w-64 lg:flex-shrink-0">
+    <div className="mx-auto w-full max-w-[1600px] px-0 sm:px-6 lg:px-10 xl:px-12 pt-0 sm:pt-4 pb-10">
+      <div className="flex flex-col gap-0 sm:gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+        <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0">
           <div className="sticky top-20 space-y-4">
             <LessonToc entries={clientTocEntries} lessonTitle={lessonDisplayTitle} />
           </div>
         </aside>
 
         <div className="flex-1 space-y-6">
-          <div className="bg-white border border-gray-200 rounded-3xl shadow-md overflow-hidden">
+          <div className="bg-white sm:border border-gray-200 sm:rounded-3xl sm:shadow-md sm:overflow-hidden">
             <div className="w-full bg-gray-100">
               <ZoomableImage>
                 <img
                   src={coverSrc}
                   alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
-                  className="w-full h-[150px] md:h-[240px] object-cover"
+                  className="w-full aspect-[16/9] sm:aspect-[21/9] md:aspect-[3/1] object-cover sm:rounded-none rounded-2xl"
                   loading="lazy"
                   referrerPolicy="no-referrer"
                 />
               </ZoomableImage>
             </div>
-            <div className="p-5 md:p-8 xl:p-10 space-y-6">
+            <div className="px-4 py-6 sm:p-5 md:p-8 xl:p-10 space-y-6">
               <header className="space-y-2 border-b border-gray-200 pb-4">
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-primary font-medium uppercase tracking-wide text-[11px]">

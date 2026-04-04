@@ -257,8 +257,8 @@ export async function getWikisFromDb(): Promise<Wiki[]> {
     return []
   }
 
-  const prisma: any = getPrisma()
   try {
+    const prisma: any = getPrisma()
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS Wiki (
         slug VARCHAR(191) NOT NULL,

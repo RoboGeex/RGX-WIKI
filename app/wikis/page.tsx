@@ -4,6 +4,8 @@ import { ArrowRight, Search, Sparkles } from 'lucide-react'
 import { Manrope, Sora } from 'next/font/google'
 import { getWikisFromDb } from '@/lib/server-data'
 
+export const dynamic = 'force-dynamic'
+
 const headingFont = Sora({
   subsets: ['latin'],
   weight: ['600', '700', '800'],

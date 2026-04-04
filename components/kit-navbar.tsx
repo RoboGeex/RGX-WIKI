@@ -47,7 +47,13 @@ export default function KitNavbar({
   const handleLocaleChange = (nextLocale: Locale) => {
     setStoredLocale(nextLocale)
     if (locale !== nextLocale) {
-      const updated = pathname.replace(`/${locale}/`, `/${nextLocale}/`)
+      const currentPath = pathname ?? `/${locale}`
+      const updated =
+        currentPath === `/${locale}`
+          ? `/${nextLocale}`
+          : currentPath.startsWith(`/${locale}/`)
+            ? currentPath.replace(`/${locale}/`, `/${nextLocale}/`)
+            : currentPath
       const query = searchParams?.toString()
       router.push(query ? `${updated}?${query}` : updated)
     }

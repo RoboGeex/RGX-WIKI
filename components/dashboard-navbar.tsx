@@ -49,13 +49,13 @@ export default function DashboardNavbar({ locale, wikiSlug, kitSlug }: Props) {
   }
 
   const isActive = (path: string) => {
-    return pathname === path || pathname.startsWith(path + '/')
+    return pathname === path || (pathname?.startsWith(path + '/') ?? false)
   }
 
   // Extract wiki context from URL
   const getCurrentWikiContext = () => {
     // Check if we're in a wiki-specific route
-    const wikiMatch = pathname.match(/\/dashboard\/([^\/]+)/) || pathname.match(/\/editor\/dashboard\/([^\/]+)/)
+    const wikiMatch = pathname?.match(/\/dashboard\/([^\/]+)/) || pathname?.match(/\/editor\/dashboard\/([^\/]+)/)
     if (wikiMatch) {
       return wikiMatch[1]
     }

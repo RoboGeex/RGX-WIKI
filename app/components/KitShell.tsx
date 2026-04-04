@@ -40,7 +40,13 @@ export default function KitShell({ locale, kitSlug, modules, lessons, defaultLes
 
   const handleLocaleChange = (l: Locale) => {
     setStoredLocale(l)
-    const updated = pathname.replace(`/${locale}/`, `/${l}/`)
+    const currentPath = pathname ?? `/${locale}`
+    const updated =
+      currentPath === `/${locale}`
+        ? `/${l}`
+        : currentPath.startsWith(`/${locale}/`)
+          ? currentPath.replace(`/${locale}/`, `/${l}/`)
+          : currentPath
     const query = searchParams?.toString()
     router.push(query ? `${updated}?${query}` : updated)
   }

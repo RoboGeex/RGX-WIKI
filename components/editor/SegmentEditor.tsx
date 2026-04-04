@@ -1312,8 +1312,8 @@ export default function SegmentEditor({
   
   // Fetch navigation context
   const searchParams = useSearchParams()
-  const lessonTitleFromUrl = searchParams.get('title') || 'Untitled Lesson'
-  const wikiNameFromUrl = searchParams.get('wiki') || 'RGX Wiki'
+  const lessonTitleFromUrl = searchParams?.get('title') || 'Untitled Lesson'
+  const wikiNameFromUrl = searchParams?.get('wiki') || 'RGX Wiki'
   const [editableTitle, setEditableTitle] = useState(lessonTitleFromUrl)
 
   return (

@@ -16,7 +16,7 @@ export default function AdminNavbar({ currentWikiSlug, currentKitSlug }: AdminNa
   const router = useRouter()
 
   const isDashboard = pathname === '/dashboard'
-  const isEditor = pathname.startsWith('/editor')
+  const isEditor = pathname?.startsWith('/editor') ?? false
 
   const handleLogout = () => {
     clearDeveloperId()

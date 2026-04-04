@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import {
   getKit,
   getLesson,
+  getLessons,
   getNextLesson, getPrevLesson,
 } from '@/lib/data'
 import type { Locale } from '@/lib/i18n'
@@ -13,7 +14,9 @@ import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import Step from '@/components/step'
 import LessonToc from '@/components/lesson-toc'
 import { getListMarker } from '@/lib/segment-types'
-import { ZoomableImage } from '@/components/zoomable-image'
+import { InteractiveHtml } from '@/components/lesson/InteractiveHtml'
+import { LessonEmbed, LessonImage, LessonVideo } from '@/components/lesson/LessonMedia'
+import { splitBodyBlocksBySection } from '@/lib/lesson-sections'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,18 +26,22 @@ export default async function LessonPage(
     searchParams,
   }: {
     params: { locale: Locale; kit: string; lesson: string }
-    searchParams?: { preview?: string }
+    searchParams?: { preview?: string; previewId?: string }
   }
 ) {
   const { locale, kit, lesson: lessonSlug } = params
-  const preview = searchParams?.preview === '1' || searchParams?.preview === 'true'
+  const preview = searchParams?.preview === '1' || searchParams?.preview === 'true' || Boolean(searchParams?.previewId)
+  const previewId = (searchParams?.previewId || '').trim()
 
   const kitData = getKit(kit)
   if (!kitData) {
     notFound()
   }
 
-  const lesson = await getLesson(kit, lessonSlug, { includeDrafts: preview })
+  const lesson = preview && previewId
+    ? (await getLessons(kit, { includeDrafts: true })).find((item) => item.id === previewId)
+      || await getLesson(kit, lessonSlug, { includeDrafts: true })
+    : await getLesson(kit, lessonSlug, { includeDrafts: preview })
 
   if (!lesson) {
     notFound()
@@ -50,7 +57,11 @@ export default async function LessonPage(
       .trim()
       .replace(/\s+/g, '-') || 'section'
 
-  const tocEntries: { id: string; text: string; level: number }[] = []
+  const tocEntriesBySection: Record<'summary' | 'lesson', { id: string; text: string; level: number }[]> = {
+    summary: [],
+    lesson: [],
+  }
+  let tocTargetSection: 'summary' | 'lesson' = 'lesson'
   let stepIndex = 0
   const parseYouTubeTime = (value: string): number => {
     if (!value) return 0
@@ -210,6 +221,13 @@ export default async function LessonPage(
           [localeCaptionKey]: block[localeCaptionKey] || '',
           [localeHtmlKey]: block[localeHtmlKey] || '',
         }
+      case 'tagBlock':
+        return {
+          type: 'tagBlock',
+          [localeTitleKey]: block[localeTitleKey] || jsonNode.attrs?.title || '',
+          [localeItemsKey]: Array.isArray(block[localeItemsKey]) ? block[localeItemsKey] : (jsonNode.attrs?.tags || []),
+          [localeTextKey]: block[localeTextKey] || '',
+        }
       case 'codeBlock':
         return {
           type: 'code',
@@ -260,10 +278,10 @@ export default async function LessonPage(
       const text = locale === 'ar' ? (block.ar || '') : (block.en || '')
       if (html) {
         return (
-          <div
+          <InteractiveHtml
             key={index}
             className="text-gray-700"
-            dangerouslySetInnerHTML={{ __html: html }}
+            html={html}
           />
         )
       }
@@ -295,17 +313,17 @@ export default async function LessonPage(
             return (
               <div
                 key={itemIndex}
-                className="flex items-baseline gap-1.5"
+                className="flex items-start gap-2"
                 style={{
                   [locale === 'ar' ? 'paddingRight' : 'paddingLeft']: `${indent * 2}rem`
                 }}
               >
-                <span className={`shrink-0 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-gray-700`}>
+                <span className={`shrink-0 pt-0.5 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-gray-700`}>
                   {marker}
                 </span>
-                <div
-                  className="flex-1 [&_p]:m-0"
-                  dangerouslySetInnerHTML={{ __html: text }}
+                <InteractiveHtml
+                  className="lesson-list-item-content flex-1 min-w-0 [&_p]:m-0"
+                  html={text || ''}
                 />
               </div>
             )
@@ -340,7 +358,7 @@ export default async function LessonPage(
         // Skip duplicating the lesson title in the body; it's already shown in the header card
         return null
       }
-      tocEntries.push({ id, text: anchorText || textValue, level })
+      tocEntriesBySection[tocTargetSection].push({ id, text: anchorText || textValue, level })
 
       return (
         <Tag
@@ -365,10 +383,7 @@ export default async function LessonPage(
       if (!html) return null
       return (
         <div key={index} className="overflow-x-auto my-6">
-          <article
-            className="tiptap max-w-none"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <InteractiveHtml className="tiptap max-w-none" html={html} />
         </div>
       )
     }
@@ -378,15 +393,42 @@ export default async function LessonPage(
       if (!images.length) return null
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (
-        <figure key={index} className="mt-2 mb-8 flex flex-col items-center w-full">
+        <figure key={index} className="media-block flex flex-col items-center w-full">
           <LessonImageSlider images={images} layoutMode={block.layoutMode} />
           {caption ? (
             <figcaption
-              className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
+              className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
               dangerouslySetInnerHTML={{ __html: caption }}
             />
           ) : null}
         </figure>
+      )
+    }
+
+    if (block.type === 'tagBlock') {
+      const title =
+        locale === 'ar'
+          ? (block.title_ar || block.title_en || '')
+          : (block.title_en || block.title_ar || '')
+      const tagsRaw = locale === 'ar' ? block.items_ar : block.items_en
+      const tags = Array.isArray(tagsRaw)
+        ? tagsRaw.map((item: any) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+        : []
+      if (!title && tags.length === 0) return null
+      return (
+        <div key={index} className="lesson-tag-card my-6 rounded-xl border border-[#cfd6da] bg-white p-4 md:p-5">
+          <p className="m-0 mb-3 text-xl md:text-2xl font-semibold uppercase tracking-wide text-gray-900">{title}</p>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag: string, tagIndex: number) => (
+              <span
+                key={`${tag}-${tagIndex}`}
+                className="inline-flex rounded-sm border border-[#c9d3d8] bg-[#eef3f5] px-2.5 py-1.5 text-sm md:text-base font-medium uppercase tracking-[0.02em] text-[#2f363d]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
       )
     }
 
@@ -409,11 +451,11 @@ export default async function LessonPage(
       return (
         <figure
           key={index}
-          className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}
+          className={`media-block flex flex-col ${alignClass} w-full`}
         >
           <div style={{ width, maxWidth: '100%' }}>
             <div className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-md ${
-              (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') 
+              (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9')
                 ? `${
                     layoutMode === '1:1' ? 'aspect-square' :
                     layoutMode === '3:4' ? 'aspect-[3/4]' :
@@ -422,20 +464,19 @@ export default async function LessonPage(
                   }`
                 : ''
             }`}>
-              <ZoomableImage className="w-full h-full">
-                <img
-                  src={imageUrl}
-                  alt={caption || ''}
-                  className={`block w-full !m-0 !p-0 ${
-                    (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
-                  }`}
-                  loading="lazy"
-                />
-              </ZoomableImage>
+              <LessonImage
+                src={imageUrl}
+                alt={caption || ''}
+                zoomable
+                minHeightClassName={layoutMode === 'fit' ? 'min-h-[14rem]' : undefined}
+                imgClassName={`block w-full !m-0 !p-0 ${
+                  (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
+                }`}
+              />
             </div>
             {caption ? (
               <figcaption
-                className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
+                className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
                 dangerouslySetInnerHTML={{ __html: caption }}
               />
             ) : null}
@@ -466,12 +507,10 @@ export default async function LessonPage(
               layoutMode === '16:9' ? 'aspect-video' :
               'aspect-video'
             }`}>
-              <iframe
+              <LessonEmbed
                 src={embedUrl}
                 title={title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full block object-cover"
+                iframeClassName="h-full w-full block"
               />
             </div>
           </div>
@@ -507,7 +546,7 @@ export default async function LessonPage(
       const layoutMode = block.layoutMode || 'aspect-video'
 
       return (
-        <figure key={index} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
+        <figure key={index} className={`media-block flex flex-col ${alignClass} w-full`}>
           <div style={{ width, maxWidth: '100%' }}>
             {provider === 'vimeo' || provider === 'youtube' ? (
               <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm ${
@@ -517,12 +556,10 @@ export default async function LessonPage(
                 layoutMode === '16:9' ? 'aspect-video' :
                 'aspect-video'
               }`}>
-                <iframe
+                <LessonEmbed
                   src={getEmbedUrl(block.url)}
                   title={caption || lessonDisplayTitle || (provider === 'youtube' ? 'YouTube video' : 'Vimeo video')}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="h-full w-full block object-cover"
+                  iframeClassName="h-full w-full block"
                 />
               </div>
             ) : (
@@ -534,16 +571,16 @@ export default async function LessonPage(
                 layoutMode === 'fit' ? '' :
                 'aspect-video'
               }`}>
-                <video
-                  controls
-                  className={`w-full block object-cover ${layoutMode === 'fit' ? 'h-auto' : 'h-full'}`}
+                <LessonVideo
                   src={block.url}
                   poster={block.poster || undefined}
+                  minHeightClassName={layoutMode === 'fit' ? 'min-h-[14rem]' : undefined}
+                  videoClassName={`w-full block object-cover ${layoutMode === 'fit' ? 'h-auto' : 'h-full'}`}
                 />
               </div>
             )}
             {caption ? (
-              <figcaption className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight" dangerouslySetInnerHTML={{ __html: caption }} />
+              <figcaption className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight" dangerouslySetInnerHTML={{ __html: caption }} />
             ) : null}
           </div>
         </figure>
@@ -595,10 +632,32 @@ export default async function LessonPage(
     return null
   }
 
-  // Use locale-normalized blocks instead of raw body
-  const renderedBlocks = localeBody.map((block, index) => renderBlock(block, index)).filter(Boolean)
+  const { summaryBlocks, lessonBlocks, hasMarkers } = splitBodyBlocksBySection(localeBody, locale)
 
-  const clientTocEntries = tocEntries.map((entry) => ({ ...entry }))
+  let renderCounter = 0
+  const renderBlocks = (blocks: any[], section: 'summary' | 'lesson') => {
+    tocTargetSection = section
+    return blocks
+      .map((block) => {
+        const rendered = renderBlock(block, renderCounter)
+        renderCounter += 1
+        return rendered
+      })
+      .filter(Boolean)
+  }
+
+  const renderedSummaryBlocks = renderBlocks(summaryBlocks, 'summary')
+  const renderedLessonBlocks = renderBlocks(lessonBlocks, 'lesson')
+  const defaultSection: 'summary' | 'lesson' = hasMarkers ? 'summary' : 'lesson'
+  const showSectionTabs = hasMarkers
+  const tabBase = `${lesson.id || lesson.slug || 'lesson'}-${locale}`.replace(/[^a-zA-Z0-9_-]/g, '')
+  const summaryTabId = `${tabBase}-summary`
+  const lessonTabId = `${tabBase}-lesson`
+  const summaryPlaceholder = 'Write the lesson summary here.'
+  const lessonPlaceholder = 'Write the lesson content here.'
+
+  const summaryTocEntries = tocEntriesBySection.summary.map((entry) => ({ ...entry }))
+  const lessonTocEntries = tocEntriesBySection.lesson.map((entry) => ({ ...entry }))
 
   const prevLesson = await getPrevLesson(kit, lesson.slug, { includeDrafts: preview })
   const nextLesson = await getNextLesson(kit, lesson.slug, { includeDrafts: preview })
@@ -614,49 +673,126 @@ export default async function LessonPage(
 
   return (
     <div className="mx-auto w-full max-w-[1600px] px-0 sm:px-6 lg:px-10 xl:px-12 pt-0 sm:pt-4 pb-10">
-      <div className="flex flex-col gap-0 sm:gap-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
-        <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0">
-          <div className="sticky top-20 space-y-4">
-            <LessonToc entries={clientTocEntries} lessonTitle={lessonDisplayTitle} />
-          </div>
-        </aside>
-
-        <div className="flex-1 space-y-6">
-          <div className="bg-white sm:border border-gray-200 sm:rounded-3xl sm:shadow-md sm:overflow-hidden">
-            <div className="w-full bg-gray-100">
-              <ZoomableImage>
-                <img
-                  src={coverSrc}
-                  alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
-                  className="w-full aspect-[16/9] sm:aspect-[21/9] md:aspect-[3/1] object-cover sm:rounded-none rounded-2xl"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              </ZoomableImage>
+      <div className={showSectionTabs ? 'lesson-section-tabs' : ''}>
+        {showSectionTabs ? (
+          <>
+            <input
+              id={summaryTabId}
+              type="radio"
+              name={`${tabBase}-sections`}
+              className="lesson-section-tab-input lesson-section-tab-input-summary"
+              defaultChecked={defaultSection === 'summary'}
+            />
+            <input
+              id={lessonTabId}
+              type="radio"
+              name={`${tabBase}-sections`}
+              className="lesson-section-tab-input lesson-section-tab-input-lesson"
+              defaultChecked={defaultSection === 'lesson'}
+            />
+          </>
+        ) : null}
+        <div className="lesson-section-layout flex flex-col gap-0 sm:gap-8 lg:grid lg:grid-cols-[260px_793px] lg:justify-center lg:gap-10">
+          <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0">
+            <div className="sticky top-20 space-y-4">
+              {showSectionTabs ? (
+                <>
+                  <div className="lesson-toc-panel lesson-toc-panel-summary">
+                    <LessonToc entries={summaryTocEntries} lessonTitle={lessonDisplayTitle} locale={locale} />
+                  </div>
+                  <div className="lesson-toc-panel lesson-toc-panel-lesson">
+                    <LessonToc entries={lessonTocEntries} lessonTitle={lessonDisplayTitle} locale={locale} />
+                  </div>
+                </>
+              ) : (
+                <LessonToc entries={lessonTocEntries} lessonTitle={lessonDisplayTitle} locale={locale} />
+              )}
             </div>
-            <div className="px-4 py-6 sm:p-5 md:p-8 xl:p-10 space-y-6">
-              <header className="space-y-2 border-b border-gray-200 pb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-primary font-medium uppercase tracking-wide text-[11px]">
-                    {locale === 'ar' ? 'الدرس' : 'Lesson'}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-700">{kitData.title_en}</span>
-                </div>
-                <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
-                  {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
-                </h1>
-              </header>
+          </aside>
 
-              <article className="tiptap prose prose-xl max-w-none space-y-6">
-                {renderedBlocks}
-              </article>
-
-              <PrevNextNav
-                prevLesson={prevLesson}
-                nextLesson={nextLesson}
-                locale={locale}
-                kitSlug={kit}
+          <div className="w-full space-y-6 lg:justify-self-start">
+            <div className="bg-white sm:border border-gray-200 sm:rounded-3xl sm:shadow-md sm:overflow-hidden">
+            <div className="w-full bg-gray-100">
+              <LessonImage
+                src={coverSrc}
+                alt={lesson.title_en || lesson.title_ar || 'Lesson cover'}
+                zoomable
+                loading="eager"
+                minHeightClassName="min-h-[14rem]"
+                imgClassName="w-full aspect-[16/9] sm:aspect-[21/9] md:aspect-[3/1] object-cover sm:rounded-none rounded-2xl"
               />
+            </div>
+              <div className="px-4 py-6 sm:p-5 md:p-8 xl:p-10 space-y-6">
+                <header className="space-y-2 border-b border-gray-200 pb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-primary font-medium uppercase tracking-wide text-[11px]">
+                      {locale === 'ar' ? '\u0627\u0644\u062F\u0631\u0633' : 'Lesson'}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-700">{kitData.title_en}</span>
+                  </div>
+                  <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+                    {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
+                  </h1>
+                  {(lesson.duration_min || lesson.difficulty) && (
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                      {typeof lesson.duration_min === 'number' && lesson.duration_min > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 font-semibold tracking-wide text-xs uppercase text-gray-700">
+                          {lesson.duration_min} min
+                        </span>
+                      )}
+                      {lesson.difficulty && lesson.difficulty.trim() && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 font-semibold tracking-wide text-xs uppercase text-gray-700">
+                          {lesson.difficulty}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </header>
+
+                {showSectionTabs ? (
+                  <>
+                    <div className="lesson-section-tab-list" role="tablist" aria-label="Lesson sections">
+                      <label htmlFor={summaryTabId} className="lesson-section-tab lesson-section-tab-summary" role="tab" aria-controls={`${summaryTabId}-panel`}>
+                        {locale === 'ar' ? '\u0627\u0644\u0645\u0644\u062E\u0635' : 'Summary'}
+                      </label>
+                      <label htmlFor={lessonTabId} className="lesson-section-tab lesson-section-tab-lesson" role="tab" aria-controls={`${lessonTabId}-panel`}>
+                        {locale === 'ar' ? '\u0627\u0644\u062F\u0631\u0633' : 'Lesson'}
+                      </label>
+                    </div>
+
+                    <article
+                      id={`${summaryTabId}-panel`}
+                      className="lesson-section-panel lesson-section-panel-summary tiptap prose prose-xl max-w-none space-y-6"
+                    >
+                      {renderedSummaryBlocks.length > 0 ? renderedSummaryBlocks : (
+                        <p className="text-gray-400 italic">{summaryPlaceholder}</p>
+                      )}
+                    </article>
+
+                    <article
+                      id={`${lessonTabId}-panel`}
+                      className="lesson-section-panel lesson-section-panel-lesson tiptap prose prose-xl max-w-none space-y-6"
+                    >
+                      {renderedLessonBlocks.length > 0 ? renderedLessonBlocks : (
+                        <p className="text-gray-400 italic">{lessonPlaceholder}</p>
+                      )}
+                    </article>
+                  </>
+                ) : (
+                  <article className="tiptap prose prose-xl max-w-none space-y-6">
+                    {renderedLessonBlocks.length > 0 ? renderedLessonBlocks : (
+                      <p className="text-gray-400 italic">{lessonPlaceholder}</p>
+                    )}
+                  </article>
+                )}
+
+                <PrevNextNav
+                  prevLesson={prevLesson}
+                  nextLesson={nextLesson}
+                  locale={locale}
+                  kitSlug={kit}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -664,3 +800,4 @@ export default async function LessonPage(
     </div>
   )
 }
+

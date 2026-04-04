@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     }
 
     const { getPrisma } = await import("@/lib/prisma-multi")
-    const prisma = getPrisma(wikiSlug)
+    const prisma: any = getPrisma(wikiSlug)
     
     const allLessons = await loadLessonsForKit(kitSlug, wikiSlug)
     if (!allLessons.length) {
@@ -72,10 +72,18 @@ export async function POST(req: Request) {
     
     await prisma.$transaction(
       finalOrder.map((lesson, idx) =>
-        prisma.lesson.update({
-          where: { id: lesson.id },
-          data: { order: idx + 1 },
-        })
+        (lesson as any).lessonKey
+          ? prisma.lesson.updateMany({
+              where: {
+                wikiSlug,
+                lessonKey: (lesson as any).lessonKey,
+              },
+              data: { order: idx + 1 },
+            })
+          : prisma.lesson.update({
+              where: { id: lesson.id },
+              data: { order: idx + 1 },
+            })
       )
     )
 

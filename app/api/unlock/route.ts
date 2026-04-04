@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getWiki } from '@/lib/data'
 import { getPrisma } from '@/lib/prisma-multi'
+import accessCodesData from '@/data/access-codes.json'
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365
+
+function getConfiguredCodes(wikiSlug: string): string[] {
+  const raw = (accessCodesData as Record<string, unknown>)[wikiSlug]
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter(Boolean)
+}
 
 export async function POST(request: NextRequest) {
   const payload = await request.json()
@@ -24,18 +33,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No wiki found for this slug' }, { status: 400 })
   }
 
-  if (process.env.USE_DB === 'true') {
-    const db = getPrisma(wiki.slug)
-    const matchedCode = await db.accessCode.findFirst({
-      where: {
-        code: rawCode,
-        wikiSlug: wiki.slug,
-      },
-    })
+  const configuredCodes = getConfiguredCodes(wiki.slug)
+  let isValid = configuredCodes.includes(rawCode)
 
-    if (!matchedCode) {
-      return NextResponse.json({ error: 'Invalid access code for this wiki' }, { status: 401 })
+  if (process.env.USE_DB === 'true') {
+    try {
+      const db = getPrisma(wiki.slug)
+      const matchedCode = await db.accessCode.findFirst({
+        where: {
+          code: rawCode,
+          wikiSlug: wiki.slug,
+        },
+      })
+      isValid = isValid || Boolean(matchedCode)
+    } catch (error) {
+      // Keep static fallback validation active if DB access codes are unavailable.
+      console.error(`[Unlock API] DB validation error for wiki ${wiki.slug}:`, error)
     }
+  }
+
+  if (!isValid) {
+    return NextResponse.json({ error: 'Invalid access code for this wiki' }, { status: 401 })
   }
 
   const response = NextResponse.json({ success: true })

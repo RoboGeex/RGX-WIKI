@@ -4,8 +4,11 @@ import { AlignLeft, AlignCenter, AlignRight, Maximize, Trash2, RefreshCw, Loader
 import { RichCaptionInput } from './RichCaptionInput'
 import { NodeViewErrorBoundary } from './NodeViewErrorBoundary'
 
+const isListNodeType = (typeName?: string | null) =>
+  typeName === 'listItem' || typeName === 'bulletList' || typeName === 'orderedList'
+
 export default function VideoComponent(props: any) {
-  const { node, updateAttributes, selected, deleteNode, editor } = props
+  const { node, updateAttributes, selected, deleteNode, editor, getPos } = props
   const isVimeo = typeof node.attrs.src === 'string' && node.attrs.src.includes('vimeo.com')
   const isYoutube = typeof node.attrs.src === 'string' && (node.attrs.src.includes('youtube.com') || node.attrs.src.includes('youtu.be'))
   const provider = node.attrs.provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)
@@ -30,8 +33,52 @@ export default function VideoComponent(props: any) {
   const [showReplaceUrl, setShowReplaceUrl] = useState(false)
   const [replaceUrlValue, setReplaceUrlValue] = useState('')
   const [isReplacing, setIsReplacing] = useState(false)
+  const [isInsideListByDom, setIsInsideListByDom] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const isInsideListByDoc = (() => {
+    if (!editor?.state?.doc || typeof getPos !== 'function') return false
+    try {
+      const doc = editor.state.doc
+      const pos = getPos()
+      const $pos = doc.resolve(pos)
+      let hasListAncestor = false
+      for (let depth = $pos.depth; depth >= 0; depth--) {
+        const typeName = $pos.node(depth).type.name
+        if (isListNodeType(typeName)) {
+          hasListAncestor = true
+          break
+        }
+      }
+      if (hasListAncestor) return true
+
+      const nodeSize = typeof node?.nodeSize === 'number' ? node.nodeSize : 0
+      const endPos = Math.min(pos + nodeSize, doc.content.size)
+      const $end = doc.resolve(endPos)
+      const isBetweenSplitLists =
+        isListNodeType($pos.nodeBefore?.type?.name) &&
+        isListNodeType($end.nodeAfter?.type?.name)
+      if (isBetweenSplitLists) return true
+    } catch {
+      return false
+    }
+    return false
+  })()
+  const isInsideList = isInsideListByDoc || isInsideListByDom
+  const effectiveAlign = textAlign
+  const alignItems = effectiveAlign === 'left' ? 'flex-start' : effectiveAlign === 'right' ? 'flex-end' : 'center'
+  const mediaWrapperStyle: React.CSSProperties = {
+    width,
+    maxWidth: '100%',
+    marginInlineStart: effectiveAlign === 'right' ? 'auto' : '0',
+    marginInlineEnd: effectiveAlign === 'left' ? 'auto' : '0',
+  }
+
+  if (effectiveAlign === 'center') {
+    mediaWrapperStyle.marginInlineStart = 'auto'
+    mediaWrapperStyle.marginInlineEnd = 'auto'
+  }
 
   useEffect(() => {
     setCaption(node.attrs.title || '')
@@ -39,6 +86,24 @@ export default function VideoComponent(props: any) {
     setTextAlign(node.attrs.textAlign || 'center')
     setLayoutMode(node.attrs.layoutMode || 'fit')
   }, [node.attrs.title, node.attrs.width, node.attrs.textAlign, node.attrs.layoutMode])
+
+  useEffect(() => {
+    const updateListContextFromDom = () => {
+      const el = wrapperRef.current
+      if (!el) return
+      const prevTag = el.previousElementSibling?.tagName
+      const nextTag = el.nextElementSibling?.tagName
+      const isAdjacentToList =
+        (prevTag === 'OL' || prevTag === 'UL') &&
+        (nextTag === 'OL' || nextTag === 'UL')
+      const isNestedInList = Boolean(el.closest('li, ol, ul'))
+      setIsInsideListByDom(isNestedInList || isAdjacentToList)
+    }
+
+    updateListContextFromDom()
+    const raf = requestAnimationFrame(updateListContextFromDom)
+    return () => cancelAnimationFrame(raf)
+  }, [getPos, node.attrs.textAlign, node.attrs.width, node.attrs.layoutMode])
 
   useEffect(() => {
     return () => {
@@ -198,8 +263,12 @@ export default function VideoComponent(props: any) {
   }
 
   return (
-    <NodeViewWrapper className={`mt-2 mb-6 flex flex-col items-${textAlign === 'left' ? 'start' : textAlign === 'right' ? 'end' : 'center'} w-full relative`} style={{ textAlign: textAlign as any }}>
-      <div className="relative inline-block group w-full" style={{ width: width, maxWidth: '100%' }}>
+    <NodeViewWrapper
+      ref={wrapperRef as any}
+      className="media-node-block flex flex-col w-full relative"
+      style={{ textAlign: effectiveAlign as any, alignItems }}
+    >
+      <div className="relative block group" style={mediaWrapperStyle}>
         {/* Embed: YouTube or Vimeo */}
         {provider === 'vimeo' || provider === 'youtube' ? (
           <div ref={containerRef} className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-md ${selected ? 'ring-2 ring-primary' : ''} ${
@@ -382,7 +451,7 @@ export default function VideoComponent(props: any) {
         )}
 
         {/* Caption Input */}
-        <div className="mt-1 pb-2 w-full flex justify-center text-center mx-auto relative z-10">
+        <div className="mt-1 w-full flex justify-center text-center mx-auto relative z-10">
           <NodeViewErrorBoundary>
             <RichCaptionInput
               initialContent={caption}

@@ -14,7 +14,7 @@ export interface ImageSlideData {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     imageSlider: {
-      insertImageSlider: (options: { images: (string | ImageSlideData)[] }) => ReturnType
+      insertImageSlider: (options: { images: (string | ImageSlideData)[]; textAlign?: string | null }) => ReturnType
     }
   }
 }
@@ -72,6 +72,14 @@ const ImageSlider = Node.create<ImageSliderOptions>({
           'data-layout-mode': attributes.layoutMode,
         }),
       },
+      textAlign: {
+        default: 'center',
+        parseHTML: element => element.getAttribute('data-align') || 'center',
+        renderHTML: (attributes: Record<string, any>) => ({
+          'data-align': attributes.textAlign,
+          style: `text-align: ${attributes.textAlign}`,
+        }),
+      },
     }
   },
 
@@ -116,7 +124,7 @@ const ImageSlider = Node.create<ImageSliderOptions>({
 
   addCommands() {
     return {
-      insertImageSlider: ({ images }) => ({ chain }) => {
+      insertImageSlider: ({ images, textAlign }) => ({ chain }) => {
         const validImages = Array.isArray(images) ? images.filter(Boolean) : []
         if (!validImages.length) {
           return false
@@ -129,7 +137,7 @@ const ImageSlider = Node.create<ImageSliderOptions>({
 
         return chain().insertContent({
           type: this.name,
-          attrs: { images: normalizedImages },
+          attrs: { images: normalizedImages, textAlign: textAlign || 'center' },
         }).run()
       },
     }

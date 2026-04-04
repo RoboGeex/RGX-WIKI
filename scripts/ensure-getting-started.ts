@@ -35,12 +35,11 @@ async function main() {
 
         try {
             // Check if getting-started exists
-            const existing = await prisma.lesson.findUnique({
+            const existing = await prisma.lesson.findFirst({
                 where: {
-                    wikiSlug_slug: {
-                        wikiSlug: wikiSlug,
-                        slug: 'getting-started'
-                    }
+                    wikiSlug: wikiSlug,
+                    lessonKey: 'getting-started',
+                    status: 'published',
                 }
             });
 
@@ -55,6 +54,7 @@ async function main() {
                 await prisma.lesson.create({
                     data: {
                         id: uniqueId,
+                        lessonKey: 'getting-started',
                         slug: 'getting-started',
                         wikiSlug: wikiSlug,
                         title_en: 'Getting Started',

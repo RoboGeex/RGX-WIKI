@@ -25,6 +25,17 @@ const getUploadContext = (editor: Editor): UploadContext => {
   return getter ? getter() ?? {} : {}
 }
 
+const isSelectionInList = (editor: Editor): boolean => {
+  const $from = editor.state.selection.$from
+  for (let depth = $from.depth; depth >= 0; depth--) {
+    const typeName = $from.node(depth).type.name
+    if (typeName === 'listItem' || typeName === 'bulletList' || typeName === 'orderedList') {
+      return true
+    }
+  }
+  return false
+}
+
 const insertListWithFallback = (editor: Editor, range: { from: number; to: number }, listType: 'bulletList' | 'orderedList') => {
   const toggleSucceeded = listType === 'orderedList'
     ? editor.chain().focus().deleteRange(range).toggleOrderedList().run()
@@ -194,6 +205,22 @@ const items: SlashItem[] = [
       }).run()
     },
   },
+  {
+    title: 'Tag Block',
+    description: 'Add a title with topic tags/chips',
+    shortcut: 'tags',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 12-8 8-8-8V4h16v8Z"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>',
+    category: 'structure',
+    keywords: ['tag', 'chips', 'topics', 'learn about'],
+    command: ({ editor, range }: any) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertTagBlock()
+        .run()
+    },
+  },
 
   // MEDIA
   {
@@ -220,7 +247,8 @@ const items: SlashItem[] = [
           const res = await fetch('/api/upload', { method: 'POST', body: fd })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || 'Upload failed')
-          editor.chain().focus().setImage({ src: data.url }).run()
+          const textAlign = isSelectionInList(editor) ? 'center' : undefined
+          editor.chain().focus().setImage({ src: data.url, textAlign }).run()
         } catch (e: any) {
           alert('Upload error: ' + (e?.message || 'unknown'))
         }
@@ -264,7 +292,9 @@ const items: SlashItem[] = [
             return { url: data.url as string, caption: '' }
           }))
           if (!uploads.length) return
-          editor.chain().focus().insertImageSlider({ images: uploads }).run()
+          const attrs: any = { images: uploads }
+          if (isSelectionInList(editor)) attrs.textAlign = 'center'
+          editor.chain().focus().insertImageSlider(attrs).run()
         } catch (error: any) {
           console.error('Image slider upload failed', error)
           alert(error?.message || 'Failed to upload images for slider')
@@ -284,7 +314,10 @@ const items: SlashItem[] = [
       editor.chain().focus().deleteRange(range).run()
       setTimeout(() => {
         const url = window.prompt('Enter Video URL (YouTube, Vimeo, or direct link):')
-        if (url) editor.chain().focus().insertVideo({ src: url }).run()
+        if (url) {
+          const textAlign = isSelectionInList(editor) ? 'center' : undefined
+          editor.chain().focus().insertVideo({ src: url, textAlign }).run()
+        }
       }, 10)
     },
   },
@@ -375,6 +408,7 @@ const items: SlashItem[] = [
               src: videoUrl,
               provider: videoProvider,
               controls: videoProvider === 'vimeo' ? false : true,
+              textAlign: isSelectionInList(editor) ? 'center' : undefined,
             })
             .run()
 

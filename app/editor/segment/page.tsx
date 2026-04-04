@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import SegmentEditor from '@/components/editor/SegmentEditor'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
 import { Segment, convertSegmentsToBody } from '@/lib/segment-types'
+import { readSessionStorageJson } from '@/lib/session-storage'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { HUB_DOMAIN } from '@/lib/domains'
@@ -28,9 +29,8 @@ export default function SegmentEditorPage() {
         // Load initial metadata from sessionStorage first
         let initialMeta: any = null
         try {
-          const raw = sessionStorage.getItem('lessonMeta')
-          if (raw) {
-            initialMeta = JSON.parse(raw)
+          initialMeta = readSessionStorageJson<any>('lessonMeta')
+          if (initialMeta) {
             setLesson((prev: any) => ({ ...prev, ...initialMeta }))
           }
         } catch (e) {

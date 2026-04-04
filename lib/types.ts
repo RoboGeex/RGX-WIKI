@@ -40,7 +40,7 @@ export interface Module {
 export type LessonBodyItemVariant = 'info' | 'tip' | 'warning';
 
 export interface LessonBodyItem {
-  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video' | 'table' | 'imageSlider';
+  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video' | 'table' | 'imageSlider' | 'tagBlock';
   en?: string;
   ar?: string;
   html_en?: string;
@@ -68,6 +68,7 @@ export interface LessonBodyItem {
 
 export interface Lesson {
   id: string;
+  lessonKey?: string;
   order: number;
   slug: string;
   title_en: string;
@@ -84,9 +85,12 @@ export interface Lesson {
   materials: Material[];
   body: LessonBodyItem[];
   wikiSlug?: string;
+  version?: number;
   isGettingStarted?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  lastPublishedAt?: string;
+  hasUnpublishedChanges?: boolean;
 }
 
 export interface AccessCode {

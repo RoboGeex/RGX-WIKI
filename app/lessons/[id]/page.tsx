@@ -5,8 +5,9 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import KitHeader from '@/components/kit-header';
 import { getListMarker } from '@/lib/segment-types';
-import { ZoomableImage } from '@/components/zoomable-image'
 import { LessonImageSlider } from '@/components/lesson/ImageSlider'
+import { InteractiveHtml } from '@/components/lesson/InteractiveHtml'
+import { LessonEmbed, LessonImage, LessonVideo } from '@/components/lesson/LessonMedia'
 
 const LessonPage = () => {
     const params = useParams();
@@ -75,13 +76,13 @@ const LessonPage = () => {
                 }>{item.html_en ? <span dangerouslySetInnerHTML={{ __html: item.html_en }} /> : item.en}</Tag>;
             }
             if (item.type === 'paragraph' && (item.html_en || item.en)) {
-                return <div key={blockIdx} className="mb-4" dangerouslySetInnerHTML={{ __html: item.html_en || item.en }} />;
+                return <InteractiveHtml key={blockIdx} className="mb-4" html={item.html_en || item.en} />;
             }
             if (item.type === 'table') {
                 const html = item.html_en || ''
                 return (
                     <div key={blockIdx} className="overflow-x-auto">
-                        <div className="tiptap" dangerouslySetInnerHTML={{ __html: html }} />
+                        <InteractiveHtml className="tiptap" html={html} />
                     </div>
                 );
             }
@@ -92,11 +93,11 @@ const LessonPage = () => {
                 const layoutMode = item.layoutMode || 'fit'
                 
                 return (
-                    <figure key={blockIdx} className="mt-2 mb-8 flex flex-col items-center w-full">
+                    <figure key={blockIdx} className="media-block flex flex-col items-center w-full">
                         <LessonImageSlider images={images} layoutMode={layoutMode} />
                         {caption ? (
                             <figcaption
-                                className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
+                                className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
                                 dangerouslySetInnerHTML={{ __html: caption }}
                             />
                         ) : null}
@@ -123,9 +124,9 @@ const LessonPage = () => {
                                     <span className={`shrink-0 font-medium ${item.ordered ? 'min-w-[1.5rem]' : 'w-4 text-center'} text-gray-500`}>
                                         {marker}
                                     </span>
-                                    <div
-                                        className="flex-1"
-                                        dangerouslySetInnerHTML={{ __html: text }}
+                                    <InteractiveHtml
+                                        className="lesson-list-item-content flex-1 min-w-0 [&_p]:m-0"
+                                        html={text || ''}
                                     />
                                 </div>
                             );
@@ -145,7 +146,7 @@ const LessonPage = () => {
                             'items-center';
 
                 return (
-                    <figure key={blockIdx} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
+                    <figure key={blockIdx} className={`media-block flex flex-col ${alignClass} w-full`}>
                         <div style={{ width, maxWidth: '100%' }}>
                             <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${
                                 (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') 
@@ -157,20 +158,19 @@ const LessonPage = () => {
                                     }`
                                   : ''
                             }`}>
-                                <ZoomableImage className="w-full h-full">
-                                    <img
-                                        src={item.image}
-                                        alt={caption}
-                                        className={`w-full block !m-0 !p-0 ${
-                                          (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
-                                        }`}
-                                        loading="lazy"
-                                    />
-                                </ZoomableImage>
+                                <LessonImage
+                                    src={item.image}
+                                    alt={caption}
+                                    zoomable
+                                    minHeightClassName={layoutMode === 'fit' ? 'min-h-[14rem]' : undefined}
+                                    imgClassName={`w-full block !m-0 !p-0 ${
+                                      (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
+                                    }`}
+                                />
                             </div>
                             {caption ? (
                                 <figcaption
-                                    className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
+                                    className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
                                     dangerouslySetInnerHTML={{ __html: caption }}
                                 />
                             ) : null}
@@ -199,12 +199,10 @@ const LessonPage = () => {
                               layoutMode === '16:9' ? 'aspect-video' :
                               'aspect-video'
                             }`}>
-                                <iframe
+                                <LessonEmbed
                                     src={embedUrl}
                                     title={title}
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                    className="h-full w-full block"
+                                    iframeClassName="h-full w-full block"
                                 />
                             </div>
                         </div>
@@ -237,7 +235,7 @@ const LessonPage = () => {
                 }
 
                 return (
-                    <figure key={blockIdx} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
+                    <figure key={blockIdx} className={`media-block flex flex-col ${alignClass} w-full`}>
                         <div style={{ width, maxWidth: '100%' }}>
                             {provider === 'vimeo' || provider === 'youtube' ? (
                                 <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm ${
@@ -247,12 +245,10 @@ const LessonPage = () => {
                                   layoutMode === '16:9' ? 'aspect-video' :
                                   'aspect-video'
                                 }`}>
-                                    <iframe
+                                    <LessonEmbed
                                         src={getEmbedUrl(item.url)}
                                         title={caption || 'Video'}
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                        className="h-full w-full block object-cover"
+                                        iframeClassName="h-full w-full block object-cover"
                                     />
                                 </div>
                             ) : (
@@ -264,16 +260,16 @@ const LessonPage = () => {
                                   layoutMode === 'fit' ? '' :
                                   'aspect-video'
                                 }`}>
-                                    <video
-                                        controls
-                                        className={`w-full block object-cover ${layoutMode === 'fit' ? 'h-auto' : 'h-full'}`}
+                                    <LessonVideo
                                         src={item.url}
                                         poster={item.poster || undefined}
+                                        minHeightClassName={layoutMode === 'fit' ? 'min-h-[14rem]' : undefined}
+                                        videoClassName={`w-full block object-cover ${layoutMode === 'fit' ? 'h-auto' : 'h-full'}`}
                                     />
                                 </div>
                             )}
                             {caption ? (
-                                <figcaption className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight" dangerouslySetInnerHTML={{ __html: caption }} />
+                                <figcaption className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight" dangerouslySetInnerHTML={{ __html: caption }} />
                             ) : null}
                         </div>
                     </figure>

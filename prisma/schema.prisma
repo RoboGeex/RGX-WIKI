@@ -14,6 +14,7 @@ datasource db {
 
 model Lesson {
   id               String   @id
+  lessonKey        String
   order            Int
   slug             String
   wikiSlug         String
@@ -39,7 +40,9 @@ model Lesson {
   lockedUntil      DateTime?
 
   @@index([wikiSlug])
-  @@unique([wikiSlug, slug])
+  @@index([wikiSlug, lessonKey])
+  @@index([wikiSlug, slug, status, version])
+  @@index([wikiSlug, lessonKey, status, version])
 }
 
 model Developer {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getPrisma } from '@/lib/prisma-multi';
 import { getActorIdFromRequest } from '@/lib/api-auth';
 import { findDeveloperById } from '@/lib/developers';
+import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic } from '@/lib/lesson-versions';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -23,17 +24,21 @@ export async function GET(request: Request) {
       }
     }
 
-    const db = getPrisma(kit ?? undefined)
-    const lessons = await db.lesson.findMany({
+    const db: any = getPrisma(kit ?? undefined)
+    const rows = await db.lesson.findMany({
       where: {
         ...(kit && { wikiSlug: kit }),
-        ...(!isAdmin && { status: 'published' }),
+        ...(!isAdmin && { status: LESSON_STATUS.PUBLISHED }),
         OR: [
           { title_en: { contains: query } },
           { title_ar: { contains: query } },
         ],
       },
+      orderBy: [{ order: 'asc' }, { version: 'desc' }],
     });
+    const lessons = isAdmin
+      ? collapseLessonsForEditor(rows)
+      : collapseLessonsForPublic(rows)
     return NextResponse.json(lessons);
   } catch (error) {
     console.error('Search error:', error);

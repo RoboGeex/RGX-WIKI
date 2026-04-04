@@ -20,6 +20,17 @@ interface EditorDashboardClientProps {
   initialSummaries: WikiSummary[]
 }
 
+async function readJsonSafely(res: Response) {
+  const text = await res.text()
+  if (!text.trim()) return null
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error('The server returned an invalid response.')
+  }
+}
+
 export default function EditorDashboardClient({ initialSummaries }: EditorDashboardClientProps) {
   const [summaries, setSummaries] = useState(initialSummaries)
   const [wikiAccess, setWikiAccess] = useState<string[] | null>(null)
@@ -35,7 +46,7 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
       setAccessError(null)
       try {
         const res = await fetch('/api/developers/me', { headers: applyDeveloperHeader() })
-        const data = await res.json()
+        const data = await readJsonSafely(res)
         if (!res.ok || !data?.developer) {
           throw new Error(data?.error || 'Failed to load developer')
         }

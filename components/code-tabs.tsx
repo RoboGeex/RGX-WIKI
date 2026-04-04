@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { LessonBodyItem } from '@/lib/types'
 import type { Locale } from '@/lib/i18n'
+import { LessonEmbed } from '@/components/lesson/LessonMedia'
 
 type TabKey = 'arduino' | 'microbit'
 type Tab = { key: TabKey; label: string; enabled: boolean }
@@ -48,13 +49,12 @@ export default function CodeTabs({ codeItem, locale: _locale }: Props) {
 
       {tab === 'microbit' && hasMicrobit && (
         <div className="p-4">
-          <iframe
-            src={codeItem.makecodeUrl}
-            width="100%"
-            height="360"
-            className="rounded-md border"
+          <LessonEmbed
+            src={codeItem.makecodeUrl!}
+            title="micro:bit editor"
+            className="h-[360px]"
+            iframeClassName="h-full w-full rounded-md border"
             allow="fullscreen"
-            loading="lazy"
           />
         </div>
       )}

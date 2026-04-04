@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
@@ -7,12 +6,37 @@ import { getPrisma } from '@/lib/prisma-multi'
 import { canEditLesson, canManageWiki } from '@/lib/assignments'
 import { findDeveloperById } from '@/lib/developers'
 import { getActorIdFromRequest } from '@/lib/api-auth'
+import {
+  LESSON_STATUS,
+  collapseLessonsForEditor,
+  collapseLessonsForPublic,
+  getLessonKey,
+  pickLatestDraft,
+  pickLatestPublished,
+  sortVersionRowsDesc,
+} from '@/lib/lesson-versions'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 type LessonBodyItem = {
-  type: 'paragraph' | 'heading' | 'step' | 'callout' | 'codeTabs' | 'image' | 'list' | 'youtube' | 'video'
+  type:
+    | 'paragraph'
+    | 'heading'
+    | 'step'
+    | 'callout'
+    | 'codeTabs'
+    | 'image'
+    | 'list'
+    | 'youtube'
+    | 'video'
+    | 'table'
+    | 'imageSlider'
+    | 'tagBlock'
+    | 'horizontalRule'
+    | 'columns'
+    | 'column'
+    | 'code'
   en?: string
   ar?: string
   html_en?: string
@@ -23,6 +47,7 @@ type LessonBodyItem = {
   caption_ar?: string
   variant?: 'info' | 'tip' | 'warning'
   image?: string
+  images?: string[]
   arduino?: string
   makecodeUrl?: string
   level?: number
@@ -39,6 +64,7 @@ type LessonBodyItem = {
 
 type NewLesson = {
   id: string
+  lessonKey?: string
   order: number
   slug: string
   wikiSlug: string
@@ -60,6 +86,28 @@ type NewLesson = {
 
 type LessonPayload = NewLesson & { forceNew?: boolean }
 
+type VersionConflictError = {
+  status: 409
+  error: string
+  errorCode: 'VERSION_CONFLICT'
+  currentVersion: number
+}
+
+type LockConflictError = {
+  status: 409
+  error: string
+  errorCode: 'LOCKED_BY_OTHER'
+}
+
+type ApiError = {
+  status: number
+  error: string
+  missing?: string[]
+  details?: string
+  errorCode?: string
+  currentVersion?: number
+}
+
 function lessonsFilePath(wikiSlug: string) {
   return path.join(process.cwd(), 'data', 'lessons.' + wikiSlug + '.json')
 }
@@ -72,11 +120,214 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
+function normalizeStatus(value: string | undefined | null, isAdmin: boolean): string {
+  const normalized = (value || '').trim().toLowerCase()
+  if (normalized === LESSON_STATUS.PUBLISHED && isAdmin) return LESSON_STATUS.PUBLISHED
+  return LESSON_STATUS.DRAFT
+}
+
+const LEGACY_DRAFT_SUFFIX = '--draft'
+
+function isLegacyDraftValue(value: string | undefined | null): boolean {
+  const normalized = (value || '').trim()
+  return Boolean(normalized && normalized.endsWith(LEGACY_DRAFT_SUFFIX))
+}
+
+function stripLegacyDraftSuffix(value: string | undefined | null): string {
+  const normalized = (value || '').trim()
+  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {
+    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
+  }
+  return normalized
+}
+
+function toLegacyDraftValue(baseValue: string): string {
+  const normalized = stripLegacyDraftSuffix(baseValue) || 'lesson'
+  return `${normalized}${LEGACY_DRAFT_SUFFIX}`
+}
+
+function getVersion(value: unknown): number {
+  return Number.isFinite(value as number) ? Number(value) : 0
+}
+
+function pickLatestAny(rows: any[]): any | undefined {
+  const sorted = sortVersionRowsDesc(rows)
+  return sorted[0]
+}
+
+function toApiError(status: number, error: string, extra?: Partial<ApiError>): ApiError {
+  return { status, error, ...extra }
+}
+
+function isApiError(error: unknown): error is ApiError {
+  return Boolean(error && typeof error === 'object' && 'status' in (error as any) && 'error' in (error as any))
+}
+
+function isLessonKeyUnsupportedError(error: any): boolean {
+  const message = typeof error?.message === 'string' ? error.message : ''
+  const lowerMessage = message.toLowerCase()
+  const missingColumn =
+    lowerMessage.includes('lessonkey') &&
+    (lowerMessage.includes('does not exist') || lowerMessage.includes('unknown field') || lowerMessage.includes('unknown argument'))
+  const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''
+  const prismaMetaColumn = metaColumn.endsWith('.lesson.lessonkey') || metaColumn === 'lessonkey'
+  return (
+    message.includes('Unknown argument `lessonKey`') ||
+    message.includes('Unknown field `lessonKey`') ||
+    missingColumn ||
+    prismaMetaColumn
+  )
+}
+
+const legacyLessonSelect = {
+  id: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  body: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  activeEditorId: true,
+  lockedUntil: true,
+} as const
+
+function mapLegacyLessonRow<T extends Record<string, any>>(row: T): T & { lessonKey: string } {
+  const normalizedLessonKey =
+    typeof row.lessonKey === 'string' && row.lessonKey.trim()
+      ? row.lessonKey
+      : stripLegacyDraftSuffix(String(row.id || '')) || stripLegacyDraftSuffix(String(row.slug || '')) || String(row.id || '')
+  return {
+    ...row,
+    lessonKey: normalizedLessonKey,
+  }
+}
+
+function toJsonValue(value: unknown): string {
+  return JSON.stringify(value ?? null)
+}
+
+async function insertLegacyLessonRow(
+  tx: any,
+  row: {
+    id: string
+    wikiSlug: string
+    order: number
+    slug: string
+    title_en: string
+    title_ar: string
+    coverImage: string | null
+    ownerId: string | null
+    lastModifiedBy: string | null
+    status: string
+    publishedAt: Date | null
+    duration_min: number
+    difficulty: string
+    prerequisites_en: unknown
+    prerequisites_ar: unknown
+    materials: unknown
+    body: unknown
+    createdAt?: Date
+    updatedAt: Date
+    version: number
+    activeEditorId: string | null
+    lockedUntil: Date | null
+  }
+) {
+  const createdAt = row.createdAt || row.updatedAt
+  await tx.$executeRawUnsafe(
+    `INSERT INTO \`Lesson\` (
+      \`id\`, \`order\`, \`slug\`, \`wikiSlug\`, \`title_en\`, \`title_ar\`, \`coverImage\`, \`ownerId\`,
+      \`lastModifiedBy\`, \`status\`, \`publishedAt\`, \`duration_min\`, \`difficulty\`,
+      \`prerequisites_en\`, \`prerequisites_ar\`, \`materials\`, \`body\`,
+      \`createdAt\`, \`updatedAt\`, \`version\`, \`activeEditorId\`, \`lockedUntil\`
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    row.id,
+    row.order,
+    row.slug,
+    row.wikiSlug,
+    row.title_en,
+    row.title_ar,
+    row.coverImage,
+    row.ownerId,
+    row.lastModifiedBy,
+    row.status,
+    row.publishedAt,
+    row.duration_min,
+    row.difficulty,
+    toJsonValue(row.prerequisites_en),
+    toJsonValue(row.prerequisites_ar),
+    toJsonValue(row.materials),
+    toJsonValue(row.body),
+    createdAt,
+    row.updatedAt,
+    row.version,
+    row.activeEditorId,
+    row.lockedUntil,
+  )
+
+  const inserted = await tx.lesson.findUnique({
+    where: { id: row.id },
+    select: legacyLessonSelect,
+  })
+  if (!inserted) {
+    throw new Error('Failed to load inserted legacy lesson row')
+  }
+  return inserted
+}
+
+function ensureLockAndVersionOrThrow(
+  reference: any | undefined,
+  clientVersion: number | undefined,
+  actorId: string | undefined
+) {
+  if (!reference) return
+  if (Number.isFinite(clientVersion as number) && getVersion(reference.version) > Number(clientVersion)) {
+    const versionError: VersionConflictError = {
+      status: 409,
+      error: 'Conflict: This lesson was modified by someone else since you opened it.',
+      errorCode: 'VERSION_CONFLICT',
+      currentVersion: getVersion(reference.version),
+    }
+    throw versionError
+  }
+  const now = new Date()
+  if (
+    reference.activeEditorId &&
+    reference.activeEditorId !== actorId &&
+    reference.lockedUntil &&
+    new Date(reference.lockedUntil) > now
+  ) {
+    const lockError: LockConflictError = {
+      status: 409,
+      error: 'Conflict: This lesson is currently actively locked by another developer.',
+      errorCode: 'LOCKED_BY_OTHER',
+    }
+    throw lockError
+  }
+}
+
 async function readLessonsFromFile(wikiSlug: string): Promise<NewLesson[]> {
   try {
     const filePath = lessonsFilePath(wikiSlug)
     const raw = await fs.readFile(filePath, 'utf-8')
-    return JSON.parse(raw) as NewLesson[]
+    const parsed = JSON.parse(raw) as NewLesson[]
+    return parsed.map((lesson) => ({
+      ...lesson,
+      lessonKey: lesson.lessonKey || lesson.id,
+    }))
   } catch {
     return []
   }
@@ -86,28 +337,486 @@ function sortLessons(list: NewLesson[]): NewLesson[] {
   return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0))
 }
 
-function generateUniqueId(baseId: string, existingLessons: NewLesson[]): string {
-  let candidate = baseId
-  let counter = 1
-  
-  while (existingLessons.some(l => l.id === candidate || l.slug === candidate)) {
-    candidate = `${baseId}-${counter}`
-    counter++
+function resolveLessonFamilyInFile(lessons: NewLesson[], lesson: NewLesson) {
+  const incomingKey = (lesson.lessonKey || '').trim()
+  const incomingId = (lesson.id || '').trim()
+  const incomingSlug = (lesson.slug || '').trim()
+
+  let matched =
+    (incomingId ? lessons.find((item) => item.id === incomingId) : undefined) ||
+    (incomingKey ? lessons.find((item) => (item.lessonKey || item.id) === incomingKey) : undefined) ||
+    (incomingSlug ? lessons.find((item) => item.slug === incomingSlug) : undefined)
+
+  if (!matched) {
+    return {
+      lessonKey: incomingKey || incomingId || incomingSlug,
+      family: [] as NewLesson[],
+    }
   }
-  
+
+  const lessonKey = matched.lessonKey || matched.id
+  return {
+    lessonKey,
+    family: lessons.filter((item) => (item.lessonKey || item.id) === lessonKey),
+  }
+}
+
+function ensureUniqueFileRowId(lessons: NewLesson[], baseId: string): string {
+  const base = baseId && baseId.trim() ? baseId.trim() : 'lesson'
+  let candidate = base
+  let counter = 1
+  while (lessons.some((item) => item.id === candidate)) {
+    candidate = `${base}-${counter++}`
+  }
   return candidate
 }
 
-// Removed SHOULD_ENFORCE_DEV_OWNERSHIP constant as it is superseded by strict RBAC
+function ensureUniqueFileSlug(lessons: NewLesson[], wikiSlug: string, lessonKey: string, baseSlug: string): string {
+  const base = baseSlug && baseSlug.trim() ? baseSlug.trim() : 'lesson'
+  let candidate = base
+  let counter = 1
+  while (
+    lessons.some(
+      (item) =>
+        item.wikiSlug === wikiSlug &&
+        item.slug === candidate &&
+        (item.lessonKey || item.id) !== lessonKey
+    )
+  ) {
+    candidate = `${base}-${counter++}`
+  }
+  return candidate
+}
+
+async function ensureUniqueRowId(prisma: any, baseId: string): Promise<string> {
+  const base = baseId && baseId.trim() ? baseId.trim() : 'lesson'
+  let candidate = base
+  let counter = 1
+  while (true) {
+    const existing = await prisma.lesson.findUnique({
+      where: { id: candidate },
+      select: { id: true },
+    })
+    if (!existing) return candidate
+    candidate = `${base}-${counter++}`
+  }
+}
+
+async function ensureUniqueLessonKey(prisma: any, wikiSlug: string, baseKey: string): Promise<string> {
+  const base = baseKey && baseKey.trim() ? baseKey.trim() : 'lesson'
+  let candidate = base
+  let counter = 1
+  while (true) {
+    let existing: any
+    try {
+      existing = await prisma.lesson.findFirst({
+        where: { wikiSlug, lessonKey: candidate },
+        select: { id: true },
+      })
+    } catch (error: any) {
+      if (!isLessonKeyUnsupportedError(error)) throw error
+      existing = await prisma.lesson.findFirst({
+        where: { wikiSlug, id: candidate },
+        select: { id: true },
+      })
+    }
+    if (!existing) return candidate
+    candidate = `${base}-${counter++}`
+  }
+}
+
+async function ensureUniqueSlugForLessonKey(
+  prisma: any,
+  wikiSlug: string,
+  baseSlug: string,
+  lessonKey: string
+): Promise<string> {
+  const base = baseSlug && baseSlug.trim() ? baseSlug.trim() : 'lesson'
+  let candidate = base
+  let counter = 1
+  while (true) {
+    let conflict: any
+    try {
+      conflict = await prisma.lesson.findFirst({
+        where: {
+          wikiSlug,
+          slug: candidate,
+          NOT: { lessonKey },
+        },
+        select: { id: true },
+      })
+    } catch (error: any) {
+      if (!isLessonKeyUnsupportedError(error)) throw error
+      conflict = await prisma.lesson.findFirst({
+        where: {
+          wikiSlug,
+          slug: candidate,
+          NOT: { id: lessonKey },
+        },
+        select: { id: true },
+      })
+    }
+    if (!conflict) return candidate
+    candidate = `${base}-${counter++}`
+  }
+}
+
+async function supportsLessonKeyColumn(prisma: any, wikiSlug: string): Promise<boolean> {
+  try {
+    await prisma.lesson.findFirst({
+      where: { wikiSlug },
+      select: { lessonKey: true },
+    })
+    return true
+  } catch (error: any) {
+    if (isLessonKeyUnsupportedError(error)) {
+      return false
+    }
+    throw error
+  }
+}
+
+async function resolveLessonFamilyInDb(prisma: any, lesson: NewLesson, forceNew: boolean) {
+  if (forceNew) {
+    return { lessonKey: '', familyRows: [] as any[] }
+  }
+
+  const wikiSlug = lesson.wikiSlug
+  const idCandidate = (lesson.id || '').trim()
+  const keyCandidate = (lesson.lessonKey || '').trim()
+  const slugCandidate = (lesson.slug || '').trim()
+  const candidates = [idCandidate, keyCandidate, slugCandidate].filter(Boolean)
+
+  let matched: any | undefined
+  for (const candidate of candidates) {
+    try {
+      matched = await prisma.lesson.findFirst({
+        where: {
+          wikiSlug,
+          OR: [{ id: candidate }, { lessonKey: candidate }, { slug: candidate }],
+        },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+      })
+    } catch (error: any) {
+      if (!isLessonKeyUnsupportedError(error)) throw error
+      const row = await prisma.lesson.findFirst({
+        where: {
+          wikiSlug,
+          OR: [{ id: candidate }, { slug: candidate }],
+        },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+        select: legacyLessonSelect,
+      })
+      matched = row ? mapLegacyLessonRow(row) : row
+    }
+    if (matched) break
+  }
+
+  const lessonKey = matched ? getLessonKey(matched) : ''
+  if (!lessonKey) {
+    return { lessonKey: '', familyRows: [] as any[] }
+  }
+
+  let familyRows: any[]
+  try {
+    familyRows = await prisma.lesson.findMany({
+      where: { wikiSlug, lessonKey },
+      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+    })
+  } catch (error: any) {
+    if (!isLessonKeyUnsupportedError(error)) throw error
+    familyRows = (await prisma.lesson.findMany({
+      where: {
+        wikiSlug,
+        OR: [{ id: lessonKey }, { slug: lessonKey }, { id: `${lessonKey}--draft` }, { slug: `${lessonKey}--draft` }],
+      },
+      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+      select: legacyLessonSelect,
+    })).map(mapLegacyLessonRow)
+  }
+
+  return { lessonKey, familyRows }
+}
+
+async function ensureUniqueLegacySlug(
+  prisma: any,
+  wikiSlug: string,
+  baseSlug: string,
+  excludeId?: string
+): Promise<string> {
+  const base = baseSlug && baseSlug.trim() ? baseSlug.trim() : 'lesson'
+  let candidate = base
+  let counter = 1
+  while (true) {
+    const conflict = await prisma.lesson.findFirst({
+      where: {
+        wikiSlug,
+        slug: candidate,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (!conflict) return candidate
+    candidate = `${base}-${counter++}`
+  }
+}
+
+async function saveLegacyLessonInDb(
+  prisma: any,
+  lesson: NewLesson,
+  forceNew: boolean,
+  developer: any,
+  requestedStatus: string,
+  clientVersion: number | undefined
+) {
+  return prisma.$transaction(async (tx: any) => {
+    const lookupId = (lesson.id || '').trim()
+    const lookupSlug = (lesson.slug || '').trim()
+    const existing = forceNew
+      ? null
+      : await tx.lesson.findFirst({
+        where: {
+          wikiSlug: lesson.wikiSlug,
+          OR: [
+            ...(lookupId ? [{ id: lookupId }] : []),
+            ...(lookupSlug ? [{ slug: lookupSlug }] : []),
+            ...(lookupId ? [{ id: toLegacyDraftValue(lookupId) }] : []),
+            ...(lookupSlug ? [{ slug: toLegacyDraftValue(lookupSlug) }] : []),
+          ],
+        },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+        select: legacyLessonSelect,
+      })
+
+    if (existing && !canEditLesson(developer, lesson.wikiSlug, existing.ownerId)) {
+      throw toApiError(403, 'Forbidden: You do not have permission to edit this lesson')
+    }
+
+    ensureLockAndVersionOrThrow(existing, clientVersion, developer?.id)
+
+    const existingId = (existing?.id || '').trim()
+    const existingSlug = (existing?.slug || '').trim()
+    const existingIsLegacyDraft = isLegacyDraftValue(existingId) || isLegacyDraftValue(existingSlug)
+    const existingStatus = normalizeStatus(existing?.status, true)
+    const existingIsPublished = existingStatus === LESSON_STATUS.PUBLISHED
+    const existingIsDraft = existingIsLegacyDraft || existingStatus === LESSON_STATUS.DRAFT
+
+    const publishedBaseId = stripLegacyDraftSuffix(existingId)
+    const publishedBaseSlug = stripLegacyDraftSuffix(existingSlug)
+
+    const publishedSource = existingIsPublished
+      ? existing
+      : await tx.lesson.findFirst({
+          where: {
+            wikiSlug: lesson.wikiSlug,
+            status: LESSON_STATUS.PUBLISHED,
+            OR: [
+              ...(publishedBaseId ? [{ id: publishedBaseId }] : []),
+              ...(publishedBaseSlug ? [{ slug: publishedBaseSlug }] : []),
+            ],
+          },
+          orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+          select: legacyLessonSelect,
+        })
+
+    const draftSource = existingIsDraft
+      ? existing
+      : (publishedSource
+        ? await tx.lesson.findFirst({
+            where: {
+              wikiSlug: lesson.wikiSlug,
+              status: LESSON_STATUS.DRAFT,
+              OR: [
+                { id: toLegacyDraftValue(publishedSource.id) },
+                ...(publishedSource.slug ? [{ slug: toLegacyDraftValue(publishedSource.slug) }] : []),
+              ],
+            },
+            orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+            select: legacyLessonSelect,
+          })
+        : null)
+
+    const reference = draftSource || publishedSource || existing
+
+    const maxOrderResult = await tx.lesson.aggregate({
+      where: { wikiSlug: lesson.wikiSlug },
+      _max: { order: true },
+    })
+    const nextOrder = (maxOrderResult?._max?.order || 0) + 1
+    const finalOrder =
+      Number.isFinite(lesson.order) && lesson.order > 0
+        ? Math.round(lesson.order)
+        : Number.isFinite(reference?.order)
+          ? Number(reference.order)
+          : nextOrder
+
+    const finalTitleEn = (lesson.title_en || reference?.title_en || '').trim()
+    const finalTitleAr = (lesson.title_ar || reference?.title_ar || finalTitleEn).trim()
+    const finalDuration =
+      Number.isFinite(lesson.duration_min) && lesson.duration_min > 0
+        ? Math.round(lesson.duration_min)
+        : Number.isFinite(reference?.duration_min)
+          ? Number(reference.duration_min)
+          : 30
+
+    const now = new Date()
+
+    const baseData = {
+      wikiSlug: lesson.wikiSlug,
+      order: finalOrder,
+      title_en: finalTitleEn,
+      title_ar: finalTitleAr,
+      coverImage: lesson.coverImage || reference?.coverImage || null,
+      ownerId: lesson.ownerId || reference?.ownerId || developer?.id || null,
+      lastModifiedBy: lesson.lastModifiedBy || developer?.id || reference?.lastModifiedBy || null,
+      duration_min: finalDuration,
+      difficulty: lesson.difficulty || reference?.difficulty || 'Beginner',
+      prerequisites_en: Array.isArray(lesson.prerequisites_en)
+        ? lesson.prerequisites_en
+        : reference?.prerequisites_en || [],
+      prerequisites_ar: Array.isArray(lesson.prerequisites_ar)
+        ? lesson.prerequisites_ar
+        : reference?.prerequisites_ar || [],
+      materials: Array.isArray(lesson.materials) ? lesson.materials : reference?.materials || [],
+      body: Array.isArray(lesson.body) ? lesson.body : reference?.body || [],
+      updatedAt: now,
+    }
+
+    if (requestedStatus === LESSON_STATUS.DRAFT) {
+      const publishedRef =
+        normalizeStatus(publishedSource?.status, true) === LESSON_STATUS.PUBLISHED ? publishedSource : null
+      const draftBaseId = publishedRef?.id || stripLegacyDraftSuffix(lookupId || existingId) || (lesson.id || 'lesson')
+      const draftBaseSlug = publishedRef?.slug || stripLegacyDraftSuffix(lookupSlug || existingSlug) || (lesson.slug || draftBaseId)
+      const draftId = draftSource?.id || await ensureUniqueRowId(tx, toLegacyDraftValue(draftBaseId))
+      const draftSlug = await ensureUniqueLegacySlug(
+        tx,
+        lesson.wikiSlug,
+        draftSource?.slug || toLegacyDraftValue(draftBaseSlug),
+        draftSource?.id
+      )
+      const nextVersion = Math.max(getVersion(draftSource?.version) + 1, 1)
+      const draftData = {
+        ...baseData,
+        slug: draftSlug,
+        status: LESSON_STATUS.DRAFT,
+        publishedAt: null,
+        version: nextVersion,
+        activeEditorId: developer?.id || draftSource?.activeEditorId || null,
+        lockedUntil: draftSource?.lockedUntil || null,
+      }
+
+      const row = draftSource
+        ? await tx.lesson.update({
+            where: { id: draftSource.id },
+            data: draftData,
+            select: legacyLessonSelect,
+          })
+        : await insertLegacyLessonRow(tx, {
+            id: draftId,
+            wikiSlug: lesson.wikiSlug,
+            order: draftData.order,
+            slug: draftData.slug,
+            title_en: draftData.title_en,
+            title_ar: draftData.title_ar,
+            coverImage: draftData.coverImage,
+            ownerId: draftData.ownerId,
+            lastModifiedBy: draftData.lastModifiedBy,
+            status: draftData.status,
+            publishedAt: draftData.publishedAt,
+            duration_min: draftData.duration_min,
+            difficulty: draftData.difficulty,
+            prerequisites_en: draftData.prerequisites_en,
+            prerequisites_ar: draftData.prerequisites_ar,
+            materials: draftData.materials,
+            body: draftData.body,
+            updatedAt: draftData.updatedAt,
+            version: draftData.version,
+            activeEditorId: draftData.activeEditorId,
+            lockedUntil: draftData.lockedUntil,
+          })
+
+      return {
+        row,
+        isUpdate: Boolean(draftSource),
+        lastPublishedAt: publishedRef?.publishedAt || null,
+      }
+    }
+
+    const publishTargetId =
+      publishedSource?.id ||
+      stripLegacyDraftSuffix(existingId || lookupId) ||
+      (lesson.id || 'lesson')
+    const publishTargetSlugBase =
+      stripLegacyDraftSuffix(lesson.slug) ||
+      stripLegacyDraftSuffix(existingSlug || lookupSlug) ||
+      publishedSource?.slug ||
+      slugify(lesson.title_en || lesson.title_ar || publishTargetId)
+    const publishSlug = await ensureUniqueLegacySlug(tx, lesson.wikiSlug, publishTargetSlugBase, publishedSource?.id)
+    const nextPublishedVersion = Math.max(getVersion(publishedSource?.version) + 1, 1)
+    const publishedData = {
+      ...baseData,
+      slug: publishSlug,
+      status: LESSON_STATUS.PUBLISHED,
+      publishedAt: now,
+      version: nextPublishedVersion,
+      activeEditorId: null,
+      lockedUntil: null,
+    }
+
+    const row = publishedSource
+      ? await tx.lesson.update({
+          where: { id: publishedSource.id },
+          data: publishedData,
+          select: legacyLessonSelect,
+        })
+      : await insertLegacyLessonRow(tx, {
+          id: await ensureUniqueRowId(tx, publishTargetId),
+          wikiSlug: lesson.wikiSlug,
+          order: publishedData.order,
+          slug: publishedData.slug,
+          title_en: publishedData.title_en,
+          title_ar: publishedData.title_ar,
+          coverImage: publishedData.coverImage,
+          ownerId: publishedData.ownerId,
+          lastModifiedBy: publishedData.lastModifiedBy,
+          status: publishedData.status,
+          publishedAt: publishedData.publishedAt,
+          duration_min: publishedData.duration_min,
+          difficulty: publishedData.difficulty,
+          prerequisites_en: publishedData.prerequisites_en,
+          prerequisites_ar: publishedData.prerequisites_ar,
+          materials: publishedData.materials,
+          body: publishedData.body,
+          updatedAt: publishedData.updatedAt,
+          version: publishedData.version,
+          activeEditorId: publishedData.activeEditorId,
+          lockedUntil: publishedData.lockedUntil,
+        })
+
+    if (draftSource && draftSource.id !== row.id) {
+      await tx.lesson.deleteMany({
+        where: { id: draftSource.id },
+      })
+    }
+
+    return {
+      row,
+      isUpdate: Boolean(publishedSource),
+      lastPublishedAt: row.publishedAt || null,
+    }
+  }, { maxWait: 20000, timeout: 20000 })
+}
 
 export async function POST(req: Request) {
   try {
     const incoming = (await req.json()) as LessonPayload
     const { forceNew = false, ...rawLesson } = incoming
+
     const lesson: NewLesson = {
       ...rawLesson,
       order: Number(rawLesson.order) || 0,
       id: (rawLesson.id || rawLesson.slug || '').trim(),
+      lessonKey: (rawLesson.lessonKey || '').trim() || undefined,
       slug: (rawLesson.slug || '').trim(),
       wikiSlug: (rawLesson.wikiSlug || 'student-kit').trim(),
       title_en: (rawLesson.title_en || rawLesson.title_ar || '').trim(),
@@ -115,22 +824,25 @@ export async function POST(req: Request) {
       coverImage: (rawLesson.coverImage || '').trim(),
       ownerId: rawLesson.ownerId?.trim() || undefined,
       lastModifiedBy: rawLesson.lastModifiedBy?.trim() || undefined,
-      status: (rawLesson.status || '').trim() || 'draft',
+      status: (rawLesson.status || '').trim() || LESSON_STATUS.DRAFT,
       publishedAt: rawLesson.publishedAt || undefined,
+      duration_min: Number(rawLesson.duration_min) || 30,
       difficulty: (rawLesson.difficulty || 'Beginner').trim(),
-      version: typeof rawLesson.version === 'number' ? rawLesson.version : undefined,
+      prerequisites_en: Array.isArray(rawLesson.prerequisites_en) ? rawLesson.prerequisites_en : [],
+      prerequisites_ar: Array.isArray(rawLesson.prerequisites_ar) ? rawLesson.prerequisites_ar : [],
+      materials: Array.isArray(rawLesson.materials) ? rawLesson.materials : [],
+      body: Array.isArray(rawLesson.body) ? rawLesson.body : [],
+      version: Number.isFinite(rawLesson.version as number) ? Number(rawLesson.version) : undefined,
     }
 
     if (!lesson.slug) {
-      const basis = lesson.id || lesson.title_en
+      const basis = lesson.id || lesson.title_en || lesson.title_ar
       if (basis) lesson.slug = slugify(basis)
     }
-
     if (!lesson.id) {
-      const basis = rawLesson.slug || rawLesson.title_en || rawLesson.title_ar
+      const basis = lesson.lessonKey || lesson.slug || lesson.title_en || lesson.title_ar
       if (basis) lesson.id = slugify(basis)
     }
-
     if (!lesson.id || lesson.id.trim() === '') {
       lesson.id = slugify(lesson.title_en || lesson.title_ar || 'untitled')
     }
@@ -154,17 +866,16 @@ export async function POST(req: Request) {
 
     const actorId = getActorIdFromRequest(req)
     let developer = actorId ? await findDeveloperById(actorId) : undefined
-    
     if (!developer && process.env.NODE_ENV === 'development') {
-        developer = {
-            id: '1',
-            email: 'admin@robogeex.com',
-            name: 'Local Admin',
-            role: 'admin',
-            password: '',
-            wikiSlugs: [],
-            lessonIds: []
-        }
+      developer = {
+        id: '1',
+        email: 'admin@robogeex.com',
+        name: 'Local Admin',
+        role: 'admin',
+        password: '',
+        wikiSlugs: [],
+        lessonIds: [],
+      }
     }
     const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
 
@@ -183,235 +894,518 @@ export async function POST(req: Request) {
       lesson.lastModifiedBy = developer.id
     }
 
-    // Enforce publish rules:
-    // Only admins or superadmins can publish
-    if (!isAdmin) {
-      lesson.status = 'draft'
-      lesson.publishedAt = undefined
-    } else {
-      // Allow publish; set publishedAt if newly published
-      if (lesson.status === 'published' && !lesson.publishedAt) {
-        lesson.publishedAt = new Date().toISOString()
-      }
-      if (lesson.status !== 'published') {
-        lesson.publishedAt = undefined
-      }
-    }
+    const requestedStatus = normalizeStatus(lesson.status, isAdmin)
+    const clientVersion = Number.isFinite(lesson.version as number) ? Number(lesson.version) : undefined
 
     if (process.env.USE_DB === 'true') {
       try {
-        const prisma = getPrisma(lesson.wikiSlug)
-
-        const existingRecord = await prisma.lesson.findUnique({
-          where: { id: lesson.id },
-          select: { order: true, wikiSlug: true, ownerId: true, version: true, activeEditorId: true, lockedUntil: true } as any,
-        })
-
-        const isSameWiki = existingRecord?.wikiSlug === lesson.wikiSlug
-        let isUpdate = !forceNew && !!existingRecord && isSameWiki
-
-        if (isUpdate && !canEditLesson(developer, lesson.wikiSlug, existingRecord?.ownerId)) {
-          return NextResponse.json({ error: 'Forbidden: You do not have permission to edit this lesson' }, { status: 403 })
+        const prisma: any = getPrisma(lesson.wikiSlug)
+        const hasLessonKeyColumn = await supportsLessonKeyColumn(prisma, lesson.wikiSlug)
+        if (!hasLessonKeyColumn) {
+          const legacySaved = await saveLegacyLessonInDb(
+            prisma,
+            lesson,
+            forceNew,
+            developer,
+            requestedStatus,
+            clientVersion
+          )
+          return NextResponse.json({
+            ok: true,
+            isUpdate: legacySaved.isUpdate,
+            lastPublishedAt: legacySaved.lastPublishedAt || null,
+            hasUnpublishedChanges:
+              legacySaved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(legacySaved.lastPublishedAt),
+            lesson: {
+              id: legacySaved.row.id,
+              lessonKey: legacySaved.row.id,
+              slug: legacySaved.row.slug,
+              order: legacySaved.row.order,
+              coverImage: legacySaved.row.coverImage,
+              ownerId: legacySaved.row.ownerId || lesson.ownerId || developer?.id || null,
+              status:
+                legacySaved.row.status === LESSON_STATUS.PUBLISHED || Boolean(legacySaved.lastPublishedAt)
+                  ? LESSON_STATUS.PUBLISHED
+                  : LESSON_STATUS.DRAFT,
+              version: legacySaved.row.version,
+            },
+          })
         }
+        const saved = await prisma.$transaction(async (tx: any) => {
+          const familyResolution = await resolveLessonFamilyInDb(tx, lesson, forceNew)
+          let lessonKey = familyResolution.lessonKey
+          let familyRows = familyResolution.familyRows
 
-        // --- Document Lock & Version Check ---
-        if (isUpdate && existingRecord) {
-          const clientVersion = typeof lesson.version === 'number' ? lesson.version : 1
-          
-          // 1. Conflict Check: Did someone else save a newer version while we were editing?
-          if (existingRecord.version > clientVersion) {
-            return NextResponse.json({ 
-              error: 'Conflict: This lesson was modified by someone else since you opened it.',
-              errorCode: 'VERSION_CONFLICT',
-              currentVersion: existingRecord.version
-            }, { status: 409 })
+          if (!lessonKey) {
+            const rawKey =
+              lesson.lessonKey ||
+              (forceNew ? lesson.slug : '') ||
+              lesson.id ||
+              lesson.slug ||
+              slugify(lesson.title_en || lesson.title_ar || 'lesson')
+            lessonKey = await ensureUniqueLessonKey(tx, lesson.wikiSlug, rawKey)
+            familyRows = []
           }
 
-          // 2. Lock Check: Is someone else currently holding the lock for this document?
-          const now = new Date()
-          if (
-            existingRecord.activeEditorId &&
-            existingRecord.activeEditorId !== developer?.id?.toString() &&
-            existingRecord.lockedUntil &&
-            new Date(existingRecord.lockedUntil) > now
-          ) {
-            return NextResponse.json({
-              error: 'Conflict: This lesson is currently actively locked by another developer.',
-              errorCode: 'LOCKED_BY_OTHER',
-            }, { status: 409 })
+          const sortedFamily = sortVersionRowsDesc(familyRows)
+          const latestDraft = pickLatestDraft(sortedFamily)
+          const latestPublished = pickLatestPublished(sortedFamily)
+          const latestAny = pickLatestAny(sortedFamily)
+          const reference = latestDraft || latestPublished || latestAny
+
+          if (reference && !canEditLesson(developer, lesson.wikiSlug, reference.ownerId)) {
+            throw toApiError(403, 'Forbidden: You do not have permission to edit this lesson')
           }
-        }
-        // -------------------------------------
 
-        if (!Number.isFinite(lesson.order) || lesson.order < 1) {
-          if (isUpdate && existingRecord) {
-            lesson.order = existingRecord.order
-          } else {
-            const agg = await prisma.lesson.aggregate({
-              where: { wikiSlug: lesson.wikiSlug },
-              _max: { order: true },
-            })
-            lesson.order = (agg._max?.order || 0) + 1
+          const maxVersion = sortedFamily.reduce((max, row) => Math.max(max, getVersion(row.version)), 0)
+          const maxOrderResult = await tx.lesson.aggregate({
+            where: { wikiSlug: lesson.wikiSlug },
+            _max: { order: true },
+          })
+          const nextOrderFromDb = (maxOrderResult?._max?.order || 0) + 1
+          const finalOrder =
+            Number.isFinite(lesson.order) && lesson.order > 0
+              ? Math.round(lesson.order)
+              : Number.isFinite(reference?.order)
+                ? Number(reference.order)
+                : nextOrderFromDb
+
+          const finalSlug = await ensureUniqueSlugForLessonKey(
+            tx,
+            lesson.wikiSlug,
+            lesson.slug || reference?.slug || lesson.id,
+            lessonKey
+          )
+
+          const finalTitleEn = (lesson.title_en || reference?.title_en || '').trim()
+          const finalTitleAr = (lesson.title_ar || reference?.title_ar || finalTitleEn).trim()
+          const finalDuration = Number.isFinite(lesson.duration_min) && lesson.duration_min > 0
+            ? Math.round(lesson.duration_min)
+            : Number.isFinite(reference?.duration_min)
+              ? Number(reference.duration_min)
+              : 30
+
+          const baseData = {
+            lessonKey,
+            order: finalOrder,
+            slug: finalSlug,
+            title_en: finalTitleEn,
+            title_ar: finalTitleAr,
+            coverImage: lesson.coverImage || reference?.coverImage || null,
+            ownerId: lesson.ownerId || reference?.ownerId || developer?.id || null,
+            lastModifiedBy: lesson.lastModifiedBy || developer?.id || null,
+            duration_min: finalDuration,
+            difficulty: lesson.difficulty || reference?.difficulty || 'Beginner',
+            prerequisites_en: Array.isArray(lesson.prerequisites_en)
+              ? lesson.prerequisites_en
+              : reference?.prerequisites_en || [],
+            prerequisites_ar: Array.isArray(lesson.prerequisites_ar)
+              ? lesson.prerequisites_ar
+              : reference?.prerequisites_ar || [],
+            materials: Array.isArray(lesson.materials) ? lesson.materials : reference?.materials || [],
+            body: Array.isArray(lesson.body) ? lesson.body : reference?.body || [],
           }
-        }
 
-        const ensureUnique = async (value: string, field: 'id' | 'slug'): Promise<string> => {
-          const base = value && value.trim() ? value.trim() : 'lesson'
-          let candidate = base
-          let counter = 1
-          while (true) {
-            const existing = field === 'id'
-              ? await prisma.lesson.findUnique({ where: { id: candidate } })
-              : await prisma.lesson.findFirst({
-                  where: {
-                    slug: candidate,
-                    wikiSlug: lesson.wikiSlug,
-                  },
-                })
-            if (!existing) break
-            candidate = `${base}-${counter++}`
-          }
-          return candidate
-        }
+          if (requestedStatus === LESSON_STATUS.DRAFT) {
+            const lockSource = latestDraft || latestPublished || latestAny
+            ensureLockAndVersionOrThrow(lockSource, clientVersion, developer?.id)
 
-        if (!isUpdate) {
-          lesson.id = await ensureUnique(lesson.id, 'id')
-          lesson.slug = await ensureUnique(lesson.slug, 'slug')
-        } else if (existingRecord && !isSameWiki) {
-          lesson.id = await ensureUnique(lesson.id, 'id')
-          lesson.slug = await ensureUnique(lesson.slug, 'slug')
-          isUpdate = false
-        }
+            if (latestDraft) {
+              const updated = await tx.lesson.update({
+                where: { id: latestDraft.id },
+                data: {
+                  ...baseData,
+                  status: LESSON_STATUS.DRAFT,
+                  publishedAt: null,
+                  version: getVersion(latestDraft.version) + 1,
+                  updatedAt: new Date(),
+                  activeEditorId: developer?.id || latestDraft.activeEditorId || null,
+                  lockedUntil: latestDraft.lockedUntil || null,
+                },
+              })
+              return {
+                row: updated,
+                isUpdate: true,
+                lastPublishedAt: latestPublished?.publishedAt || null,
+              }
+            }
 
-        const dataForDb = {
-          order: lesson.order,
-          slug: lesson.slug,
-          title_en: lesson.title_en,
-          title_ar: lesson.title_ar,
-          coverImage: lesson.coverImage || null,
-          ownerId: lesson.ownerId || existingRecord?.ownerId || developer?.id || null,
-          lastModifiedBy: lesson.lastModifiedBy || developer?.id || null,
-          status: lesson.status || 'draft',
-          publishedAt: lesson.publishedAt ? new Date(lesson.publishedAt) : null,
-          duration_min: lesson.duration_min,
-          difficulty: lesson.difficulty,
-          prerequisites_en: lesson.prerequisites_en as any,
-          prerequisites_ar: lesson.prerequisites_ar as any,
-          materials: lesson.materials as any,
-          body: lesson.body as any,
-          version: isUpdate ? (existingRecord?.version || 1) + 1 : 1,
-        }
-
-        const saved = isUpdate
-          ? await prisma.lesson.update({
-              where: { id: lesson.id },
-              data: { ...dataForDb, updatedAt: new Date() },
-            })
-          : await prisma.lesson.create({
+            const nextVersion = Math.max(maxVersion + 1, 1)
+            const newRowId = await ensureUniqueRowId(
+              tx,
+              lesson.id || `${lessonKey}-draft-v${nextVersion}`
+            )
+            const created = await tx.lesson.create({
               data: {
-                id: lesson.id,
+                id: newRowId,
                 wikiSlug: lesson.wikiSlug,
-                ...dataForDb,
+                ...baseData,
+                status: LESSON_STATUS.DRAFT,
+                publishedAt: null,
+                version: nextVersion,
+                activeEditorId:
+                  latestPublished?.activeEditorId === developer?.id ? developer?.id : null,
+                lockedUntil:
+                  latestPublished?.activeEditorId === developer?.id
+                    ? latestPublished.lockedUntil || null
+                    : null,
               },
             })
+            return {
+              row: created,
+              isUpdate: false,
+              lastPublishedAt: latestPublished?.publishedAt || null,
+            }
+          }
+
+          const publishSource = latestDraft || latestPublished || latestAny
+          ensureLockAndVersionOrThrow(publishSource, clientVersion, developer?.id)
+
+          let draftSnapshot: any
+          if (latestDraft) {
+            draftSnapshot = await tx.lesson.update({
+              where: { id: latestDraft.id },
+              data: {
+                ...baseData,
+                status: LESSON_STATUS.DRAFT,
+                publishedAt: null,
+                version: getVersion(latestDraft.version) + 1,
+                updatedAt: new Date(),
+                activeEditorId: developer?.id || latestDraft.activeEditorId || null,
+                lockedUntil: latestDraft.lockedUntil || null,
+              },
+            })
+          } else {
+            const nextDraftVersion = Math.max(maxVersion + 1, 1)
+            const draftId = await ensureUniqueRowId(
+              tx,
+              lesson.id || `${lessonKey}-draft-v${nextDraftVersion}`
+            )
+            draftSnapshot = await tx.lesson.create({
+              data: {
+                id: draftId,
+                wikiSlug: lesson.wikiSlug,
+                ...baseData,
+                status: LESSON_STATUS.DRAFT,
+                publishedAt: null,
+                version: nextDraftVersion,
+                activeEditorId: developer?.id || null,
+                lockedUntil: null,
+              },
+            })
+          }
+
+          await tx.lesson.updateMany({
+            where: {
+              wikiSlug: lesson.wikiSlug,
+              lessonKey,
+              status: { in: [LESSON_STATUS.PUBLISHED, LESSON_STATUS.DRAFT] },
+            },
+            data: {
+              status: LESSON_STATUS.ARCHIVED,
+              activeEditorId: null,
+              lockedUntil: null,
+            },
+          })
+
+          const publishedVersion = getVersion(draftSnapshot.version) + 1
+          const publishedId = await ensureUniqueRowId(
+            tx,
+            `${lessonKey}-published-v${publishedVersion}`
+          )
+
+          const published = await tx.lesson.create({
+            data: {
+              id: publishedId,
+              wikiSlug: lesson.wikiSlug,
+              lessonKey,
+              order: draftSnapshot.order,
+              slug: draftSnapshot.slug,
+              title_en: draftSnapshot.title_en,
+              title_ar: draftSnapshot.title_ar,
+              coverImage: draftSnapshot.coverImage,
+              ownerId: draftSnapshot.ownerId,
+              lastModifiedBy: developer?.id || draftSnapshot.lastModifiedBy || null,
+              status: LESSON_STATUS.PUBLISHED,
+              publishedAt: new Date(),
+              duration_min: draftSnapshot.duration_min,
+              difficulty: draftSnapshot.difficulty,
+              prerequisites_en: draftSnapshot.prerequisites_en,
+              prerequisites_ar: draftSnapshot.prerequisites_ar,
+              materials: draftSnapshot.materials,
+              body: draftSnapshot.body,
+              version: publishedVersion,
+              activeEditorId: null,
+              lockedUntil: null,
+            },
+          })
+
+          return {
+            row: published,
+            isUpdate: true,
+            lastPublishedAt: published.publishedAt || null,
+          }
+        }, { maxWait: 20000, timeout: 20000 })
 
         return NextResponse.json({
           ok: true,
-          isUpdate,
+          isUpdate: saved.isUpdate,
+          lastPublishedAt: saved.lastPublishedAt || null,
+          hasUnpublishedChanges:
+            saved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(saved.lastPublishedAt),
           lesson: {
-            id: saved.id,
-            slug: saved.slug,
-            order: saved.order,
-            coverImage: saved.coverImage,
-            ownerId: saved.ownerId || lesson.ownerId || developer?.id || null,
-            status: saved.status,
-            version: (saved as any).version,
+            id: saved.row.id,
+            lessonKey: saved.row.lessonKey || saved.row.id,
+            slug: saved.row.slug,
+            order: saved.row.order,
+            coverImage: saved.row.coverImage,
+            ownerId: saved.row.ownerId || lesson.ownerId || developer?.id || null,
+            status:
+              saved.row.status === LESSON_STATUS.PUBLISHED || Boolean(saved.lastPublishedAt)
+                ? LESSON_STATUS.PUBLISHED
+                : LESSON_STATUS.DRAFT,
+            version: saved.row.version,
           },
         })
-      } catch (e: any) {
-        if (e?.code === 'P2002') {
-          const target = e.meta?.target || []
+      } catch (error: any) {
+        if (isApiError(error)) {
+          const { status, ...body } = error
+          return NextResponse.json(body, { status })
+        }
+        if (isLessonKeyUnsupportedError(error)) {
+          try {
+            const prisma: any = getPrisma(lesson.wikiSlug)
+            const legacySaved = await saveLegacyLessonInDb(
+              prisma,
+              lesson,
+              forceNew,
+              developer,
+              requestedStatus,
+              clientVersion
+            )
+            return NextResponse.json({
+              ok: true,
+              isUpdate: legacySaved.isUpdate,
+              lastPublishedAt: legacySaved.lastPublishedAt || null,
+              hasUnpublishedChanges:
+                legacySaved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(legacySaved.lastPublishedAt),
+              lesson: {
+                id: legacySaved.row.id,
+                lessonKey: legacySaved.row.id,
+                slug: legacySaved.row.slug,
+                order: legacySaved.row.order,
+                coverImage: legacySaved.row.coverImage,
+                ownerId: legacySaved.row.ownerId || lesson.ownerId || developer?.id || null,
+                status:
+                  legacySaved.row.status === LESSON_STATUS.PUBLISHED || Boolean(legacySaved.lastPublishedAt)
+                    ? LESSON_STATUS.PUBLISHED
+                    : LESSON_STATUS.DRAFT,
+                version: legacySaved.row.version,
+              },
+            })
+          } catch (legacyError: any) {
+            if (isApiError(legacyError)) {
+              const { status, ...body } = legacyError
+              return NextResponse.json(body, { status })
+            }
+            return NextResponse.json({ error: legacyError?.message || 'DB error' }, { status: 500 })
+          }
+        }
+        if (error?.code === 'P2002') {
+          const target = error.meta?.target || []
           const fields = Array.isArray(target) ? target.join(', ') : 'unknown field'
           return NextResponse.json({ error: `A lesson with this ${fields} already exists.` }, { status: 409 })
         }
-        return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })
+        return NextResponse.json({ error: error?.message || 'DB error' }, { status: 500 })
       }
-    } else {
-      const existingLessons = await readLessonsFromFile(lesson.wikiSlug)
-      const existingLessonIndex = existingLessons.findIndex(l => l.id === lesson.id)
-      const isUpdate = !forceNew && existingLessonIndex !== -1
+    }
 
-      if (isUpdate && !canEditLesson(developer, lesson.wikiSlug, existingLessons[existingLessonIndex]?.ownerId)) {
+    try {
+      const list = await readLessonsFromFile(lesson.wikiSlug)
+      const resolved = resolveLessonFamilyInFile(list, lesson)
+      let lessonKey = resolved.lessonKey
+      let family = resolved.family
+
+      if (!lessonKey || forceNew) {
+        const desired = lesson.lessonKey || lesson.id || lesson.slug || slugify(lesson.title_en || lesson.title_ar || 'lesson')
+        let candidate = desired
+        let counter = 1
+        while (list.some((item) => (item.lessonKey || item.id) === candidate)) {
+          candidate = `${desired}-${counter++}`
+        }
+        lessonKey = candidate
+        family = []
+      }
+
+      const sortedFamily = sortVersionRowsDesc(family)
+      const latestDraft = pickLatestDraft(sortedFamily)
+      const latestPublished = pickLatestPublished(sortedFamily)
+      const latestAny = pickLatestAny(sortedFamily)
+      const reference = latestDraft || latestPublished || latestAny
+
+      if (reference && !canEditLesson(developer, lesson.wikiSlug, reference.ownerId)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to edit this lesson' }, { status: 403 })
       }
 
-      if (!isUpdate) {
-        lesson.id = generateUniqueId(lesson.id, existingLessons)
-        lesson.slug = generateUniqueId(lesson.slug, existingLessons)
+      const desiredStatus = normalizeStatus(lesson.status, isAdmin)
+      const maxVersion = sortedFamily.reduce((max, row) => Math.max(max, getVersion(row.version)), 0)
+      const maxOrder = list.reduce((max, row) => Math.max(max, Number(row.order) || 0), 0)
+      let lastPublishedAt = latestPublished?.publishedAt || null
+      const finalOrder =
+        Number.isFinite(lesson.order) && lesson.order > 0
+          ? Math.round(lesson.order)
+          : Number.isFinite(reference?.order)
+            ? Number(reference.order)
+            : maxOrder + 1
+
+      const finalSlug = ensureUniqueFileSlug(
+        list,
+        lesson.wikiSlug,
+        lessonKey,
+        lesson.slug || reference?.slug || lesson.id
+      )
+
+      const baseData: NewLesson = {
+        ...lesson,
+        id: lesson.id,
+        lessonKey,
+        wikiSlug: lesson.wikiSlug,
+        order: finalOrder,
+        slug: finalSlug,
+        title_en: lesson.title_en || reference?.title_en || '',
+        title_ar: lesson.title_ar || reference?.title_ar || lesson.title_en || '',
+        coverImage: lesson.coverImage || reference?.coverImage || '',
+        ownerId: lesson.ownerId || reference?.ownerId || developer?.id || undefined,
+        lastModifiedBy: developer?.id || lesson.lastModifiedBy || reference?.lastModifiedBy,
+        duration_min:
+          Number.isFinite(lesson.duration_min) && lesson.duration_min > 0
+            ? Math.round(lesson.duration_min)
+            : Number(reference?.duration_min) || 30,
+        difficulty: lesson.difficulty || reference?.difficulty || 'Beginner',
+        prerequisites_en: Array.isArray(lesson.prerequisites_en)
+          ? lesson.prerequisites_en
+          : reference?.prerequisites_en || [],
+        prerequisites_ar: Array.isArray(lesson.prerequisites_ar)
+          ? lesson.prerequisites_ar
+          : reference?.prerequisites_ar || [],
+        materials: Array.isArray(lesson.materials) ? lesson.materials : reference?.materials || [],
+        body: Array.isArray(lesson.body) ? lesson.body : reference?.body || [],
+        status: desiredStatus,
+        publishedAt: lesson.publishedAt,
       }
 
-      const list = existingLessons
-      if (isUpdate) {
-        const existingLesson = list[existingLessonIndex]
-        list[existingLessonIndex] = {
-          ...existingLesson,
-          ...lesson,
-          status: isAdmin ? lesson.status || existingLesson.status || 'draft' : 'draft',
-          publishedAt: isAdmin
-            ? lesson.status === 'published'
-              ? (lesson.publishedAt || existingLesson.publishedAt || new Date().toISOString())
-              : undefined
-            : undefined,
-          lastModifiedBy: developer?.id || lesson.lastModifiedBy || existingLesson.lastModifiedBy,
-          ownerId: existingLesson.ownerId || lesson.ownerId || developer?.id,
-          version: (existingLesson.version || 1) + 1,
+      let savedRow: NewLesson
+      let isUpdate = false
+
+      if (desiredStatus === LESSON_STATUS.DRAFT) {
+        if (latestDraft) {
+          const index = list.findIndex((row) => row.id === latestDraft.id)
+          const updated: NewLesson = {
+            ...latestDraft,
+            ...baseData,
+            status: LESSON_STATUS.DRAFT,
+            publishedAt: undefined,
+            version: getVersion(latestDraft.version) + 1,
+          }
+          if (index >= 0) list[index] = updated
+          savedRow = updated
+          isUpdate = true
+        } else {
+          const nextVersion = Math.max(maxVersion + 1, 1)
+          const id = ensureUniqueFileRowId(list, lesson.id || `${lessonKey}-draft-v${nextVersion}`)
+          const created: NewLesson = {
+            ...baseData,
+            id,
+            lessonKey,
+            status: LESSON_STATUS.DRAFT,
+            publishedAt: undefined,
+            version: nextVersion,
+          }
+          list.push(created)
+          savedRow = created
+          isUpdate = false
         }
       } else {
-        const maxOrder = list.reduce((max, item) => Math.max(max, item.order || 0), 0)
-        if (!Number.isFinite(lesson.order) || lesson.order < 1) {
-          lesson.order = maxOrder + 1
+        let draftSnapshot: NewLesson
+        if (latestDraft) {
+          const index = list.findIndex((row) => row.id === latestDraft.id)
+          draftSnapshot = {
+            ...latestDraft,
+            ...baseData,
+            status: LESSON_STATUS.DRAFT,
+            publishedAt: undefined,
+            version: getVersion(latestDraft.version) + 1,
+          }
+          if (index >= 0) list[index] = draftSnapshot
+        } else {
+          const nextDraftVersion = Math.max(maxVersion + 1, 1)
+          draftSnapshot = {
+            ...baseData,
+            id: ensureUniqueFileRowId(list, lesson.id || `${lessonKey}-draft-v${nextDraftVersion}`),
+            lessonKey,
+            status: LESSON_STATUS.DRAFT,
+            publishedAt: undefined,
+            version: nextDraftVersion,
+          }
+          list.push(draftSnapshot)
         }
-        list.push({
-          ...lesson,
-          status: isAdmin ? lesson.status || 'draft' : 'draft',
-          publishedAt: isAdmin && lesson.status === 'published'
-            ? lesson.publishedAt || new Date().toISOString()
-            : undefined,
-          ownerId: lesson.ownerId || developer?.id,
-          lastModifiedBy: developer?.id || lesson.lastModifiedBy,
-          version: 1,
-        })
+
+        for (let i = 0; i < list.length; i += 1) {
+          const item = list[i]
+          if ((item.lessonKey || item.id) !== lessonKey) continue
+          if (item.status === LESSON_STATUS.DRAFT || item.status === LESSON_STATUS.PUBLISHED) {
+            list[i] = { ...item, status: LESSON_STATUS.ARCHIVED, publishedAt: undefined }
+          }
+        }
+
+        const publishedVersion = getVersion(draftSnapshot.version) + 1
+        const published: NewLesson = {
+          ...draftSnapshot,
+          id: ensureUniqueFileRowId(list, `${lessonKey}-published-v${publishedVersion}`),
+          lessonKey,
+          status: LESSON_STATUS.PUBLISHED,
+          publishedAt: new Date().toISOString(),
+          version: publishedVersion,
+        }
+        list.push(published)
+        savedRow = published
+        isUpdate = true
+        lastPublishedAt = published.publishedAt || null
       }
 
-      try {
-        const ordered = sortLessons(list)
-        const filePath = lessonsFilePath(lesson.wikiSlug)
-        const dir = path.dirname(filePath)
-        await fs.mkdir(dir, { recursive: true })
-        await fs.writeFile(filePath, JSON.stringify(ordered, null, 2), 'utf-8')
+      const ordered = sortLessons(list)
+      const filePath = lessonsFilePath(lesson.wikiSlug)
+      const dir = path.dirname(filePath)
+      await fs.mkdir(dir, { recursive: true })
+      await fs.writeFile(filePath, JSON.stringify(ordered, null, 2), 'utf-8')
 
-        return NextResponse.json({
-          ok: true,
-          isUpdate,
-          lesson: {
-            id: lesson.id,
-            slug: lesson.slug,
-            order: lesson.order,
-            ownerId: lesson.ownerId || developer?.id || null,
-            status: lesson.status || 'draft',
-            version: isUpdate ? list[existingLessonIndex].version : 1,
-          },
-        })
-      } catch (error) {
-        console.error('Error saving lessons to file:', error)
-        return NextResponse.json({ 
-          error: 'Failed to save lessons',
-          details: error instanceof Error ? error.message : String(error)
-        }, { status: 500 })
-      }
+      return NextResponse.json({
+        ok: true,
+        isUpdate,
+        lastPublishedAt: lastPublishedAt || null,
+        hasUnpublishedChanges:
+          savedRow.status !== LESSON_STATUS.PUBLISHED && Boolean(lastPublishedAt),
+        lesson: {
+          id: savedRow.id,
+          lessonKey: savedRow.lessonKey || savedRow.id,
+          slug: savedRow.slug,
+          order: savedRow.order,
+          ownerId: savedRow.ownerId || developer?.id || null,
+          status:
+            savedRow.status === LESSON_STATUS.PUBLISHED || Boolean(lastPublishedAt)
+              ? LESSON_STATUS.PUBLISHED
+              : LESSON_STATUS.DRAFT,
+          version: savedRow.version || 1,
+        },
+      })
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error?.message || 'Failed to save lessons', details: error?.message || String(error) },
+        { status: 500 }
+      )
     }
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || 'Unknown error' }, { status: 500 })
   }
 }
 
@@ -427,24 +1421,31 @@ export async function GET(req: Request) {
 
     if (process.env.USE_DB === 'true') {
       try {
-        const prisma = getPrisma(wikiSlug || undefined)
+        const prisma: any = getPrisma(wikiSlug || undefined)
         const lessons = await prisma.lesson.findMany({
           where: {
             wikiSlug,
-            ...(publishedOnly ? { status: 'published' } : {}),
+            ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
           },
-          orderBy: [{ order: 'asc' }],
+          orderBy: [{ order: 'asc' }, { version: 'desc' }],
         })
-        return NextResponse.json(lessons)
-      } catch (e: any) {
-        return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })
+
+        const collapsed = publishedOnly
+          ? collapseLessonsForPublic(lessons)
+          : collapseLessonsForEditor(lessons)
+
+        return NextResponse.json(collapsed)
+      } catch (error: any) {
+        return NextResponse.json({ error: error?.message || 'DB error' }, { status: 500 })
       }
-    } else {
-      const list = await readLessonsFromFile(wikiSlug)
-      const filtered = publishedOnly ? list.filter((l) => l.status === 'published') : list
-      return NextResponse.json(sortLessons(filtered))
     }
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed to load lessons' }, { status: 500 })
+
+    const list = await readLessonsFromFile(wikiSlug)
+    const collapsed = publishedOnly
+      ? collapseLessonsForPublic(list)
+      : collapseLessonsForEditor(list)
+    return NextResponse.json(sortLessons(collapsed))
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || 'Failed to load lessons' }, { status: 500 })
   }
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Locale } from '@/lib/i18n'
 
 type TocEntry = {
   id: string
@@ -11,9 +12,11 @@ type TocEntry = {
 export interface LessonTocProps {
   entries: TocEntry[]
   lessonTitle?: string
+  locale?: Locale
 }
 
-export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
+export default function LessonToc({ entries, lessonTitle, locale = 'en' }: LessonTocProps) {
+  const isArabic = locale === 'ar'
   const [activeId, setActiveId] = useState<string>('')
   const [discoveredEntries, setDiscoveredEntries] = useState<TocEntry[]>([])
   const clickLockRef = useRef<string | null>(null)
@@ -107,9 +110,12 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
   }
 
   return (
-    <nav className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm sticky top-24">
+    <nav
+      dir={isArabic ? 'rtl' : 'ltr'}
+      className={`bg-white border border-gray-200 rounded-2xl p-5 shadow-sm sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar smooth-panel-scroll ${isArabic ? 'text-right' : 'text-left'}`}
+    >
       {lessonTitle && (
-        <div className="rounded-2xl bg-primary/15 text-primary px-4 py-3 mb-4 space-y-1">
+        <div className={`rounded-2xl bg-primary/15 text-primary px-4 py-3 mb-4 space-y-1 ${isArabic ? 'text-right' : 'text-left'}`}>
           <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/70">Lesson</div>
           <div className="text-sm font-semibold leading-snug text-primary">{lessonTitle}</div>
         </div>
@@ -125,8 +131,10 @@ export default function LessonToc({ entries, lessonTitle }: LessonTocProps) {
             <button
               type="button"
               onClick={() => handleLinkClick(entry.id)}
-              className={`block w-full text-left rounded-md px-3 py-2 text-sm transition-colors duration-150 ${
-                entry.level >= 4 ? 'pl-8' : entry.level === 3 ? 'pl-5' : 'pl-3'
+              className={`block w-full rounded-md px-3 py-2 text-sm transition-colors duration-150 ${
+                isArabic
+                  ? (entry.level >= 4 ? 'text-right pr-8' : entry.level === 3 ? 'text-right pr-5' : 'text-right pr-3')
+                  : (entry.level >= 4 ? 'text-left pl-8' : entry.level === 3 ? 'text-left pl-5' : 'text-left pl-3')
               } ${
                 activeId === entry.id
                   ? 'bg-primary/10 text-primary font-semibold'

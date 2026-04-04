@@ -32,6 +32,7 @@ import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
 import ImageSlider from './extensions/ImageSlider'
+import TagBlock from './extensions/TagBlock'
 import { CellSelection } from '@tiptap/pm/tables'
 import { Columns, Column } from './extensions/Columns'
 import CodeBlockView from './CodeBlockView'
@@ -43,6 +44,8 @@ import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev
 import DeveloperLogin from './DeveloperLogin'
 import Sidebar from '../sidebar'
 import { HUB_DOMAIN } from '@/lib/domains'
+import { buildDocumentFromSections, splitDocumentBySection, type LessonSectionKey } from '@/lib/lesson-sections'
+import { readSessionStorageJson } from '@/lib/session-storage'
 
 const ENABLE_SEGMENTS_EDITOR = false
 
@@ -195,6 +198,7 @@ export default function WikiEditor() {
   const [meta, setMeta] = useState(() => {
     const base = {
       id: '',
+      lessonKey: '',
       slug: '',
       wikiSlug: 'student-kit',
       order: 0,
@@ -206,6 +210,8 @@ export default function WikiEditor() {
       isNew: false,
       ownerId: '',
       status: 'draft',
+      lastPublishedAt: '',
+      hasUnpublishedChanges: false,
     }
 
     // Check for URL parameters first
@@ -217,13 +223,7 @@ export default function WikiEditor() {
       const urlTitle = searchParams.get('title')?.trim()
 
       if (urlWiki || urlKit || urlSlug || urlId || urlTitle) {
-        let storedMeta: any = null
-        try {
-          const rawStored = sessionStorage.getItem('lessonMeta')
-          if (rawStored) {
-            storedMeta = JSON.parse(rawStored)
-          }
-        } catch { }
+        const storedMeta = readSessionStorageJson<any>('lessonMeta')
 
         const urlMeta = {
           ...base,
@@ -247,19 +247,16 @@ export default function WikiEditor() {
 
     // Fallback to sessionStorage
     if (typeof window !== 'undefined') {
-      try {
-        const raw = sessionStorage.getItem('lessonMeta')
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          return {
-            ...base,
-            ...parsed,
-            wikiSlug: parsed.wikiSlug || base.wikiSlug,
-            isNew: typeof parsed.isNew === 'boolean' ? parsed.isNew : base.isNew,
-            coverImage: parsed.coverImage || '',
-          }
+      const parsed = readSessionStorageJson<any>('lessonMeta')
+      if (parsed) {
+        return {
+          ...base,
+          ...parsed,
+          wikiSlug: parsed.wikiSlug || base.wikiSlug,
+          isNew: typeof parsed.isNew === 'boolean' ? parsed.isNew : base.isNew,
+          coverImage: parsed.coverImage || '',
         }
-      } catch { }
+      }
     }
     return base
   })
@@ -361,12 +358,6 @@ export default function WikiEditor() {
     }
   }, [meta.id, meta.wikiSlug, developerId, hasWikiAccess])
 
-  const handleConfirmEditPublished = () => {
-    setMeta((prev: any) => ({ ...prev, status: 'draft' }))
-    setShowDraftConfirmation(false)
-    setStatus('Lesson status reverted to Draft for editing.')
-  }
-  // -------------------------------
   useEffect(() => {
     let cancelled = false
     const loadRole = async () => {
@@ -420,14 +411,22 @@ export default function WikiEditor() {
     readability: false
   })
 
-  // Confirmation for editing published lessons
-  const [showDraftConfirmation, setShowDraftConfirmation] = useState(false)
-
   const [activeEditorTab, setActiveEditorTab] = useState<'en' | 'ar'>('en')
   const activeTabRef = useRef(activeEditorTab)
   useEffect(() => {
     activeTabRef.current = activeEditorTab
   }, [activeEditorTab])
+
+  const [activeSectionTab, setActiveSectionTab] = useState<LessonSectionKey>('lesson')
+  const activeSectionRef = useRef<LessonSectionKey>('lesson')
+  useEffect(() => {
+    activeSectionRef.current = activeSectionTab
+  }, [activeSectionTab])
+  const [splitSummaryLesson, setSplitSummaryLesson] = useState(false)
+  const splitSummaryLessonRef = useRef(false)
+  useEffect(() => {
+    splitSummaryLessonRef.current = splitSummaryLesson
+  }, [splitSummaryLesson])
 
   const shouldShowTableEn = useCallback(({ editor }: any) => {
     if (activeEditorTab !== 'en') return false
@@ -463,6 +462,27 @@ export default function WikiEditor() {
   const [settingsSnapshot, setSettingsSnapshot] = useState<any>(null)
   const [isUploadingCover, setIsUploadingCover] = useState(false)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const difficultyOptions = useMemo(
+    () => [
+      { value: 'Beginner', labelEn: 'Beginner', labelAr: 'مبتدئ' },
+      { value: 'Intermediate', labelEn: 'Intermediate', labelAr: 'متوسط' },
+      { value: 'Advanced', labelEn: 'Advanced', labelAr: 'متقدم' },
+    ],
+    []
+  )
+  const selectedDifficultyValue = useMemo(() => {
+    const rawDifficulty = typeof meta.difficulty === 'string' ? meta.difficulty.trim() : ''
+    if (!rawDifficulty) return 'Beginner'
+    const matched = difficultyOptions.find(
+      (option) => option.value.toLowerCase() === rawDifficulty.toLowerCase()
+    )
+    return matched ? matched.value : rawDifficulty
+  }, [meta.difficulty, difficultyOptions])
+  const showCustomDifficultyOption = useMemo(() => {
+    return !difficultyOptions.some(
+      (option) => option.value.toLowerCase() === selectedDifficultyValue.toLowerCase()
+    )
+  }, [difficultyOptions, selectedDifficultyValue])
 
   const handleCoverFileChange = async (event: any) => {
     const file = event.target.files?.[0]
@@ -520,6 +540,25 @@ export default function WikiEditor() {
     return english || arabic || slug || id
   }, [meta.title_en, meta.title_ar, meta.slug, meta.id])
 
+  const lastPublishedLabel = useMemo(() => {
+    const raw = typeof meta.lastPublishedAt === 'string' ? meta.lastPublishedAt.trim() : ''
+    if (!raw) return 'Never published'
+    const parsed = new Date(raw)
+    if (Number.isNaN(parsed.getTime())) return 'Never published'
+    return parsed.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }, [meta.lastPublishedAt])
+
+  const publishChangeLabel = useMemo(() => {
+    if (!meta.lastPublishedAt) return 'Not published yet'
+    return meta.hasUnpublishedChanges ? 'Changes since last publish' : 'No changes since last publish'
+  }, [meta.lastPublishedAt, meta.hasUnpublishedChanges])
+
   const [isSigningIn, setIsSigningIn] = useState(!developerId)
 
   useEffect(() => {
@@ -554,7 +593,27 @@ export default function WikiEditor() {
       ],
     }
   }
+  const createEmptyDoc = () => ({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+      },
+    ],
+  })
 
+  const cloneDoc = (doc: any) => JSON.parse(JSON.stringify(doc || createEmptyDoc()))
+
+  const sectionDocsRef = useRef<{ en: Record<LessonSectionKey, any>; ar: Record<LessonSectionKey, any> }>({
+    en: {
+      summary: createEmptyDoc(),
+      lesson: createEmptyDoc(),
+    },
+    ar: {
+      summary: createEmptyDoc(),
+      lesson: createEmptyDoc(),
+    },
+  })
   const editorEn = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -590,7 +649,7 @@ export default function WikiEditor() {
                       wasHeading = true
                     }
                   } catch { /* position doesn't exist in old state */ }
-                  
+
                   // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
                   if (!wasHeading) {
                     if (!tr) tr = newState.tr
@@ -657,9 +716,10 @@ export default function WikiEditor() {
       }).configure({ lowlight: lowlightInstance }),
       Video,
       ImageSlider,
+      TagBlock,
       Columns,
       Column,
-      TextAlign.configure({ types: ['heading', 'paragraph', 'image', 'video', 'youtube'] }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: "type '/' to add a new element" }),
       SlashCommand.configure({
         getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
@@ -677,8 +737,7 @@ export default function WikiEditor() {
 
   const [isVerified, setIsVerified] = useState(false)
 
-  const isPublished = meta.status === 'published'
-  const canEdit = !isLockedByOther && !isPublished && (isSuperAdmin || (hasWikiAccess && (isAdmin || (isEditor && (isOwner || !meta.ownerId || !!meta.isNew)))))
+  const canEdit = !isLockedByOther && (isSuperAdmin || (hasWikiAccess && (isAdmin || (isEditor && (isOwner || !meta.ownerId || !!meta.isNew)))))
   const saveDisabled = !canEdit
 
 
@@ -718,7 +777,7 @@ export default function WikiEditor() {
                       wasHeading = true
                     }
                   } catch { /* position doesn't exist in old state */ }
-                  
+
                   // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
                   if (!wasHeading) {
                     if (!tr) tr = newState.tr
@@ -785,9 +844,10 @@ export default function WikiEditor() {
       }).configure({ lowlight: lowlightInstance }),
       Video,
       ImageSlider,
+      TagBlock,
       Columns,
       Column,
-      TextAlign.configure({ types: ['heading', 'paragraph', 'image', 'video', 'youtube'] }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: "اكتب '/' للإدراج" }),
       SlashCommand.configure({
         getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
@@ -805,16 +865,20 @@ export default function WikiEditor() {
 
   const handleVerifyAndMirror = () => {
     if (!editorEn || !editorAr) return
-    const json = editorEn.getJSON()
+
+    const currentSection = activeSectionRef.current
+    sectionDocsRef.current.en[currentSection] = cloneDoc(editorEn.getJSON())
+    sectionDocsRef.current.ar.summary = cloneDoc(sectionDocsRef.current.en.summary)
+    sectionDocsRef.current.ar.lesson = cloneDoc(sectionDocsRef.current.en.lesson)
+
     setIsVerified(true)
     editorAr.setEditable(true)
 
-    // Mirror content
     syncingArRef.current = true
-    editorAr.commands.setContent(json, { emitUpdate: false })
+    editorAr.commands.setContent(cloneDoc(sectionDocsRef.current.ar[currentSection]), { emitUpdate: false })
     setTimeout(() => { syncingArRef.current = false }, 0)
 
-    setStatus('English Verified! Content mirrored to Arabic pane.')
+    setStatus('English Verified! Summary and lesson mirrored to Arabic pane.')
   }
 
   // Force a re-render on EVERY selection / update event so all isActive() checks
@@ -875,6 +939,83 @@ export default function WikiEditor() {
   const publishRef = useRef<any>(null)
   const publishQueueRef = useRef<Promise<void>>(Promise.resolve())
   const pendingPublishCountRef = useRef(0)
+
+  const setSectionDocsIntoEditors = (section: LessonSectionKey) => {
+    if (!editorEn || !editorAr) return
+    syncingEnRef.current = true
+    syncingArRef.current = true
+    editorEn.commands.setContent(cloneDoc(sectionDocsRef.current.en[section]), { emitUpdate: false })
+    editorAr.commands.setContent(cloneDoc(sectionDocsRef.current.ar[section]), { emitUpdate: false })
+    setTimeout(() => {
+      syncingEnRef.current = false
+      syncingArRef.current = false
+    }, 100)
+  }
+
+  const persistActiveSectionToRefs = () => {
+    const section = activeSectionRef.current
+    if (editorEn) {
+      sectionDocsRef.current.en[section] = cloneDoc(editorEn.getJSON())
+    }
+    if (editorAr) {
+      sectionDocsRef.current.ar[section] = cloneDoc(editorAr.getJSON())
+    }
+  }
+
+  const buildDocsForSave = () => {
+    const section = activeSectionRef.current
+    const enSections = {
+      summary: cloneDoc(sectionDocsRef.current.en.summary),
+      lesson: cloneDoc(sectionDocsRef.current.en.lesson),
+    }
+    const arSections = {
+      summary: cloneDoc(sectionDocsRef.current.ar.summary),
+      lesson: cloneDoc(sectionDocsRef.current.ar.lesson),
+    }
+
+    // Source of truth for save is the currently visible editor content.
+    if (editorEn) enSections[section] = cloneDoc(editorEn.getJSON())
+    if (editorAr) arSections[section] = cloneDoc(editorAr.getJSON())
+
+    const docEn = splitSummaryLessonRef.current
+      ? buildDocumentFromSections(enSections.summary, enSections.lesson)
+      : cloneDoc(enSections.lesson)
+    const docAr = splitSummaryLessonRef.current
+      ? buildDocumentFromSections(arSections.summary, arSections.lesson)
+      : cloneDoc(arSections.lesson)
+
+    return { docEn, docAr, enSections, arSections }
+  }
+
+  const switchSectionTab = (nextSection: LessonSectionKey) => {
+    if (!splitSummaryLessonRef.current) return
+    if (nextSection === activeSectionRef.current) return
+    persistActiveSectionToRefs()
+    activeSectionRef.current = nextSection
+    setActiveSectionTab(nextSection)
+    setSectionDocsIntoEditors(nextSection)
+    setTocTrigger((prev) => prev + 1)
+  }
+
+  const applySplitSummaryLesson = (enabled: boolean) => {
+    if (enabled === splitSummaryLessonRef.current) return
+    persistActiveSectionToRefs()
+    setSplitSummaryLesson(enabled)
+    splitSummaryLessonRef.current = enabled
+
+    if (!enabled) {
+      activeSectionRef.current = 'lesson'
+      setActiveSectionTab('lesson')
+      setSectionDocsIntoEditors('lesson')
+      setTocTrigger((prev) => prev + 1)
+      return
+    }
+
+    activeSectionRef.current = 'summary'
+    setActiveSectionTab('summary')
+    setSectionDocsIntoEditors('summary')
+    setTocTrigger((prev) => prev + 1)
+  }
 
   function getFirstHeadingText(editor: any): string {
     const json: any = editor?.getJSON()
@@ -1003,7 +1144,7 @@ export default function WikiEditor() {
     }
   }
 
-  const serializeListNode = (node: any): { htmlItems: string[]; textItems: string[] } => {
+  const serializeListNode = (node: any, editorInstance?: any): { htmlItems: string[]; textItems: string[] } => {
     const htmlItems: string[] = []
     const textItems: string[] = []
 
@@ -1029,7 +1170,7 @@ export default function WikiEditor() {
               textParts.push(text)
             }
           } else if (child.type === 'bulletList' || child.type === 'orderedList') {
-            const nested = serializeListNode(child)
+            const nested = serializeListNode(child, editorInstance)
             if (nested.htmlItems.length > 0) {
               const tag = child.type === 'orderedList' ? 'ol' : 'ul'
               const nestedHtml = nested.htmlItems.map((li) => '<li>' + li + '</li>').join('')
@@ -1037,6 +1178,15 @@ export default function WikiEditor() {
             }
             if (nested.textItems.length > 0) {
               textParts.push(nested.textItems.join('\n'))
+            }
+          } else {
+            const childHtml = serializeNodeToHTML(child, editorInstance)
+            if (childHtml) {
+              htmlParts.push(childHtml)
+              const childText = stripHtml(childHtml)
+              if (childText) {
+                textParts.push(childText)
+              }
             }
           }
         })
@@ -1173,20 +1323,33 @@ export default function WikiEditor() {
           case 'list': {
             const listItems = Array.isArray(item[itemsKey]) ? item[itemsKey] : []
             if (listItems.length > 0) {
+              const editor = language === 'ar' ? editorAr : editorEn
               nodes.push({
                 type: item.ordered ? 'orderedList' : 'bulletList',
                 content: listItems.map((entry: any) => {
                   // Handle both string format and ListItem object format ({text, indent})
                   const rawText = typeof entry === 'string' ? entry : (entry?.text || '')
-                  const text = stripHtml(rawText)
-                  return {
-                    type: 'listItem',
-                    content: [
+                  const parsedNodes = rawText ? parseHtmlToNodes(rawText, editor) : []
+                  let contentNodes = Array.isArray(parsedNodes)
+                    ? parsedNodes.filter((node: any) => node && typeof node === 'object')
+                    : []
+
+                  if (contentNodes.length === 0) {
+                    const text = stripHtml(rawText)
+                    contentNodes = [
                       {
                         type: 'paragraph',
                         content: text ? [{ type: 'text', text }] : [],
                       },
-                    ],
+                    ]
+                  } else if (contentNodes[0]?.type !== 'paragraph') {
+                    // ProseMirror listItem expects a paragraph first.
+                    contentNodes = [{ type: 'paragraph', content: [] }, ...contentNodes]
+                  }
+
+                  return {
+                    type: 'listItem',
+                    content: contentNodes,
                   }
                 }),
               })
@@ -1226,6 +1389,24 @@ export default function WikiEditor() {
                 nodes.push({ type: 'imageSlider', attrs: { images, layoutMode: item.layoutMode || 'fit', textAlign: item.align || 'center' } })
               }
             }
+            break
+          }
+          case 'tagBlock': {
+            const titleValue = typeof item[titleKey] === 'string' && item[titleKey].trim().length
+              ? item[titleKey].trim()
+              : ''
+            const tags = Array.isArray(item[itemsKey])
+              ? item[itemsKey]
+                  .map((entry: any) => (typeof entry === 'string' ? entry.trim() : ''))
+                  .filter((entry: string) => entry.length > 0)
+              : []
+            nodes.push({
+              type: 'tagBlock',
+              attrs: {
+                title: titleValue,
+                tags,
+              },
+            })
             break
           }
           case 'callout': {
@@ -1348,7 +1529,8 @@ export default function WikiEditor() {
     if (!editorEn || !editorAr) return
     if (!developerId || !hasWikiAccess) return
 
-    const identifier = (meta.slug || meta.id || '').trim()
+    // Use row id first to avoid slug ambiguity between published and draft versions.
+    const identifier = (meta.id || meta.slug || '').trim()
     if (!identifier) return
     const wikiSlug = (meta.wikiSlug || 'student-kit').trim() || 'student-kit'
     const cacheKey = `${wikiSlug}::${identifier}`
@@ -1391,17 +1573,33 @@ export default function WikiEditor() {
         const docEn = bodyToDocument(body, 'en')
         const docAr = bodyToDocument(body, 'ar')
 
+        const splitEn = splitDocumentBySection(docEn)
+        const splitAr = splitDocumentBySection(docAr)
+
+        sectionDocsRef.current.en.summary = cloneDoc(splitEn.summaryDoc)
+        sectionDocsRef.current.en.lesson = cloneDoc(splitEn.lessonDoc)
+        sectionDocsRef.current.ar.summary = cloneDoc(splitAr.summaryDoc)
+        sectionDocsRef.current.ar.lesson = cloneDoc(splitAr.lessonDoc)
+
+        const hasSplitMarkers = splitEn.hasMarkers || splitAr.hasMarkers
+        setSplitSummaryLesson(hasSplitMarkers)
+        splitSummaryLessonRef.current = hasSplitMarkers
+        const defaultSection: LessonSectionKey = hasSplitMarkers ? 'summary' : 'lesson'
+        activeSectionRef.current = defaultSection
+        setActiveSectionTab(defaultSection)
+
         syncingEnRef.current = true
-        editorEn.commands.setContent(docEn, { emitUpdate: false })
+        editorEn.commands.setContent(cloneDoc(sectionDocsRef.current.en[defaultSection]), { emitUpdate: false })
 
         syncingArRef.current = true
-        editorAr.commands.setContent(docAr, { emitUpdate: false })
+        editorAr.commands.setContent(cloneDoc(sectionDocsRef.current.ar[defaultSection]), { emitUpdate: false })
 
         // Keep syncing flags TRUE for a short bit to catch any trailing events
         setTimeout(() => {
           syncingEnRef.current = false
           syncingArRef.current = false
         }, 500)
+        setTocTrigger((prev) => prev + 1)
 
         if (hasArabicContent) {
           setIsVerified(true) // Auto-verify/unlock if we already have Arabic content
@@ -1416,6 +1614,18 @@ export default function WikiEditor() {
         setMeta((prev: typeof meta) => {
           const next = { ...prev }
           let changed = false
+          if (typeof lesson?.id === 'string' && lesson.id.trim() && lesson.id !== prev.id) {
+            next.id = lesson.id
+            changed = true
+          }
+          if (typeof lesson?.lessonKey === 'string' && lesson.lessonKey.trim() && lesson.lessonKey !== prev.lessonKey) {
+            next.lessonKey = lesson.lessonKey
+            changed = true
+          }
+          if (typeof lesson?.slug === 'string' && lesson.slug.trim() && lesson.slug !== prev.slug) {
+            next.slug = lesson.slug
+            changed = true
+          }
           if (typeof lesson?.title_en === 'string' && lesson.title_en.trim() && lesson.title_en !== prev.title_en) {
             next.title_en = lesson.title_en
             changed = true
@@ -1449,6 +1659,18 @@ export default function WikiEditor() {
             next.status = lesson.status
             changed = true
           }
+          const incomingLastPublishedAt =
+            typeof lesson?.lastPublishedAt === 'string'
+              ? lesson.lastPublishedAt.trim()
+              : ''
+          if (incomingLastPublishedAt !== prev.lastPublishedAt) {
+            next.lastPublishedAt = incomingLastPublishedAt
+            changed = true
+          }
+          if (typeof lesson?.hasUnpublishedChanges === 'boolean' && lesson.hasUnpublishedChanges !== prev.hasUnpublishedChanges) {
+            next.hasUnpublishedChanges = lesson.hasUnpublishedChanges
+            changed = true
+          }
           if (next.isNew) {
             next.isNew = false
             changed = true
@@ -1473,7 +1695,7 @@ export default function WikiEditor() {
     }
   }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId, hasWikiAccess])
 
-  // --- Enforce Read-Only Mode: locked by another user OR lesson is published ---
+  // --- Enforce Read-Only Mode: locked by another user ---
   useEffect(() => {
     const enEditable = canEdit
     const arEditable = canEdit
@@ -1502,14 +1724,13 @@ export default function WikiEditor() {
     )
 
     try {
-      const raw = sessionStorage.getItem('lessonMeta')
-      if (!raw && !hasUrlParams) {
+      const parsed = readSessionStorageJson<any>('lessonMeta')
+      if (!parsed && !hasUrlParams) {
         router.replace('/editor/properties')
         return
       }
 
-      if (raw) {
-        const parsed = JSON.parse(raw)
+      if (parsed) {
         setMeta((m: typeof meta) => {
           const next = {
             ...m,
@@ -1693,7 +1914,7 @@ export default function WikiEditor() {
         }
         case 'bulletList':
         case 'orderedList': {
-          const { htmlItems, textItems } = serializeListNode(node)
+          const { htmlItems, textItems } = serializeListNode(node, editorInstance)
           if (htmlItems.length === 0 && textItems.length === 0) return null
           return {
             type: 'list',
@@ -1733,6 +1954,21 @@ export default function WikiEditor() {
           const html = serializeNodeToHTML(node, editorInstance)
           if (html) block[htmlKey] = html
           return block
+        }
+        case 'tagBlock': {
+          const title = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
+          const tags = Array.isArray(node.attrs?.tags)
+            ? node.attrs.tags
+                .map((entry: any) => (typeof entry === 'string' ? entry.trim() : ''))
+                .filter((entry: string) => entry.length > 0)
+            : []
+          return {
+            type: 'tagBlock',
+            [titleKey]: title,
+            [itemsKey]: tags,
+            [textKey]: tags.join(', '),
+            [jsonKey]: cloneNode(node),
+          }
         }
         case 'image': {
           const src = node.attrs?.src
@@ -1907,8 +2143,12 @@ export default function WikiEditor() {
       return
     }
     setStatus('')
-    const docEn = editorEn.getJSON()
-    const docAr = editorAr.getJSON()
+    persistActiveSectionToRefs()
+    const { docEn, docAr, enSections, arSections } = buildDocsForSave()
+    sectionDocsRef.current.en.summary = cloneDoc(enSections.summary)
+    sectionDocsRef.current.en.lesson = cloneDoc(enSections.lesson)
+    sectionDocsRef.current.ar.summary = cloneDoc(arSections.summary)
+    sectionDocsRef.current.ar.lesson = cloneDoc(arSections.lesson)
     const bodyEn = extractBody(docEn, 'en', editorEn)
     const bodyAr = extractBody(docAr, 'ar', editorAr)
     // Locale-safe merge: EN fields from bodyEn, AR fields from bodyAr,
@@ -1935,6 +2175,7 @@ export default function WikiEditor() {
 
     const payload = {
       id: generatedId,
+      lessonKey: meta.lessonKey || '',
       wikiSlug: meta.wikiSlug,
       order: Number(meta.order) || 0,
       slug: generatedSlug,
@@ -1956,8 +2197,8 @@ export default function WikiEditor() {
         return
       }
 
-      const currentStatus = meta.status || 'draft'
-      const desiredStatus = (statusOverride || currentStatus) === 'published' && isAdmin ? 'published' : 'draft'
+      const wantsPublish = statusOverride === 'published'
+      const desiredStatus = wantsPublish && isAdmin ? 'published' : 'draft'
 
       if (saveDisabled) {
         setStatus('You can only edit lessons you own (or admin).')
@@ -1985,10 +2226,23 @@ export default function WikiEditor() {
 
       const savedLesson = data?.lesson ?? {}
       const isUpdate = Boolean(data?.isUpdate)
+      const hasLastPublishedAt = Object.prototype.hasOwnProperty.call(data || {}, 'lastPublishedAt')
+      const normalizedLastPublishedAt =
+        hasLastPublishedAt && typeof data?.lastPublishedAt === 'string'
+          ? data.lastPublishedAt.trim()
+          : ''
+      const resolvedLastPublishedAt = hasLastPublishedAt ? normalizedLastPublishedAt : (meta.lastPublishedAt || '')
+      const hasUnpublishedChanges =
+        typeof data?.hasUnpublishedChanges === 'boolean'
+          ? data.hasUnpublishedChanges
+          : (desiredStatus !== 'published' && Boolean(resolvedLastPublishedAt))
 
       const updatedMeta = {
         ...meta,
         id: typeof savedLesson.id === 'string' && savedLesson.id.trim() ? savedLesson.id : generatedId,
+        lessonKey: typeof savedLesson.lessonKey === 'string' && savedLesson.lessonKey.trim()
+          ? savedLesson.lessonKey
+          : (meta.lessonKey || generatedId),
         slug: typeof savedLesson.slug === 'string' && savedLesson.slug.trim() ? savedLesson.slug : generatedSlug,
         order: typeof savedLesson.order === 'number' ? savedLesson.order : meta.order,
         isNew: false,
@@ -1996,6 +2250,15 @@ export default function WikiEditor() {
           ? savedLesson.ownerId
           : meta.ownerId || developerId || '',
         status: typeof savedLesson.status === 'string' ? savedLesson.status : desiredStatus,
+        lastPublishedAt: resolvedLastPublishedAt,
+        hasUnpublishedChanges,
+      }
+
+      // Prevent immediate post-save reload from replacing the live editor state.
+      const updatedIdentifier = (updatedMeta.id || updatedMeta.slug || '').trim()
+      const updatedWikiSlug = (updatedMeta.wikiSlug || meta.wikiSlug || '').trim()
+      if (updatedIdentifier && updatedWikiSlug) {
+        loadedLessonKeyRef.current = `${updatedWikiSlug}::${updatedIdentifier}`
       }
 
       setMeta(updatedMeta)
@@ -2023,9 +2286,12 @@ export default function WikiEditor() {
       } else {
         setStatus(desiredStatus === 'published' ? 'Lesson published!' : isUpdate ? 'Changes saved!' : 'Lesson saved!')
       }
+
+      return updatedMeta
     } catch (e: any) {
       console.error('Publish error:', e)
       setStatus(`Error: ${e.message}`)
+      throw e
     }
   }
 
@@ -2035,7 +2301,7 @@ export default function WikiEditor() {
 
     const run = async () => {
       try {
-        await publishNow(statusOverride)
+        return await publishNow(statusOverride)
       } finally {
         pendingPublishCountRef.current = Math.max(0, pendingPublishCountRef.current - 1)
         if (pendingPublishCountRef.current === 0) {
@@ -2096,11 +2362,21 @@ export default function WikiEditor() {
     // Reset the loaded lesson key so the new lesson will load fresh
     loadedLessonKeyRef.current = null
 
+    splitSummaryLessonRef.current = false
+    setSplitSummaryLesson(false)
+    activeSectionRef.current = 'lesson'
+    setActiveSectionTab('lesson')
+    sectionDocsRef.current.en.summary = createEmptyDoc()
+    sectionDocsRef.current.en.lesson = createEmptyDoc()
+    sectionDocsRef.current.ar.summary = createEmptyDoc()
+    sectionDocsRef.current.ar.lesson = createEmptyDoc()
+
     // Write CLEAN meta for the new lesson into sessionStorage.
     // This prevents the old lesson's coverImage/title from persisting
     // when the page re-mounts and reads sessionStorage.
     const cleanMeta = {
       id: lesson.id,
+      lessonKey: lesson.lessonKey || lesson.id || '',
       slug: lesson.slug,
       wikiSlug: lesson.wikiSlug || meta.wikiSlug,
       title_en: lesson.title_en || '',
@@ -2109,6 +2385,11 @@ export default function WikiEditor() {
       order: lesson.order || 0,
       ownerId: lesson.ownerId || '',
       status: lesson.status || 'draft',
+      lastPublishedAt:
+        (typeof lesson.lastPublishedAt === 'string' && lesson.lastPublishedAt.trim()) ||
+        (typeof lesson.publishedAt === 'string' && lesson.publishedAt.trim()) ||
+        '',
+      hasUnpublishedChanges: Boolean(lesson.hasUnpublishedChanges),
       isNew: false,
     }
     try {
@@ -2131,8 +2412,12 @@ export default function WikiEditor() {
   const handleDownloadJSON = useCallback(() => {
     if (!editorEn || !editorAr) return
 
-    const docEn = editorEn.getJSON()
-    const docAr = editorAr.getJSON()
+    persistActiveSectionToRefs()
+    const { docEn, docAr, enSections, arSections } = buildDocsForSave()
+    sectionDocsRef.current.en.summary = cloneDoc(enSections.summary)
+    sectionDocsRef.current.en.lesson = cloneDoc(enSections.lesson)
+    sectionDocsRef.current.ar.summary = cloneDoc(arSections.summary)
+    sectionDocsRef.current.ar.lesson = cloneDoc(arSections.lesson)
     const bodyEn = extractBody(docEn, 'en', editorEn)
     const bodyAr = extractBody(docAr, 'ar', editorAr)
 
@@ -2213,16 +2498,31 @@ export default function WikiEditor() {
         // Hydrate Editors
         const docEn = bodyToDocument(json.body, 'en')
         const docAr = bodyToDocument(json.body, 'ar')
+        const splitEn = splitDocumentBySection(docEn)
+        const splitAr = splitDocumentBySection(docAr)
+
+        sectionDocsRef.current.en.summary = cloneDoc(splitEn.summaryDoc)
+        sectionDocsRef.current.en.lesson = cloneDoc(splitEn.lessonDoc)
+        sectionDocsRef.current.ar.summary = cloneDoc(splitAr.summaryDoc)
+        sectionDocsRef.current.ar.lesson = cloneDoc(splitAr.lessonDoc)
+
+        const hasSplitMarkers = splitEn.hasMarkers || splitAr.hasMarkers
+        setSplitSummaryLesson(hasSplitMarkers)
+        splitSummaryLessonRef.current = hasSplitMarkers
+        const defaultSection: LessonSectionKey = hasSplitMarkers ? 'summary' : 'lesson'
+        activeSectionRef.current = defaultSection
+        setActiveSectionTab(defaultSection)
 
         syncingEnRef.current = true
-        editorEn.commands.setContent(docEn, { emitUpdate: false })
+        editorEn.commands.setContent(cloneDoc(sectionDocsRef.current.en[defaultSection]), { emitUpdate: false })
         syncingArRef.current = true
-        editorAr.commands.setContent(docAr, { emitUpdate: false })
+        editorAr.commands.setContent(cloneDoc(sectionDocsRef.current.ar[defaultSection]), { emitUpdate: false })
 
         setTimeout(() => {
           syncingEnRef.current = false
           syncingArRef.current = false
         }, 500)
+        setTocTrigger((prev) => prev + 1)
 
         setStatus('Lesson imported successfully!')
       } catch (err: any) {
@@ -2364,72 +2664,6 @@ export default function WikiEditor() {
 
       </AnimatePresence>
 
-      {/* Revert to Draft Confirmation Modal */}
-      <AnimatePresence>
-        {showDraftConfirmation && (
-          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200"
-            >
-              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-6 text-amber-500">
-                <Unlock size={32} />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-3">Edit Published Lesson?</h2>
-              <p className="text-slate-600 mb-8 leading-relaxed">
-                Editing this lesson will change its status back to <span className="font-bold text-amber-600">Draft</span>.
-                You will need to <span className="font-bold">Publish</span> it again to make your changes visible to users.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDraftConfirmation(false)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-200 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmEditPublished}
-                  className="flex-1 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all"
-                >
-                  Start Editing
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Global Overlay for Published Lessons (Fixed to Viewport) */}
-      <AnimatePresence>
-        {meta.status === 'published' && (
-          <div className="fixed inset-0 z-[155] bg-white/40 backdrop-blur-md flex items-center justify-center p-6 overflow-hidden pointer-events-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white/90 p-10 rounded-[2.5rem] shadow-2xl border border-slate-200 text-center max-w-md w-full relative"
-            >
-              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                <Check size={32} />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">Lesson is Published</h3>
-              <p className="text-slate-600 mb-8 leading-relaxed">
-                This lesson is live and read-only. To make changes, you'll need to unlock it and revert to Draft status.
-              </p>
-              <button
-                onClick={() => setShowDraftConfirmation(true)}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
-              >
-                <Unlock size={20} />
-                Unlock for Editing
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* Premium Header/Navbar area */}
       <div className={`fixed left-0 right-0 z-[60] bg-white border-b border-slate-200 px-6 py-3 shadow-sm transition-all duration-300 ${isLockedByOther ? 'top-10' : 'top-0'
         }`}>
@@ -2568,12 +2802,13 @@ export default function WikiEditor() {
                   difficulty: meta.difficulty || 'Beginner',
                   coverImage: meta.coverImage || '',
                   order: meta.order || 0,
+                  splitSummaryLesson: splitSummaryLessonRef.current,
                 })
                 setShowSettingsModal(true)
               }}
               disabled={!canEdit}
               className={`p-2 rounded-lg transition-colors ${!canEdit ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
-              title={isPublished ? 'Lesson is Published' : isLockedByOther ? 'Locked by another developer' : 'Lesson Settings'}
+              title={isLockedByOther ? 'Locked by another developer' : 'Lesson Settings'}
               type="button"
             >
               <Settings size={18} />
@@ -2583,12 +2818,27 @@ export default function WikiEditor() {
               <button
                 onClick={async () => {
                   setStatus('Preparing preview...')
-                  await publish('draft')
+                  let savedMeta: Awaited<ReturnType<typeof publish>>
+                  try {
+                    savedMeta = await publish('draft')
+                  } catch {
+                    return
+                  }
                   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                  const kitSlug = meta.wikiSlug || 'student-kit'
+                  const previewSlug = savedMeta?.slug || meta.slug
+                  const kitSlug = savedMeta?.wikiSlug || meta.wikiSlug || 'student-kit'
+                  if (!previewSlug) {
+                    setStatus('Preview unavailable until this lesson has a valid slug.')
+                    return
+                  }
+                  const previewId = savedMeta?.id || meta.id
+                  const canonicalPreviewSlug = previewSlug.replace(/--draft$/, '')
+                  const previewQuery = previewId
+                    ? `?previewId=${encodeURIComponent(previewId)}`
+                    : '?preview=1'
                   const url = (!isLocal && typeof window !== 'undefined')
-                    ? `https://${HUB_DOMAIN}/${kitSlug}/en/${meta.slug}?preview=1`
-                    : `/en/${kitSlug}/lesson/${meta.slug}?preview=1`
+                    ? `https://${HUB_DOMAIN}/${kitSlug}/en/lesson/${canonicalPreviewSlug}${previewQuery}`
+                    : `/${kitSlug}/en/lesson/${canonicalPreviewSlug}${previewQuery}`
                   window.open(url, '_blank')
                 }}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
@@ -2634,7 +2884,7 @@ export default function WikiEditor() {
                   if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
                   if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
                   setAutosaveProgress(0);
-                  publish();
+                  publish().catch(() => { });
                 }}
                 disabled={saveDisabled || isSaving}
                 className="relative z-0 flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-sm disabled:opacity-50"
@@ -2648,14 +2898,22 @@ export default function WikiEditor() {
             </div>
 
             {isAdmin && (
-              <button
-                onClick={() => setShowPublishModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-[#f05d4e] hover:bg-[#f05d4e]/90 rounded-lg transition-colors shadow-sm"
-                type="button"
-              >
-                <Rocket size={14} />
-                <span className="hidden sm:inline">Publish</span>
-              </button>
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={() => setShowPublishModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-[#f05d4e] hover:bg-[#f05d4e]/90 rounded-lg transition-colors shadow-sm"
+                  type="button"
+                >
+                  <Rocket size={14} />
+                  <span className="hidden sm:inline">Publish</span>
+                </button>
+                <p className="mt-1 text-[10px] font-medium text-slate-500 text-right">
+                  Last published: <span className="text-slate-700">{lastPublishedLabel}</span>
+                </p>
+                <p className={`text-[10px] font-semibold text-right ${meta.hasUnpublishedChanges ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {publishChangeLabel}
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -2664,7 +2922,7 @@ export default function WikiEditor() {
       {/* Match KitLayout's outer container */}
       <div className="mx-auto w-full max-w-[1920px] px-6 sm:px-10 lg:px-16 pt-20 pb-12">
         <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-12 pt-4 pb-10">
-          <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+          <div className="lg:grid lg:grid-cols-[260px_793px] lg:justify-center lg:gap-10">
             <div className="hidden lg:block relative">
               <Sidebar
                 locale={activeEditorTab === 'ar' ? 'ar' : 'en'}
@@ -2672,7 +2930,7 @@ export default function WikiEditor() {
                 isOpen={true}
                 onClose={() => { }}
                 lessons={wikiLessons}
-                className="!static !w-full !h-auto !shadow-none lg:!sticky lg:!top-24"
+                className="!static !w-full !shadow-none lg:!sticky lg:!top-24 lg:!max-h-[calc(100vh-7.5rem)] lg:!overflow-y-auto"
                 onLessonClick={handleLessonClick}
                 activeSlug={meta.slug}
                 hideLessons={true}
@@ -2680,8 +2938,29 @@ export default function WikiEditor() {
                 refreshTocTrigger={tocTrigger}
               />
             </div>
-            <div className="flex-1 space-y-6">
+            <div className="w-full space-y-6 lg:justify-self-start">
 
+
+              {splitSummaryLesson ? (
+                <div className="lesson-section-tabs editor-section-tabs">
+                  <div className="lesson-section-tab-list" role="tablist" aria-label="Lesson sections">
+                    <button
+                      type="button"
+                      onClick={() => switchSectionTab('summary')}
+                      className={`lesson-section-tab ${activeSectionTab === 'summary' ? 'is-active' : ''}`}
+                    >
+                      Summary
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchSectionTab('lesson')}
+                      className={`lesson-section-tab ${activeSectionTab === 'lesson' ? 'is-active' : ''}`}
+                    >
+                      Lesson
+                    </button>
+                  </div>
+                </div>
+              ) : null}
 
               {/* Language Tab Switcher */}
               <div className="editor-tab-bar">
@@ -3127,7 +3406,7 @@ export default function WikiEditor() {
                   disabled={!Object.values(publishCheckpoints).every(Boolean)}
                   onClick={() => {
                     setShowPublishModal(false)
-                    publish('published')
+                    publish('published').catch(() => { })
                   }}
                   className="group relative px-8 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 disabled:opacity-50 disabled:shadow-none disabled:bg-slate-300 transition-all active:scale-95 overflow-hidden"
                 >
@@ -3159,19 +3438,19 @@ export default function WikiEditor() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-3 overflow-hidden max-h-[88vh] overflow-y-auto"
             >
-              <div className="bg-slate-50 px-8 py-6 border-b border-slate-100">
+              <div className="bg-slate-50 px-6 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="p-2 bg-[#f05d4e]/10 rounded-lg">
                     <Settings className="w-5 h-5 text-[#f05d4e]" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900">Lesson Settings</h3>
+                  <h3 className="text-lg font-bold text-slate-900">Lesson Settings</h3>
                 </div>
                 <p className="text-sm text-slate-500">Configure metadata for this lesson.</p>
               </div>
 
-              <div className="p-4 sm:p-8 space-y-6">
+              <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">
                     Lesson Title (English)
@@ -3187,7 +3466,7 @@ export default function WikiEditor() {
                         return next
                       })
                     }}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all"
+                    className="w-full px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all"
                     placeholder="Enter lesson title..."
                   />
                 </div>
@@ -3209,7 +3488,7 @@ export default function WikiEditor() {
                         return next
                       })
                     }}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all text-right"
+                    className="w-full px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all text-right"
                     placeholder="عنوان الدرس..."
                   />
                 </div>
@@ -3229,14 +3508,125 @@ export default function WikiEditor() {
                         return next
                       })
                     }}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all"
+                    className="w-full px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all"
                     placeholder="lesson-slug"
                   />
-                  <p className="text-xs text-slate-400 mt-1">This will be used in the lesson URL.</p>
+                  <p className="text-xs text-slate-400 mt-0.5">This will be used in the lesson URL.</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-4">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Lesson estimated time (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={5}
+                    value={meta.duration_min !== undefined ? meta.duration_min : ''}
+                    onChange={(e) => {
+                      const parsed = Number(e.target.value)
+                      const normalized = Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0
+                      setMeta((m: typeof meta) => {
+                        const next = { ...m, duration_min: normalized }
+                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
+                        return next
+                      })
+                    }}
+                    className="w-full px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all"
+                    placeholder="30"
+                  />
+                  <p className="text-xs text-slate-400 mt-0.5">This appears on the lesson card as the estimated duration.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    {activeEditorTab === 'ar' ? 'المستوى' : 'Level'}
+                  </label>
+                  <select
+                    value={selectedDifficultyValue}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setMeta((m: typeof meta) => {
+                        const next = { ...m, difficulty: val }
+                        try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
+                        return next
+                      })
+                    }}
+                    className={`w-full px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all ${activeEditorTab === 'ar' ? 'text-right' : ''}`}
+                    dir={activeEditorTab === 'ar' ? 'rtl' : 'ltr'}
+                  >
+                    {difficultyOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {activeEditorTab === 'ar' ? option.labelAr : option.labelEn}
+                      </option>
+                    ))}
+                    {showCustomDifficultyOption && (
+                      <option value={selectedDifficultyValue}>
+                        {activeEditorTab === 'ar'
+                          ? `مخصص (${selectedDifficultyValue})`
+                          : `Custom (${selectedDifficultyValue})`}
+                      </option>
+                    )}
+                  </select>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {activeEditorTab === 'ar'
+                      ? 'اختر مستوى الدرس المناسب.'
+                      : 'Choose the lesson level from the list.'}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="pr-2">
+                      <label className="block text-sm font-semibold text-slate-800">
+                        Divide Lesson into Summary + Lesson
+                      </label>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Off by default. Enable only when this lesson should have a separate summary tab.
+                      </p>
+                    </div>
+                    <div
+                      className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1"
+                      role="group"
+                      aria-label="Split mode"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => applySplitSummaryLesson(false)}
+                        className={`min-w-[58px] rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                          !splitSummaryLesson
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                      >
+                        No
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applySplitSummaryLesson(true)}
+                        className={`min-w-[58px] rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                          splitSummaryLesson
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                      >
+                        Yes
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      splitSummaryLesson
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {splitSummaryLesson ? 'Summary + Lesson tabs enabled' : 'Single Lesson content mode'}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
                     <div className="flex items-center gap-2">
                       <ImageIcon size={16} /> Cover Image
                     </div>
@@ -3245,7 +3635,7 @@ export default function WikiEditor() {
                   {!meta.coverImage ? (
                     <div
                       onClick={triggerCoverUpload}
-                      className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isUploadingCover ? 'border-[#f05d4e]/40 bg-[#f05d4e]/5' : 'border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
+                        className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isUploadingCover ? 'border-[#f05d4e]/40 bg-[#f05d4e]/5' : 'border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
                     >
                       <input
                         type="file"
@@ -3254,16 +3644,16 @@ export default function WikiEditor() {
                         accept="image/*"
                         onChange={handleCoverFileChange}
                       />
-                      <div className="bg-[#f05d4e]/10 text-[#f05d4e] p-3 rounded-full mb-3">
+                      <div className="bg-[#f05d4e]/10 text-[#f05d4e] p-2.5 rounded-full mb-2">
                         {isUploadingCover ? <Loader2 className="animate-spin w-6 h-6" /> : <UploadCloud className="w-6 h-6" />}
                       </div>
                       <p className="font-semibold text-slate-700">
                         {isUploadingCover ? 'Uploading...' : 'Click to upload cover image'}
                       </p>
-                      <p className="text-sm text-slate-500 mt-1">SVG, PNG, JPG (max. 5MB)</p>
+                      <p className="text-sm text-slate-500 mt-0.5">SVG, PNG, JPG (max. 5MB)</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div className="rounded-xl overflow-hidden border border-slate-200 aspect-video relative group">
                         <img
                           key={meta.coverImage}
@@ -3303,12 +3693,16 @@ export default function WikiEditor() {
 
               </div>
 
-              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   onClick={() => {
                     if (settingsSnapshot) {
+                      if (typeof settingsSnapshot.splitSummaryLesson === 'boolean') {
+                        applySplitSummaryLesson(Boolean(settingsSnapshot.splitSummaryLesson))
+                      }
                       setMeta((prev: typeof meta) => {
-                        const next = { ...prev, ...settingsSnapshot }
+                        const { splitSummaryLesson: _splitSummaryLesson, ...restSnapshot } = settingsSnapshot
+                        const next = { ...prev, ...restSnapshot }
                         try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
                         return next
                       })
@@ -3322,7 +3716,7 @@ export default function WikiEditor() {
                 <button
                   onClick={() => {
                     setShowSettingsModal(false)
-                    publish('draft')
+                    publish('draft').catch(() => { })
                   }}
                   className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-200/50 hover:bg-slate-800 transition-all active:scale-95"
                 >

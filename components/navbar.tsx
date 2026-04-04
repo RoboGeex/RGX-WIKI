@@ -56,7 +56,7 @@ export default function Navbar({
 
   const sortedLessons = useMemo(() => {
     return lessons
-      .filter((lesson) => lesson.slug !== 'getting-started')
+      .filter((lesson) => lesson.slug !== 'getting-started' && lesson.slug !== 'resources')
       .sort((a, b) => a.order - b.order)
   }, [lessons])
 
@@ -67,8 +67,32 @@ export default function Navbar({
     isHubDomain,
   })
   const kitHomeHref = buildKitHomeHref({ locale: safeLocale, kitSlug, isHubDomain })
-  const resourcesHref = resourcesUrl || buildResourcesHref({ locale: safeLocale, kitSlug, isHubDomain })
-  const isLessonsPage = pathname?.includes(`/lesson/`) && pathname !== gettingStartedHref
+  const customResourcesHref =
+    resourcesUrl && /^(https?:)?\/\//i.test(resourcesUrl)
+      ? resourcesUrl
+      : undefined
+  const resourcesHref = customResourcesHref || buildResourcesHref({ locale: safeLocale, kitSlug, isHubDomain })
+  const normalizePath = (value?: string | null) => {
+    if (!value) return ''
+    const cleaned = value.split('?')[0].replace(/\/+$/, '')
+    return cleaned || '/'
+  }
+  const currentPath = normalizePath(pathname)
+  const defaultSlug = (defaultLessonSlug || 'getting-started').trim()
+  const gettingStartedPaths = new Set<string>([
+    normalizePath(gettingStartedHref),
+    normalizePath(kitHomeHref),
+    normalizePath(`/${safeLocale}/${kitSlug}/lesson/${defaultSlug}`),
+    normalizePath(`/${kitSlug}/${safeLocale}/lesson/${defaultSlug}`),
+  ])
+  const resourcesPaths = new Set<string>([
+    normalizePath(resourcesHref),
+    normalizePath(`/${safeLocale}/${kitSlug}/lesson/resources`),
+    normalizePath(`/${kitSlug}/${safeLocale}/lesson/resources`),
+  ])
+  const isGettingStartedActive = gettingStartedPaths.has(currentPath)
+  const isResourcesActive = resourcesPaths.has(currentPath)
+  const isLessonsPage = pathname?.includes(`/lesson/`) && !isGettingStartedActive && !isResourcesActive
   const buildLessonLink = (slug: string) =>
     buildLessonHref({ locale: safeLocale, kitSlug, lessonSlug: slug, isHubDomain })
 
@@ -92,7 +116,7 @@ export default function Navbar({
         <div className="hidden md:flex items-center gap-6 flex-1 justify-center">
           <Link
             href={gettingStartedHref}
-            className={pathname === gettingStartedHref ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'text-white/80 hover:text-primary pb-1 transition-colors'}
+            className={isGettingStartedActive ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'text-white/80 hover:text-primary pb-1 transition-colors'}
           >
             {t('gettingStarted', safeLocale)}
           </Link>
@@ -126,7 +150,7 @@ export default function Navbar({
 
           <Link
             href={resourcesHref}
-            className={pathname === resourcesHref ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'text-white/80 hover:text-primary pb-1 transition-colors'}
+            className={isResourcesActive ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'text-white/80 hover:text-primary pb-1 transition-colors'}
           >
             {t('resources', safeLocale)}
           </Link>

@@ -153,7 +153,7 @@ export function middleware(request: NextRequest) {
 
   // Standardize rewrites
   if (finalRest[0] === 'resources') {
-    url.pathname = `/${currentLocale}/${wikiSlug}/resources`
+    url.pathname = `/${currentLocale}/${wikiSlug}/lesson/resources`
   } else {
     const lessonSlug = finalRest[0] === 'lesson' ? finalRest.slice(1).join('/') : finalRest.join('/')
     url.pathname = `/${currentLocale}/${wikiSlug}/lesson/${lessonSlug || defaultLesson}`

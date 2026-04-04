@@ -1,6 +1,7 @@
 import type { Locale } from './i18n'
 
 const DEFAULT_LESSON_SLUG = 'getting-started'
+const RESOURCES_LESSON_SLUG = 'resources'
 const DEFAULT_LOCALE: Locale = 'en'
 
 function normalizeLocale(locale?: Locale) {
@@ -36,8 +37,12 @@ export function buildKitHomeHref({ locale, kitSlug, isHubDomain }: PathArgs) {
 }
 
 export function buildResourcesHref({ locale, kitSlug, isHubDomain }: PathArgs) {
-  const safeLocale = normalizeLocale(locale)
-  return isHubDomain ? `/${kitSlug}/${safeLocale}/resources` : `/${safeLocale}/${kitSlug}/resources`
+  return buildLessonHref({
+    locale,
+    kitSlug,
+    lessonSlug: RESOURCES_LESSON_SLUG,
+    isHubDomain,
+  })
 }
 
 export function buildDefaultLessonHref({

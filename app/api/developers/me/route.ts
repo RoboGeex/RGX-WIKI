@@ -13,23 +13,32 @@ function getActorIdFromRequest(req: Request): string | undefined {
 }
 
 export async function GET(request: Request) {
-  const actorId = getActorIdFromRequest(request)
-  if (!actorId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const actorId = getActorIdFromRequest(request)
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const developer = await findDeveloperById(actorId)
+    if (!developer) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      developer: {
+        id: developer.id,
+        email: developer.email,
+        name: developer.name,
+        role: developer.role,
+        wikiSlugs: developer.wikiSlugs || [],
+        lessonIds: developer.lessonIds || [],
+      },
+    })
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || 'Failed to load developer' },
+      { status: 500 },
+    )
   }
-  const developer = await findDeveloperById(actorId)
-  if (!developer) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return NextResponse.json({
-    ok: true,
-    developer: {
-      id: developer.id,
-      email: developer.email,
-      name: developer.name,
-      role: developer.role,
-      wikiSlugs: developer.wikiSlugs || [],
-      lessonIds: developer.lessonIds || [],
-    },
-  })
 }

@@ -5,6 +5,15 @@ import type { Locale } from '@/lib/i18n'
 import { headers, cookies } from 'next/headers'
 import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
 import { getPrisma } from '@/lib/prisma-multi'
+import accessCodesData from '@/data/access-codes.json'
+
+function getConfiguredCodes(wikiSlug: string): string[] {
+  const raw = (accessCodesData as Record<string, unknown>)[wikiSlug]
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter(Boolean)
+}
 
 export default async function KitLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale; kit: string } }
@@ -20,25 +29,34 @@ export default async function KitLayout(
 
   // Access check
   if (process.env.USE_DB === 'true' && wiki) {
+    const configuredCodes = getConfiguredCodes(wiki.slug)
+    const accessCookieValue = cookies().get(`wiki-${wiki.slug}-access`)?.value?.trim()
+    let shouldRequireAccess = configuredCodes.length > 0
+    let isValid = false
+
     try {
       const db = getPrisma(wiki.slug)
       const codesCount = await db.accessCode.count({ where: { wikiSlug: wiki.slug } })
       if (codesCount > 0) {
-        const accessCookieValue = cookies().get(`wiki-${wiki.slug}-access`)?.value
-        const isValid = accessCookieValue 
+        shouldRequireAccess = true
+        const matchedCode = accessCookieValue
           ? await db.accessCode.findFirst({ where: { code: accessCookieValue, wikiSlug: wiki.slug } })
           : null
-        
-        if (!isValid) {
-          // Find current full path if possible for redirect, or just use kit root
-          const currentPath = headers().get('x-current-path') || `/${locale}/${kit}`
-          redirect(`/${locale}/unlock?kit=${kit}&redirect=${encodeURIComponent(currentPath)}`)
-        }
+        isValid = Boolean(matchedCode)
+      } else if (configuredCodes.length > 0) {
+        isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
       }
     } catch (e) {
       console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
-      // We continue to allow the page to load instead of crashing.
-      // If access control is strictly required, you can decide to redirect or show an error here.
+      // Fail closed on DB errors. If static codes are configured, allow those.
+      shouldRequireAccess = true
+      isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
+    }
+
+    if (shouldRequireAccess && !isValid) {
+      // Find current full path if possible for redirect, or just use kit root.
+      const currentPath = headers().get('x-current-path') || `/${locale}/${kit}`
+      redirect(`/${locale}/unlock?kit=${kit}&redirect=${encodeURIComponent(currentPath)}`)
     }
   }
 

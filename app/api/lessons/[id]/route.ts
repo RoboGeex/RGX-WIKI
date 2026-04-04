@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma-multi'
 import { findDeveloperById } from '@/lib/developers'
-import { canEditLesson, canDeleteLesson, canManageWiki } from '@/lib/assignments'
+import { canDeleteLesson, canManageWiki } from '@/lib/assignments'
+import { POST as saveLesson } from '@/app/api/lessons/route'
+import { pickEditableVersion, pickLatestPublished, sortVersionRowsDesc } from '@/lib/lesson-versions'
 
 function getActorIdFromRequest(req: Request): string | undefined {
   const headers = (req as any)?.headers as Headers | undefined
@@ -14,6 +16,97 @@ function getActorIdFromRequest(req: Request): string | undefined {
   return raw ? raw.trim() || undefined : undefined
 }
 
+function isLessonKeyUnsupportedError(error: any): boolean {
+  const message = typeof error?.message === 'string' ? error.message : ''
+  const lowerMessage = message.toLowerCase()
+  const missingColumn =
+    lowerMessage.includes('lessonkey') &&
+    (lowerMessage.includes('does not exist') || lowerMessage.includes('unknown field') || lowerMessage.includes('unknown argument'))
+  const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''
+  const prismaMetaColumn = metaColumn.endsWith('.lesson.lessonkey') || metaColumn === 'lessonkey'
+  return (
+    message.includes('Unknown argument `lessonKey`') ||
+    message.includes('Unknown field `lessonKey`') ||
+    missingColumn ||
+    prismaMetaColumn
+  )
+}
+
+const LEGACY_DRAFT_SUFFIX = '--draft'
+
+const legacyLessonSelect = {
+  id: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  body: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  activeEditorId: true,
+  lockedUntil: true,
+} as const
+
+function stripLegacyDraftSuffix(value: string | undefined | null): string {
+  const normalized = (value || '').trim()
+  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {
+    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
+  }
+  return normalized
+}
+
+function toLegacyDraftValue(value: string | undefined | null): string {
+  const normalized = stripLegacyDraftSuffix(value) || 'lesson'
+  return `${normalized}${LEGACY_DRAFT_SUFFIX}`
+}
+
+function mapLegacyLessonRow(row: any) {
+  const normalizedLessonKey =
+    row.lessonKey ||
+    stripLegacyDraftSuffix(row.id || '') ||
+    stripLegacyDraftSuffix(row.slug || '') ||
+    row.id
+  return {
+    ...row,
+    lessonKey: normalizedLessonKey,
+  }
+}
+
+async function findLessonMatch(prisma: any, wikiSlug: string | undefined, identifier: string) {
+  try {
+    return await prisma.lesson.findFirst({
+      where: {
+        ...(wikiSlug ? { wikiSlug } : {}),
+        OR: [{ id: identifier }, { slug: identifier }, { lessonKey: identifier }],
+      },
+      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+    })
+  } catch (error: any) {
+    if (!isLessonKeyUnsupportedError(error)) throw error
+    const row = await prisma.lesson.findFirst({
+      where: {
+        ...(wikiSlug ? { wikiSlug } : {}),
+        OR: [{ id: identifier }, { slug: identifier }],
+      },
+      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+      select: legacyLessonSelect,
+    })
+    return row ? mapLegacyLessonRow(row) : row
+  }
+}
+
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
@@ -21,26 +114,71 @@ export async function GET(
   try {
     const id = params.id
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
     const { searchParams } = new URL(req.url)
     const wikiSlug = searchParams.get('kit') || searchParams.get('wiki') || undefined
-    const prisma = getPrisma(wikiSlug)
-    const lesson = await prisma.lesson.findFirst({
-      where: {
-        ...(wikiSlug ? { wikiSlug } : {}),
-        OR: [{ id }, { slug: id }],
-      },
-    })
-    if (!lesson) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const prisma: any = getPrisma(wikiSlug)
+
+    const matched = await findLessonMatch(prisma, wikiSlug, id)
+    if (!matched) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const actorId = getActorIdFromRequest(req)
     const developer = actorId ? await findDeveloperById(actorId) : undefined
+    const canManage = !!developer && canManageWiki(developer, matched.wikiSlug)
     const isEnforcementOn = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
 
-    if (isEnforcementOn && !canManageWiki(developer, lesson.wikiSlug)) {
+    if (isEnforcementOn && developer && !canManage) {
       return NextResponse.json({ error: 'Access denied: You are not assigned to this wiki' }, { status: 403 })
     }
 
-    return NextResponse.json(lesson)
+    const lessonKey = (matched as any).lessonKey || matched.id
+    let familyRows: any[] = []
+    try {
+      familyRows = await prisma.lesson.findMany({
+        where: { wikiSlug: matched.wikiSlug, lessonKey },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+      })
+    } catch (error: any) {
+      if (!isLessonKeyUnsupportedError(error)) throw error
+      const baseId = stripLegacyDraftSuffix((matched as any)?.id)
+      const baseSlug = stripLegacyDraftSuffix((matched as any)?.slug)
+      const legacyRows = await prisma.lesson.findMany({
+        where: {
+          wikiSlug: matched.wikiSlug,
+          OR: [
+            ...(baseId ? [{ id: baseId }, { id: toLegacyDraftValue(baseId) }] : []),
+            ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
+          ],
+        },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+        select: legacyLessonSelect,
+      })
+      familyRows = legacyRows.map(mapLegacyLessonRow)
+    }
+    if (!Array.isArray(familyRows) || familyRows.length === 0) {
+      familyRows = [matched]
+    }
+
+    const selected = canManage
+      ? pickEditableVersion(familyRows)
+      : pickLatestPublished(familyRows)
+
+    if (!selected) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    const latestPublished = pickLatestPublished(familyRows)
+    const hasPublishedSnapshot = Boolean(latestPublished)
+    const hasUnpublishedChanges =
+      canManage &&
+      hasPublishedSnapshot &&
+      String((selected as any)?.status || '').toLowerCase() === 'draft'
+    return NextResponse.json({
+      ...selected,
+      status: hasPublishedSnapshot ? 'published' : (selected as any)?.status,
+      hasUnpublishedChanges,
+      lastPublishedAt: latestPublished?.publishedAt || (selected as any)?.publishedAt || null,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to load lesson' }, { status: 500 })
   }
@@ -50,42 +188,29 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   try {
     const id = params.id
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
     const payload = await req.json()
-    const actorId = getActorIdFromRequest(req)
-    const developer = actorId ? await findDeveloperById(actorId) : undefined
-    const isAdmin = developer?.role === 'admin' || developer?.role === 'superadmin'
-
-    // Fetch lesson to know wikiSlug and owner
-    const prismaForLookup = getPrisma()
-    const existing = await prismaForLookup.lesson.findFirst({
-      where: {
-        OR: [{ id }, { slug: id }],
-      },
-      select: { ownerId: true, wikiSlug: true, status: true, publishedAt: true },
-    })
-    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-    if (!canEditLesson(developer, existing.wikiSlug, existing.ownerId)) {
-      return NextResponse.json({ error: 'Forbidden: You do not have permission to edit this lesson' }, { status: 403 })
-    }
-
-    const prisma = getPrisma(existing.wikiSlug)
-
-    const shouldEnforceOwnership = process.env.ENFORCE_DEV_OWNERSHIP === 'true'
-
-    const updateData = {
+    const mergedPayload = {
       ...payload,
-      // Only restrict to draft if ownership enforcement is enabled AND user is not admin
-      status: (shouldEnforceOwnership && !isAdmin) ? 'draft' : (payload.status || existing.status || 'draft'),
-      publishedAt:
-        (!shouldEnforceOwnership || isAdmin) && payload.status === 'published'
-          ? payload.publishedAt || existing.publishedAt || new Date().toISOString()
-          : existing.publishedAt || null,
-      lastModifiedBy: developer?.id || payload.lastModifiedBy,
+      id: payload?.id || id,
     }
 
-    const saved = await prisma.lesson.update({ where: { id }, data: updateData })
-    return NextResponse.json({ ok: true, lesson: saved })
+    const forwardedHeaders = new Headers(req.headers)
+    if (!forwardedHeaders.get('content-type')) {
+      forwardedHeaders.set('content-type', 'application/json')
+    }
+
+    const saveUrl = new URL(req.url)
+    saveUrl.pathname = '/api/lessons'
+    saveUrl.search = ''
+
+    const saveRequest = new Request(saveUrl.toString(), {
+      method: 'POST',
+      headers: forwardedHeaders,
+      body: JSON.stringify(mergedPayload),
+    })
+
+    return saveLesson(saveRequest)
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to update lesson' }, { status: 500 })
   }
@@ -103,29 +228,74 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: 'Only Super Admins can delete lessons' }, { status: 403 })
     }
 
-    // Get wikiSlug from query params so we use the correct database
     const { searchParams } = new URL(req.url)
     const wikiSlug = searchParams.get('wiki') || searchParams.get('kit') || undefined
+    const prisma: any = getPrisma(wikiSlug)
 
-    // Use the wiki-specific prisma client for both lookup and delete
-    const prisma = getPrisma(wikiSlug)
-    const existing = await prisma.lesson.findFirst({
-      where: {
-        ...(wikiSlug ? { wikiSlug } : {}),
-        OR: [{ id }, { slug: id }],
-      },
-      select: { id: true, slug: true, wikiSlug: true, title_en: true },
-    })
+    const existing = await findLessonMatch(prisma, wikiSlug, id)
     if (!existing) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
 
-    // Delete from the same prisma instance that found it
-    if (existing.slug === 'getting-started') {
-      return NextResponse.json({ error: 'The "Getting Started" lesson cannot be deleted as it is a required system lesson.' }, { status: 400 })
+    const lessonKey = (existing as any).lessonKey || existing.id
+    let familyRows: any[] = []
+    try {
+      familyRows = await prisma.lesson.findMany({
+        where: { wikiSlug: existing.wikiSlug, lessonKey },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+      })
+    } catch (error: any) {
+      if (!isLessonKeyUnsupportedError(error)) throw error
+      const baseId = stripLegacyDraftSuffix((existing as any)?.id)
+      const baseSlug = stripLegacyDraftSuffix((existing as any)?.slug)
+      const legacyRows = await prisma.lesson.findMany({
+        where: {
+          wikiSlug: existing.wikiSlug,
+          OR: [
+            ...(baseId ? [{ id: baseId }, { id: toLegacyDraftValue(baseId) }] : []),
+            ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
+          ],
+        },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+        select: legacyLessonSelect,
+      })
+      familyRows = legacyRows.map(mapLegacyLessonRow)
+    }
+    if (!Array.isArray(familyRows) || familyRows.length === 0) {
+      familyRows = [existing]
     }
 
-    await prisma.lesson.delete({ where: { id: existing.id } })
+    const latest = sortVersionRowsDesc(familyRows)[0]
+    const slug = latest?.slug || existing.slug
+    if (slug === 'getting-started' || slug === 'resources') {
+      return NextResponse.json(
+        { error: 'The "Getting Started" and "Resources" lessons cannot be deleted as they are required system lessons.' },
+        { status: 400 }
+      )
+    }
 
-    return NextResponse.json({ ok: true, deleted: existing.id, title: existing.title_en })
+    try {
+      await prisma.lesson.deleteMany({
+        where: { wikiSlug: existing.wikiSlug, lessonKey },
+      })
+    } catch (error: any) {
+      if (!isLessonKeyUnsupportedError(error)) throw error
+      const baseId = stripLegacyDraftSuffix((existing as any)?.id)
+      const baseSlug = stripLegacyDraftSuffix((existing as any)?.slug)
+      await prisma.lesson.deleteMany({
+        where: {
+          wikiSlug: existing.wikiSlug,
+          OR: [
+            ...(baseId ? [{ id: baseId }, { id: toLegacyDraftValue(baseId) }] : []),
+            ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
+          ],
+        },
+      })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      deleted: lessonKey,
+      title: latest?.title_en || existing.title_en,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to delete lesson' }, { status: 500 })
   }

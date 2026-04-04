@@ -47,6 +47,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const safeLocale: Locale =
     locale && (locale === "en" || locale === "ar") ? locale : "en";
+  const isArabic = safeLocale === "ar";
   const [modules, setModules] = useState<Module[]>([]);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeHeading, setActiveHeading] = useState<string>("");
@@ -200,7 +201,7 @@ export default function Sidebar({
         <div onClick={onClose} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
       <aside
-        className={`fixed lg:static top-20 left-0 w-72 lg:w-64 h-[calc(100vh-5rem)] overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-sm z-50 transform transition-transform lg:sticky lg:top-28 lg:h-auto lg:self-start ${
+        className={`fixed lg:static top-20 left-0 w-72 lg:w-64 h-[calc(100vh-5rem)] overflow-y-auto no-scrollbar smooth-panel-scroll bg-white border border-gray-200 rounded-xl shadow-sm z-50 transform transition-transform lg:sticky lg:top-28 lg:h-auto lg:self-start ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } ${className || ""}`}
       >
@@ -246,7 +247,7 @@ export default function Sidebar({
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
               {t("onThisPage", safeLocale)}
             </div>
-            <nav className="space-y-1">
+            <nav className={`space-y-1 ${isArabic ? "text-right" : "text-left"}`} dir={isArabic ? "rtl" : "ltr"}>
               {toc.length === 0 && (
                 <div className="text-xs text-gray-400">{t("noHeadingsYet", safeLocale)}</div>
               )}
@@ -254,8 +255,10 @@ export default function Sidebar({
                 <button
                   key={`toc-${item.id}-${idx}`}
                   onClick={() => handleScrollTo(idx)}
-                  className={`block text-left w-full rounded-md px-3 py-2 text-sm transition ${
-                    item.level >= 4 ? "pl-6 text-xs" : item.level === 3 ? "pl-4" : ""
+                  className={`block w-full rounded-md px-3 py-2 text-sm transition ${
+                    isArabic
+                      ? (item.level >= 4 ? "text-right pr-6 text-xs" : item.level === 3 ? "text-right pr-4" : "text-right")
+                      : (item.level >= 4 ? "text-left pl-6 text-xs" : item.level === 3 ? "text-left pl-4" : "text-left")
                   } ${activeHeading === item.id ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-primary/10 hover:text-primary"}`}
                 >
                   {item.text}

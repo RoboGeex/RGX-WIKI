@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState, type CSSProperties } from 'react'
-import { ZoomableImage } from '@/components/zoomable-image'
+import { useState } from 'react'
+import { LessonImage } from '@/components/lesson/LessonMedia'
 
 type Props = {
   images: any[]
@@ -49,15 +49,15 @@ export function LessonImageSlider({ images, layoutMode = 'fit' }: Props) {
                 aria-hidden={!isActive}
               >
                 {isActive ? (
-                  <ZoomableImage>
-                    <img
-                      src={src}
-                      alt={cap || "Lesson slide"}
-                      className={`block w-full !m-0 !p-0 ${
-                        (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'
-                      }`}
-                    />
-                  </ZoomableImage>
+                  <LessonImage
+                    src={src}
+                    alt={cap || "Lesson slide"}
+                    zoomable
+                    minHeightClassName={(!layoutMode || layoutMode === 'fit') ? 'min-h-[14rem]' : undefined}
+                    imgClassName={`block w-full !m-0 !p-0 ${
+                      (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'
+                    }`}
+                  />
                 ) : (
                   <img
                     src={src}
@@ -112,7 +112,7 @@ export function LessonImageSlider({ images, layoutMode = 'fit' }: Props) {
       {/* Active caption displayed as a standard figure caption */}
       {activeCaption ? (
         <figcaption
-          className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
+          className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
           dangerouslySetInnerHTML={{ __html: activeCaption }}
         />
       ) : null}

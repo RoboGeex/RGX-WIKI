@@ -34,7 +34,7 @@ export default function KitNavbar({
     if (!pathname) return
     if (!pathname.includes('/lesson/')) return
     if (pathname.includes('/unlock')) return
-    if (isUnlocked()) return
+    if (isUnlocked(kitSlug)) return
 
     const search = new URLSearchParams({
       kit: kitSlug,

@@ -107,7 +107,7 @@ export default async function WikiDashboardPage({ params }: Params) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/editor/lesson?wiki=${wiki.slug}&kit=${kit.slug}&slug=${lesson.slug}&id=${lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.title_ar || lesson.slug)}`}
+                      href={`/editor/lesson?wiki=${wiki.slug}&kit=${kit.slug}&slug=${lesson.slug}&id=${lesson.id || lesson.slug}&title=${encodeURIComponent(lesson.title_en || lesson.title_ar || lesson.slug)}`}
                       className="px-3 py-1.5 text-sm rounded-md border border-primary/40 text-primary hover:bg-primary/10"
                     >
                       Edit

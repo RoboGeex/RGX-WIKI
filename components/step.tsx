@@ -1,5 +1,6 @@
 import type { LessonBodyItem } from '../lib/types'
 import type { Locale } from '@/lib/i18n'
+import { LessonImage } from '@/components/lesson/LessonMedia'
 
 interface StepProps {
   step: LessonBodyItem
@@ -26,7 +27,12 @@ export default function Step({ step, stepNumber, locale }: StepProps) {
       )}
       {step.image && (
         <div className="mt-4 rounded-2xl overflow-hidden border bg-white shadow-sm">
-          <img src={step.image} alt={title || ''} className="w-full h-auto object-cover" />
+          <LessonImage
+            src={step.image}
+            alt={title || ''}
+            minHeightClassName="min-h-[10rem]"
+            imgClassName="w-full h-auto object-cover"
+          />
         </div>
       )}
     </div>

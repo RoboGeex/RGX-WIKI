@@ -44,6 +44,21 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Reusable scrolling utilities for side panels (editor/wiki TOC). */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+.smooth-panel-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Prevent long unbroken text from overflowing */
 .tiptap,
 .prose,
@@ -61,20 +76,92 @@ html {
   margin-top: 0.25rem !important;
 }
 
+/* Force external vertical spacing around media wrappers (outside the container). */
+.tiptap figure.media-block,
+.ProseMirror figure.media-block,
+.prose figure.media-block {
+  margin-top: 3.5rem !important;
+  margin-bottom: 3.5rem !important;
+}
+
+.tiptap .media-node-block,
+.ProseMirror .media-node-block {
+  margin-top: 3.5rem !important;
+  margin-bottom: 3.5rem !important;
+}
+
+.tiptap > * + figure.media-block,
+.ProseMirror > * + figure.media-block,
+.prose > * + figure.media-block {
+  margin-top: 3.5rem !important;
+}
+
+.tiptap > figure.media-block + *,
+.ProseMirror > figure.media-block + *,
+.prose > figure.media-block + * {
+  margin-top: 3.5rem !important;
+}
+
+.tiptap .lesson-tag-card,
+.ProseMirror .lesson-tag-card,
+.prose .lesson-tag-card {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.tiptap > * + .lesson-tag-card,
+.ProseMirror > * + .lesson-tag-card,
+.prose > * + .lesson-tag-card {
+  margin-top: 1.5rem !important;
+}
+
+.tiptap > .lesson-tag-card + *,
+.ProseMirror > .lesson-tag-card + *,
+.prose > .lesson-tag-card + * {
+  margin-top: 1.5rem !important;
+}
+
+.tiptap .tag-block-node.media-node-block,
+.ProseMirror .tag-block-node.media-node-block,
+.tiptap > .tag-block-node.media-node-block,
+.ProseMirror > .tag-block-node.media-node-block,
+.tiptap [data-node-view-wrapper].tag-block-node.media-node-block,
+.ProseMirror [data-node-view-wrapper].tag-block-node.media-node-block {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
 .tiptap p,
 .ProseMirror p,
-.tiptap div:not([data-type]),
-.ProseMirror div:not([data-type]) {
+.tiptap div:not([data-type]):not(.media-node-block),
+.ProseMirror div:not([data-type]):not(.media-node-block) {
   font-size: 1.25rem !important; /* Premium 20px scale (Match Wiki) */
   line-height: 1.75rem !important; /* Tighter: 28px for 20px font */
   color: #374151 !important; /* text-gray-700 */
   margin-bottom: 0 !important;
 }
 
+.tiptap > div.media-node-block,
+.ProseMirror > div.media-node-block,
+.tiptap [data-node-view-wrapper].media-node-block,
+.ProseMirror [data-node-view-wrapper].media-node-block {
+  margin-top: 3.5rem !important;
+  margin-bottom: 3.5rem !important;
+}
+
 .tiptap img,
 .ProseMirror img,
 .prose img {
+  display: block;
   object-fit: cover !important;
+}
+
+.tiptap figure.media-block img,
+.ProseMirror figure.media-block img,
+.prose figure.media-block img,
+.tiptap .media-node-block img,
+.ProseMirror .media-node-block img {
+  margin: 0 !important;
 }
 
 /* Callout / blockquote — styled to match wiki Callout component exactly */
@@ -121,6 +208,21 @@ html {
 }
 
 
+.tiptap pre,
+.ProseMirror pre,
+.prose pre {
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  overflow-x: hidden !important;
+}
+.tiptap pre code,
+.ProseMirror pre code,
+.prose pre code {
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
 /* ========== Code Block Font Size Parity (Editor ↔ Wiki) ==========
    prose-xl sets pre to 1.125rem (18px) and .tiptap div:not([data-type]) sets
    the NodeViewWrapper divs to 1.25rem (20px). Raw text nodes between hljs spans
@@ -236,6 +338,159 @@ html {
 }
 .tiptap-rtl li {
   padding-right: 0.5rem !important;
+}
+
+/* Wiki list items can include embedded media under a bullet/number.
+   Keep media styling consistent with standalone media blocks. */
+.lesson-list-item-content > img,
+.lesson-list-item-content > p > img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  margin-inline: 0;
+  border-radius: 1.5rem;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
+}
+
+.lesson-list-item-content > img[data-align="left"],
+.lesson-list-item-content > p > img[data-align="left"] {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+.lesson-list-item-content > img[style*="text-align:left"],
+.lesson-list-item-content > img[style*="text-align: left"],
+.lesson-list-item-content > p > img[style*="text-align:left"],
+.lesson-list-item-content > p > img[style*="text-align: left"] {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+.lesson-list-item-content > img[data-align="right"],
+.lesson-list-item-content > p > img[data-align="right"] {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+.lesson-list-item-content > img[style*="text-align:right"],
+.lesson-list-item-content > img[style*="text-align: right"],
+.lesson-list-item-content > p > img[style*="text-align:right"],
+.lesson-list-item-content > p > img[style*="text-align: right"] {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+.lesson-list-item-content > img[data-align="center"],
+.lesson-list-item-content > img[style*="text-align:center"],
+.lesson-list-item-content > img[style*="text-align: center"],
+.lesson-list-item-content > p > img[data-align="center"],
+.lesson-list-item-content > p > img[style*="text-align:center"],
+.lesson-list-item-content > p > img[style*="text-align: center"],
+.lesson-list-item-content > img:not([data-align]):not([style*="text-align:left"]):not([style*="text-align: left"]):not([style*="text-align:right"]):not([style*="text-align: right"]),
+.lesson-list-item-content > p > img:not([data-align]):not([style*="text-align:left"]):not([style*="text-align: left"]):not([style*="text-align:right"]):not([style*="text-align: right"]) {
+  margin-inline: auto;
+}
+
+.lesson-list-item-content > .tiptap-video-embed,
+.lesson-list-item-content > video,
+.lesson-list-item-content > iframe,
+.lesson-list-item-content > div[data-type="image-slider"] {
+  display: block;
+  max-width: 100%;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  margin-inline: auto;
+}
+
+.lesson-list-item-content > .tiptap-video-embed,
+.lesson-list-item-content > video,
+.lesson-list-item-content > iframe {
+  width: 100%;
+}
+
+.lesson-list-item-content > iframe,
+.lesson-list-item-content > video {
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  background: #000000;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
+}
+
+.lesson-list-item-content > iframe {
+  aspect-ratio: 16 / 9;
+}
+
+.lesson-list-item-content .tiptap-video-embed iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lesson-list-item-content [data-type="image-slider"] .tiptap-image-slide img {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.lesson-list-item-content figure {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.lesson-list-item-content figure img {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.lesson-list-item-content figcaption {
+  margin-top: 0.25rem;
+  padding-bottom: 0.5rem;
+  width: 100%;
+  color: #4b5563;
+  font-size: 1rem;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.lesson-list-item-content figcaption p {
+  margin: 0;
+}
+
+/* Skeleton UI for media rendered inside rich HTML blocks */
+.lesson-inline-media {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  transition: opacity 260ms ease;
+}
+
+.lesson-inline-media-loading {
+  width: 100% !important;
+  height: auto;
+  aspect-ratio: var(--lesson-inline-ar, 16 / 9);
+  border-radius: 1rem;
+  background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+  background-size: 200% 100%;
+  animation: lesson-media-shimmer 1.15s linear infinite;
+}
+
+@keyframes lesson-media-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .tiptap table {
@@ -795,8 +1050,8 @@ html {
 .glass-editor-panel {
   background: #ffffff;
   border: 1px solid hsl(var(--border));
-  box-shadow: 
-    0 4px 6px -1px rgb(0 0 0 / 0.1), 
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
     0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md sync */
   border-radius: 1.5rem; /* rounded-3xl sync */
   overflow: hidden;
@@ -805,8 +1060,8 @@ html {
 }
 
 .glass-editor-panel:hover {
-  box-shadow: 
-    0 10px 15px -3px rgb(0 0 0 / 0.1), 
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1); /* shadow-lg on hover */
 }
 
@@ -1518,9 +1773,9 @@ html {
 }
 
 /* Ensure editor headings have enough scroll margin to clear the fixed header */
-.ProseMirror h1, 
-.ProseMirror h2, 
-.ProseMirror h3, 
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
 .ProseMirror h4,
 .tiptap h1,
 .tiptap h2,
@@ -1567,6 +1822,13 @@ html {
     width: 1px;
     background-color: #e2e8f0; /* Light slate separator */
   }
+
+  /* In RTL visual flow, separators must be anchored from the right side. */
+  [dir="rtl"] .columns-layout .column-layout:not(:first-child)::before,
+  .tiptap-rtl .column-layout:not(:first-child)::before {
+    left: auto;
+    right: -1rem;
+  }
 }
 
 .column-layout > *:first-child {
@@ -1593,3 +1855,83 @@ html {
 .prose strong, .prose b, .tiptap strong, .tiptap b {
   color: inherit !important;
 }
+/* Lesson Summary/Lesson Tabs (Wiki view) */
+.lesson-section-tabs {
+  position: relative;
+}
+
+.lesson-section-tab-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lesson-section-tab-list {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding: 0;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.lesson-section-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 9rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.18s ease;
+  margin-bottom: -1px;
+}
+
+.lesson-section-tab:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.lesson-section-panel {
+  display: none;
+}
+
+.lesson-toc-panel {
+  display: none;
+}
+
+.lesson-section-tab-input-summary:checked ~ .lesson-section-layout .lesson-section-tab-summary,
+.lesson-section-tab-input-lesson:checked ~ .lesson-section-layout .lesson-section-tab-lesson {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.lesson-section-tab-input-summary:checked ~ .lesson-section-layout .lesson-section-panel-summary,
+.lesson-section-tab-input-lesson:checked ~ .lesson-section-layout .lesson-section-panel-lesson,
+.lesson-section-tab-input-summary:checked ~ .lesson-section-layout .lesson-toc-panel-summary,
+.lesson-section-tab-input-lesson:checked ~ .lesson-section-layout .lesson-toc-panel-lesson {
+  display: block;
+}
+
+button.lesson-section-tab {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.lesson-section-tab.is-active {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+

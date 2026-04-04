@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { applyDeveloperHeader } from './dev-identity'
 import { Package, Sparkles } from 'lucide-react'
+import { readSessionStorageJson } from '@/lib/session-storage'
 
 const ENABLE_SEGMENTS_EDITOR = false
 // Removed static import - will use dynamic loading instead
@@ -91,10 +92,8 @@ export default function PropertiesForm() {
         sessionStorage.removeItem('lessonMeta')
       } catch {}
     } else if (typeof window !== 'undefined') {
-      try {
-        const raw = sessionStorage.getItem('lessonMeta')
-        if (raw) Object.assign(base, JSON.parse(raw))
-      } catch {}
+      const storedMeta = readSessionStorageJson<Partial<LessonMeta>>('lessonMeta')
+      if (storedMeta) Object.assign(base, storedMeta)
     }
     
     if (slugFromQuery) base.slug = slugFromQuery

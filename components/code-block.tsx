@@ -58,13 +58,13 @@ export default function CodeBlock({ code, language = 'typescript', locale = 'en'
         <SyntaxHighlighter
           language={language.toLowerCase()}
           useInlineStyles={false}
-          wrapLines={false}
-          wrapLongLines={false}
+          wrapLines={true}
+          wrapLongLines={true}
           PreTag="pre"
           CodeTag="code"
-          className="!bg-transparent !m-0 !p-4 !overflow-visible"
+          className="!bg-transparent !m-0 !p-4 !overflow-hidden !whitespace-pre-wrap !break-words"
           codeTagProps={{
-            className: `!font-mono !text-[15px] !leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`
+            className: `!font-mono !text-[15px] !leading-relaxed !whitespace-pre-wrap !break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`
           }}
         >
           {code}
@@ -73,3 +73,4 @@ export default function CodeBlock({ code, language = 'typescript', locale = 'en'
     </div>
   )
 }
+

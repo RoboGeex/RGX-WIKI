@@ -5,6 +5,28 @@ import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 import { getPrisma } from '@/lib/prisma-multi'
+import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, pickLatestPublished } from '@/lib/lesson-versions'
+
+function isLessonKeyColumnMissingError(error: any): boolean {
+  const message = typeof error?.message === 'string' ? error.message : ''
+  const lowerMessage = message.toLowerCase()
+  const missingColumn = lowerMessage.includes('lessonkey') && lowerMessage.includes('does not exist')
+  const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''
+  const prismaMetaColumn = metaColumn.endsWith('.lesson.lessonkey') || metaColumn === 'lessonkey'
+  return missingColumn || prismaMetaColumn
+}
+
+function mapLegacyLessonRow(row: any): Lesson {
+  const normalizedLessonKey =
+    row.lessonKey ||
+    stripLegacyDraftSuffix(row.id || '') ||
+    stripLegacyDraftSuffix(row.slug || '') ||
+    row.id
+  return {
+    ...row,
+    lessonKey: normalizedLessonKey,
+  } as Lesson
+}
 
 function loadJsonFile<T>(file: string, fallback: T): T {
   const tmpPath = path.join(os.tmpdir(), file)
@@ -50,6 +72,71 @@ function wikiSlugForKit(kitSlug: string): string {
 }
 
 const normalizeSlug = (s: string) => s.replace(/_/g, '-')
+const LEGACY_DRAFT_SUFFIX = '--draft'
+
+function stripLegacyDraftSuffix(value: string): string {
+  const normalized = normalizeSlug(value || '')
+  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {
+    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
+  }
+  return normalized
+}
+
+function ensureResourcesLesson(list: Lesson[], wikiSlug: string): Lesson[] {
+  const hasResources = list.some((lesson) => normalizeSlug(lesson.slug || '') === 'resources')
+  if (hasResources) return list
+
+  const maxOrder = list.reduce((max, lesson) => Math.max(max, Number(lesson.order) || 0), 0)
+  const resources: Lesson = {
+    id: 'resources',
+    lessonKey: 'resources',
+    wikiSlug,
+    order: maxOrder + 1,
+    slug: 'resources',
+    title_en: 'Resources',
+    title_ar: 'الموارد',
+    status: LESSON_STATUS.PUBLISHED,
+    publishedAt: new Date(0).toISOString(),
+    duration_min: 15,
+    difficulty: 'Beginner',
+    prerequisites_en: [],
+    prerequisites_ar: [],
+    materials: [],
+    body: [
+      { type: 'heading', en: 'Resources', ar: 'الموارد', level: 1 },
+      { type: 'paragraph', en: 'Resources are coming soon.', ar: 'الموارد قادمة قريباً.' },
+    ],
+  }
+  return [...list, resources]
+}
+
+function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], includeDrafts: boolean): Lesson[] {
+  if (!includeDrafts) return collapsed
+
+  const toIsoDate = (value: unknown): string => {
+    if (!value) return ''
+    if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : ''
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (!trimmed) return ''
+      const parsed = new Date(trimmed)
+      return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : trimmed
+    }
+    return ''
+  }
+
+  const grouped = groupLessonsByKey(rows)
+  return collapsed.map((lesson) => {
+    const versions = grouped.get(lesson.lessonKey || lesson.id) || []
+    const latestPublished = pickLatestPublished(versions)
+    const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt)
+    return {
+      ...lesson,
+      lastPublishedAt,
+      hasUnpublishedChanges: lesson.status === LESSON_STATUS.DRAFT && Boolean(latestPublished),
+    }
+  })
+}
 
 export function getWikis(): Wiki[] { return loadWikis() }
 
@@ -102,14 +189,57 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   try {
     const normKit = normalizeSlug(kitSlug)
     const wikiSlug = wikiSlugForKit(normKit)
-    const enforcementDisabled = process.env.ENFORCE_DEV_OWNERSHIP !== 'true'
-    const includeDrafts = opts?.includeDrafts === true || process.env.NODE_ENV === 'development' || enforcementDisabled
-    const prisma = getPrisma(wikiSlug)
-    const lessons = await prisma.lesson.findMany({
-      where: { wikiSlug, ...(includeDrafts ? {} : { status: 'published' }) },
-      orderBy: { order: 'asc' },
-    })
-    return lessons as unknown as Lesson[]
+    const includeDrafts = opts?.includeDrafts === true
+    const prisma: any = getPrisma(wikiSlug)
+    let rows: Lesson[]
+    try {
+      rows = await prisma.lesson.findMany({
+        where: {
+          wikiSlug,
+          ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
+        },
+        orderBy: [{ order: 'asc' }, { version: 'desc' }],
+      })
+    } catch (error: any) {
+      if (!isLessonKeyColumnMissingError(error)) throw error
+      const legacyRows = await prisma.lesson.findMany({
+        where: {
+          wikiSlug,
+          ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
+        },
+        orderBy: [{ order: 'asc' }, { version: 'desc' }],
+        select: {
+          id: true,
+          order: true,
+          slug: true,
+          wikiSlug: true,
+          title_en: true,
+          title_ar: true,
+          coverImage: true,
+          ownerId: true,
+          lastModifiedBy: true,
+          status: true,
+          publishedAt: true,
+          duration_min: true,
+          difficulty: true,
+          prerequisites_en: true,
+          prerequisites_ar: true,
+          materials: true,
+          body: true,
+          createdAt: true,
+          updatedAt: true,
+          version: true,
+          activeEditorId: true,
+          lockedUntil: true,
+        },
+      })
+      rows = legacyRows.map(mapLegacyLessonRow)
+    }
+    const collapsed = includeDrafts
+      ? collapseLessonsForEditor(rows as Lesson[])
+      : collapseLessonsForPublic(rows as Lesson[])
+    const enriched = enrichLessonsWithPublishState(rows as Lesson[], collapsed as Lesson[], includeDrafts)
+    return ensureResourcesLesson(enriched as Lesson[], wikiSlug)
   } catch (e) {
     console.error("Failed to fetch lessons from db", e)
     return []
@@ -127,8 +257,22 @@ export async function getLesson(
   opts?: { includeDrafts?: boolean }
 ): Promise<Lesson | undefined> {
   const lessons = await getLessons(kit, opts)
-  const normSlug = normalizeSlug(lessonSlug)
-  return lessons.find(l => l.slug === normSlug || l.slug === lessonSlug)
+  const rawSlug = (lessonSlug || '').trim()
+  const normSlug = normalizeSlug(rawSlug)
+  const baseSlug = stripLegacyDraftSuffix(normSlug)
+  const draftSlug = `${baseSlug}${LEGACY_DRAFT_SUFFIX}`
+
+  const candidates = new Set<string>([rawSlug, normSlug])
+  if (opts?.includeDrafts) {
+    candidates.add(baseSlug)
+    candidates.add(draftSlug)
+  }
+
+  return lessons.find((l) => {
+    const lessonSlugNorm = normalizeSlug(l.slug || '')
+    const lessonIdNorm = normalizeSlug(l.id || '')
+    return candidates.has(lessonSlugNorm) || candidates.has(lessonIdNorm)
+  })
 }
 
 function sortLessons(list: Lesson[]): Lesson[] {

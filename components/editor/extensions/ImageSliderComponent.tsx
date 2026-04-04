@@ -24,6 +24,9 @@ import { CSS } from '@dnd-kit/utilities'
 import { ImageSlideData } from './ImageSlider'
 import { RichCaptionInput } from './RichCaptionInput'
 
+const isListNodeType = (typeName?: string | null) =>
+  typeName === 'listItem' || typeName === 'bulletList' || typeName === 'orderedList'
+
 // Sortable Image Item Component
 const SortableImageItem = memo(function SortableImageItem(props: { id: string; item: ImageSlideData; index: number; onRemove: () => void; onReplace: (newUrl: string) => void; onCaptionChange: (newCaption: string) => void }) {
   const {
@@ -164,8 +167,9 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
 })
 
 export default function ImageSliderComponent(props: any) {
+  const { node, editor, getPos, updateAttributes } = props
   // Normalize images on load
-  const images: ImageSlideData[] = (props.node.attrs.images || []).map((img: any) => {
+  const images: ImageSlideData[] = (node.attrs.images || []).map((img: any) => {
     if (typeof img === 'string') return { url: img, caption: '' }
     return img
   })
@@ -174,6 +178,50 @@ export default function ImageSliderComponent(props: any) {
   const [isReordering, setIsReordering] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null) // State for dragging overlay
   const [isUploading, setIsUploading] = useState(false)
+  const [textAlign, setTextAlign] = useState(node.attrs.textAlign || 'center')
+  const [isInsideListByDom, setIsInsideListByDom] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const isInsideListByDoc = (() => {
+    if (!editor?.state?.doc || typeof getPos !== 'function') return false
+    try {
+      const doc = editor.state.doc
+      const pos = getPos()
+      const $pos = doc.resolve(pos)
+      let hasListAncestor = false
+      for (let depth = $pos.depth; depth >= 0; depth--) {
+        if (isListNodeType($pos.node(depth).type.name)) {
+          hasListAncestor = true
+          break
+        }
+      }
+      if (hasListAncestor) return true
+
+      const nodeSize = typeof node?.nodeSize === 'number' ? node.nodeSize : 0
+      const endPos = Math.min(pos + nodeSize, doc.content.size)
+      const $end = doc.resolve(endPos)
+      const isBetweenSplitLists =
+        isListNodeType($pos.nodeBefore?.type?.name) &&
+        isListNodeType($end.nodeAfter?.type?.name)
+      if (isBetweenSplitLists) return true
+    } catch {
+      return false
+    }
+    return false
+  })()
+  const isInsideList = isInsideListByDoc || isInsideListByDom
+  const effectiveAlign = textAlign
+  const alignItems = effectiveAlign === 'left' ? 'flex-start' : effectiveAlign === 'right' ? 'flex-end' : 'center'
+  const mediaWrapperStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '720px',
+    marginInlineStart: effectiveAlign === 'right' ? 'auto' : '0',
+    marginInlineEnd: effectiveAlign === 'left' ? 'auto' : '0',
+  }
+
+  if (effectiveAlign === 'center') {
+    mediaWrapperStyle.marginInlineStart = 'auto'
+    mediaWrapperStyle.marginInlineEnd = 'auto'
+  }
 
   // DnD Sensors
   const sensors = useSensors(
@@ -187,7 +235,27 @@ export default function ImageSliderComponent(props: any) {
     })
   )
 
-  // Removed global caption useEffect and handleBlur
+  useEffect(() => {
+    setTextAlign(node.attrs.textAlign || 'center')
+  }, [node.attrs.textAlign])
+
+  useEffect(() => {
+    const updateListContextFromDom = () => {
+      const el = wrapperRef.current
+      if (!el) return
+      const prevTag = el.previousElementSibling?.tagName
+      const nextTag = el.nextElementSibling?.tagName
+      const isAdjacentToList =
+        (prevTag === 'OL' || prevTag === 'UL') &&
+        (nextTag === 'OL' || nextTag === 'UL')
+      const isNestedInList = Boolean(el.closest('li, ol, ul'))
+      setIsInsideListByDom(isNestedInList || isAdjacentToList)
+    }
+
+    updateListContextFromDom()
+    const raf = requestAnimationFrame(updateListContextFromDom)
+    return () => cancelAnimationFrame(raf)
+  }, [getPos, node.attrs.textAlign, node.attrs.layoutMode, node.attrs.images])
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -232,7 +300,7 @@ export default function ImageSliderComponent(props: any) {
 
       if (successUrls.length > 0) {
         const newItems = successUrls.map(url => ({ url, caption: '' }))
-        props.updateAttributes({ images: [...images, ...newItems] })
+        updateAttributes({ images: [...images, ...newItems] })
       }
 
       if (failCount > 0) {
@@ -258,7 +326,7 @@ export default function ImageSliderComponent(props: any) {
 
       if (activeIndex !== -1 && overIndex !== -1) {
         const newImages = arrayMove(images, activeIndex, overIndex)
-        props.updateAttributes({ images: newImages })
+        updateAttributes({ images: newImages })
 
         // Adjust currentIndex if necessary so the same image stays selected, 
         // or just reset to the dragged image's new position
@@ -267,7 +335,17 @@ export default function ImageSliderComponent(props: any) {
     }
   }
 
-  if (!images.length) return <NodeViewWrapper className="image-slider-wrapper p-4 bg-slate-50 rounded border border-slate-200 text-slate-400 text-center text-sm">No images in slider</NodeViewWrapper>
+  if (!images.length) {
+    return (
+      <NodeViewWrapper
+        ref={wrapperRef as any}
+        className="image-slider-wrapper media-node-block p-4 bg-slate-50 rounded border border-slate-200 text-slate-400 text-center text-sm"
+        style={{ textAlign: effectiveAlign as any, alignItems }}
+      >
+        No images in slider
+      </NodeViewWrapper>
+    )
+  }
 
   const next = () => setCurrentIndex((prev) => (prev + 1) % images.length)
   const prev = () => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length)
@@ -281,7 +359,7 @@ export default function ImageSliderComponent(props: any) {
       }
       return
     }
-    props.updateAttributes({ images: newImages })
+    updateAttributes({ images: newImages })
     if (currentIndex >= newImages.length) {
       setCurrentIndex(newImages.length - 1)
     } else if (currentIndex === indexToRemove) {
@@ -298,10 +376,14 @@ export default function ImageSliderComponent(props: any) {
   }
 
   return (
-    <NodeViewWrapper className="image-slider-wrapper relative group select-none flex flex-col items-center space-y-3 my-6">
+    <NodeViewWrapper
+      ref={wrapperRef as any}
+      className="image-slider-wrapper media-node-block relative group select-none flex flex-col w-full space-y-3"
+      style={{ textAlign: effectiveAlign as any, alignItems }}
+    >
       {/* Main View Area */}
       {isReordering ? (
-        <div className="w-full max-w-[720px] bg-white rounded-2xl border border-gray-200 p-4 shadow-sm min-h-[462px]">
+        <div className="w-full bg-white rounded-2xl border border-gray-200 p-4 shadow-sm min-h-[462px]" style={mediaWrapperStyle}>
           <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-700">Reorder Images</h3>
             <div className="flex items-center gap-2">
@@ -348,12 +430,12 @@ export default function ImageSliderComponent(props: any) {
                     onReplace={(newUrl: string) => {
                       const newImages = [...images]
                       newImages[index] = { ...newImages[index], url: newUrl }
-                      props.updateAttributes({ images: newImages })
+                      updateAttributes({ images: newImages })
                     }}
                     onCaptionChange={(newCaption) => {
                       const newImages = [...images]
                       newImages[index] = { ...newImages[index], caption: newCaption }
-                      props.updateAttributes({ images: newImages })
+                      updateAttributes({ images: newImages })
                     }}
                   />
                 ))}
@@ -373,16 +455,16 @@ export default function ImageSliderComponent(props: any) {
           </DndContext>
         </div>
       ) : (
-        <div className="inline-flex flex-col w-full max-w-[720px] mx-auto">
+        <div className="inline-flex flex-col w-full" style={mediaWrapperStyle}>
           <div
             className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-white not-prose shadow-md ${
-              props.node.attrs.layoutMode === '1:1' ? 'aspect-square' :
-              props.node.attrs.layoutMode === '3:4' ? 'aspect-[3/4]' :
-              props.node.attrs.layoutMode === '2:3' ? 'aspect-[2/3]' :
-              props.node.attrs.layoutMode === '16:9' ? 'aspect-video' :
+              node.attrs.layoutMode === '1:1' ? 'aspect-square' :
+              node.attrs.layoutMode === '3:4' ? 'aspect-[3/4]' :
+              node.attrs.layoutMode === '2:3' ? 'aspect-[2/3]' :
+              node.attrs.layoutMode === '16:9' ? 'aspect-video' :
               ''
             }`}
-            style={(!props.node.attrs.layoutMode || props.node.attrs.layoutMode === 'fit') ? { display: 'grid', gridTemplateAreas: '"stack"', fontSize: 0, lineHeight: 0 } : {}}
+            style={(!node.attrs.layoutMode || node.attrs.layoutMode === 'fit') ? { display: 'grid', gridTemplateAreas: '"stack"', fontSize: 0, lineHeight: 0 } : {}}
           >
             {/* All images stacked in the same grid cell — the tallest/widest one sizes the container */}
             {images.map((img: any, idx: number) => {
@@ -391,9 +473,9 @@ export default function ImageSliderComponent(props: any) {
               return (
                 <div
                   key={idx}
-                  style={(!props.node.attrs.layoutMode || props.node.attrs.layoutMode === 'fit') ? { gridArea: 'stack', fontSize: 0, lineHeight: 0 } : {}}
+                  style={(!node.attrs.layoutMode || node.attrs.layoutMode === 'fit') ? { gridArea: 'stack', fontSize: 0, lineHeight: 0 } : {}}
                   className={`w-full flex items-center justify-center !m-0 !p-0 ${isActive ? 'visible opacity-100 z-10' : 'invisible opacity-0 pointer-events-none z-0'} ${
-                    (props.node.attrs.layoutMode === '1:1' || props.node.attrs.layoutMode === '3:4' || props.node.attrs.layoutMode === '2:3' || props.node.attrs.layoutMode === '16:9') ? 'absolute inset-0 h-full' : ''
+                    (node.attrs.layoutMode === '1:1' || node.attrs.layoutMode === '3:4' || node.attrs.layoutMode === '2:3' || node.attrs.layoutMode === '16:9') ? 'absolute inset-0 h-full' : ''
                   }`}
                   aria-hidden={!isActive}
                 >
@@ -401,7 +483,7 @@ export default function ImageSliderComponent(props: any) {
                     src={img.url}
                     alt={img.caption || `Slide ${idx + 1}`}
                     className={`block w-full pointer-events-none !m-0 !p-0 ${
-                      (props.node.attrs.layoutMode === '1:1' || props.node.attrs.layoutMode === '3:4' || props.node.attrs.layoutMode === '2:3' || props.node.attrs.layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'
+                      (node.attrs.layoutMode === '1:1' || node.attrs.layoutMode === '3:4' || node.attrs.layoutMode === '2:3' || node.attrs.layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'
                     }`}
                     style={{ display: 'block', margin: 0, padding: 0 }}
                   />
@@ -462,36 +544,36 @@ export default function ImageSliderComponent(props: any) {
 
                 <div className="flex bg-black/50 backdrop-blur-sm rounded-lg p-0.5 ml-2 border border-white/10">
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: 'fit' }); }}
-                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${(!props.node.attrs.layoutMode || props.node.attrs.layoutMode === 'fit') ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateAttributes({ layoutMode: 'fit' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${(!node.attrs.layoutMode || node.attrs.layoutMode === 'fit') ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     Fit
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '1:1' }); }}
-                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '1:1' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateAttributes({ layoutMode: '1:1' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${node.attrs.layoutMode === '1:1' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     1:1
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '3:4' }); }}
-                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '3:4' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateAttributes({ layoutMode: '3:4' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${node.attrs.layoutMode === '3:4' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     3:4
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '2:3' }); }}
-                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '2:3' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateAttributes({ layoutMode: '2:3' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${node.attrs.layoutMode === '2:3' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     2:3
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '16:9' }); }}
-                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '16:9' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateAttributes({ layoutMode: '16:9' }); }}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${node.attrs.layoutMode === '16:9' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     16:9
@@ -521,7 +603,7 @@ export default function ImageSliderComponent(props: any) {
           {/* Active caption displayed as a standard figure caption below the box */}
           {images[currentIndex]?.caption && (
             <div
-              className="mt-1 pb-2 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
+              className="mt-1 w-full text-base text-gray-600 text-center [&_p]:m-0 [&_p]:!text-base [&_p]:!text-gray-600 [&_p]:!leading-tight"
               dangerouslySetInnerHTML={{ __html: images[currentIndex].caption }}
             />
           )}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, type DragEvent } from "react"
+import { useEffect, useMemo, useState, useRef, type DragEvent } from "react"
 import Link from "next/link"
 import { applyDeveloperHeader } from "./dev-identity"
 
@@ -8,6 +8,7 @@ const ENABLE_SEGMENTS_EDITOR = false
 
 type LessonSummary = {
   id?: string
+  lessonKey?: string
   slug: string
   title_en?: string
   title_ar?: string
@@ -16,6 +17,8 @@ type LessonSummary = {
   order?: number
   ownerId?: string
   status?: string
+  lastPublishedAt?: string
+  hasUnpublishedChanges?: boolean
 }
 type Props = {
   wikiSlug: string
@@ -68,6 +71,23 @@ function ordersMatch(a: LessonSummary[], b: LessonSummary[]): boolean {
   return true
 }
 
+const LEGACY_DRAFT_SUFFIX = '--draft'
+
+function stripLegacyDraftSuffix(value?: string) {
+  const normalized = (value || '').trim()
+  return normalized.endsWith(LEGACY_DRAFT_SUFFIX)
+    ? normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
+    : normalized
+}
+
+function getLessonFamilyKey(lesson: LessonSummary) {
+  return (
+    stripLegacyDraftSuffix(lesson.lessonKey) ||
+    stripLegacyDraftSuffix(lesson.slug) ||
+    lesson.slug
+  ).trim()
+}
+
 export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, lessons, viewBaseUrl }: Props) {
   const [items, setItems] = useState(() => normalizeLessons(lessons))
   const [draggingSlug, setDraggingSlug] = useState<string | null>(null)
@@ -87,6 +107,23 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
   useEffect(() => {
     setItems(normalizeLessons(lessons))
   }, [lessons])
+
+  const lessonFamilies = useMemo(() => {
+    const families = new Map<string, { hasDraft: boolean; hasPublished: boolean }>()
+
+    items.forEach((lesson) => {
+      const familyKey = getLessonFamilyKey(lesson)
+      const current = families.get(familyKey) || { hasDraft: false, hasPublished: false }
+      if (lesson.status === 'published') {
+        current.hasPublished = true
+      } else {
+        current.hasDraft = true
+      }
+      families.set(familyKey, current)
+    })
+
+    return families
+  }, [items])
 
   useEffect(() => {
     const headers = applyDeveloperHeader({})
@@ -351,6 +388,16 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
           const isIndicatorAfter = indicator?.slug === lesson.slug && indicator.position === "after"
           const isHovered = indicator?.slug === lesson.slug
           const isDraft = lesson.status && lesson.status !== 'published'
+          const familyKey = getLessonFamilyKey(lesson)
+          const family = lessonFamilies.get(familyKey)
+          const hasUnpublishedChanges =
+            Boolean(lesson.hasUnpublishedChanges) ||
+            Boolean(family?.hasDraft && family?.hasPublished)
+          const hasPublishedVersion = lesson.status === 'published' || Boolean(lesson.lastPublishedAt) || Boolean(family?.hasPublished)
+          const displayStatus = hasPublishedVersion ? 'published' : (lesson.status || 'draft')
+          const publishStateLabel = hasPublishedVersion
+            ? (hasUnpublishedChanges ? 'Changed after last publish' : 'No changes after last publish')
+            : 'Not published yet'
           const viewPath = viewBaseUrl
             ? `${viewBaseUrl.replace(/\/$/, '')}/${defaultLocale}/${lesson.slug}`
             : `/${defaultLocale}/${kitSlug}/lesson/${lesson.slug}`
@@ -403,15 +450,31 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
                 <div>
                   <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                     <span>{lesson.title_en || lesson.title_ar || lesson.slug}</span>
-                    <span className={`px-1 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${lesson.status === 'published'
+                    <span className={`px-1 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${displayStatus === 'published'
                         ? 'bg-emerald-100 text-emerald-700'
                         : 'bg-amber-100 text-amber-700'
                       }`}>
-                      {lesson.status === 'published' ? 'Pub' : 'Draft'}
+                      {displayStatus === 'published' ? 'Pub' : 'Draft'}
                     </span>
+                    {hasPublishedVersion && (
+                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                        hasUnpublishedChanges
+                          ? 'bg-amber-100 text-amber-800 border-amber-200'
+                          : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                      }`}>
+                        {hasUnpublishedChanges ? 'Changed' : 'Synced'}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
                     {duration} min | {difficulty}
+                  </div>
+                  <div className={`mt-1 text-[11px] font-medium ${
+                    hasPublishedVersion
+                      ? (hasUnpublishedChanges ? 'text-amber-700' : 'text-emerald-700')
+                      : 'text-slate-500'
+                  }`}>
+                    {publishStateLabel}
                   </div>
                 </div>
               </div>
@@ -442,7 +505,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
                 >
                   {canEdit ? 'View' : 'Preview'}
                 </Link>
-                {isSuperAdmin && lesson.slug !== 'getting-started' && (
+                {isSuperAdmin && lesson.slug !== 'getting-started' && lesson.slug !== 'resources' && (
                   <button
                     type="button"
                     disabled={deletingId === (lesson.id || lesson.slug)}

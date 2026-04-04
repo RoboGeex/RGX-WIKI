@@ -92,10 +92,11 @@ export default function CodeBlockView({ node, updateAttributes }: CodeBlockViewP
 
       {/* Code body - Premium Light/Dark */}
       <div className={`${isDarkMode ? 'bg-[#161b22] hljs-theme-dark' : 'bg-gray-50 hljs-theme-light'}`}>
-        <pre className="!bg-transparent !m-0 !p-4 !overflow-visible !text-[15px] !font-mono !leading-relaxed">
-          <NodeViewContent as={"code" as any} className={`!font-mono !text-[15px] !leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`} />
+        <pre className="!bg-transparent !m-0 !p-4 !overflow-hidden !whitespace-pre-wrap !break-words !text-[15px] !font-mono !leading-relaxed">
+          <NodeViewContent as={"code" as any} className={`!font-mono !text-[15px] !leading-relaxed !whitespace-pre-wrap !break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`} />
         </pre>
       </div>
     </NodeViewWrapper>
   )
 }
+

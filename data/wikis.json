@@ -85,7 +85,8 @@
     "defaultLocale": "en",
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
-    "createdAt": "2025-03-14T00:00:00.000Z"
+    "createdAt": "2025-03-14T00:00:00.000Z",
+    "isPublished": true
   },
   {
     "slug": "mobile-apps",

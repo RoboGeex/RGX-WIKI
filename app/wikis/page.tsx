@@ -33,7 +33,7 @@ type WikisPageProps = {
 
 export default async function WikisLandingPage({ searchParams }: WikisPageProps) {
   const dbWikis = await getWikisFromDb()
-  const wikis = dbWikis.length > 0 ? dbWikis : getWikis()
+  const wikis = (dbWikis.length > 0 ? dbWikis : getWikis()).filter((wiki) => wiki.isPublished !== false)
   const kits = getKits()
   const query = (searchParams?.q || '').trim().toLowerCase()
   const kitsByWikiSlug = new Map(kits.map((kit) => [kit.wikiSlug, kit]))

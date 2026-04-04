@@ -20,6 +20,7 @@ type WikiRow = {
   displayName: string
   grade: string | null
   picture: string | null
+  isPublished: number | boolean | null
   domains: unknown
   defaultLocale: string | null
   defaultLessonSlug: string | null
@@ -50,6 +51,7 @@ function normalizeWikiRow(row: WikiRow) {
     displayName: row.displayName,
     grade: row.grade || 'All Levels',
     picture: row.picture || '',
+    isPublished: row.isPublished == null ? true : Boolean(row.isPublished),
     domains: parseDomains(row.domains),
     defaultLocale: row.defaultLocale || 'en',
     defaultLessonSlug: row.defaultLessonSlug || 'getting-started',
@@ -68,6 +70,7 @@ async function ensureWikiTable(): Promise<void> {
       displayName VARCHAR(255) NOT NULL,
       grade VARCHAR(191) NULL,
       picture TEXT NULL,
+      isPublished BOOLEAN NOT NULL DEFAULT TRUE,
       domains JSON NULL,
       defaultLocale VARCHAR(16) NULL,
       defaultLessonSlug VARCHAR(191) NULL,
@@ -77,13 +80,21 @@ async function ensureWikiTable(): Promise<void> {
       PRIMARY KEY (slug)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   `)
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE Wiki
+      ADD COLUMN IF NOT EXISTS isPublished BOOLEAN NOT NULL DEFAULT TRUE;
+    `)
+  } catch {
+    // Column might already exist or server may not support IF NOT EXISTS.
+  }
 }
 
 async function readWikisFromDb(): Promise<any[]> {
   await ensureWikiTable()
   const prisma: any = getPrisma()
   const rows = (await prisma.$queryRawUnsafe(`
-    SELECT slug, displayName, grade, picture, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
+    SELECT slug, displayName, grade, picture, isPublished, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
     FROM Wiki
     ORDER BY createdAt ASC
   `)) as WikiRow[]
@@ -95,12 +106,13 @@ async function saveWikiToDb(wiki: any): Promise<void> {
   const prisma: any = getPrisma()
   await prisma.$executeRaw`
     INSERT INTO Wiki (
-      slug, displayName, grade, picture, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
+      slug, displayName, grade, picture, isPublished, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
     ) VALUES (
       ${wiki.slug},
       ${wiki.displayName},
       ${wiki.grade || null},
       ${wiki.picture || null},
+      ${wiki.isPublished == null ? true : Boolean(wiki.isPublished)},
       ${JSON.stringify(wiki.domains || [])},
       ${wiki.defaultLocale || 'en'},
       ${wiki.defaultLessonSlug || 'getting-started'},
@@ -111,6 +123,7 @@ async function saveWikiToDb(wiki: any): Promise<void> {
       displayName = VALUES(displayName),
       grade = VALUES(grade),
       picture = VALUES(picture),
+      isPublished = VALUES(isPublished),
       domains = VALUES(domains),
       defaultLocale = VALUES(defaultLocale),
       defaultLessonSlug = VALUES(defaultLessonSlug),
@@ -355,6 +368,7 @@ export async function POST(req: Request) {
       displayName: name,
       grade,
       picture: pictureUrl,
+      isPublished: true,
       domains: [
         `${slug}.localhost`,
         'localhost',

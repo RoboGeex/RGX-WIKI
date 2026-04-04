@@ -4,6 +4,8 @@ import { getWiki, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { HUB_DOMAIN } from "@/lib/domains"
 import LessonsReorderList from "@/components/editor/LessonsReorderList"
+import WikiPublishToggle from "@/components/editor/WikiPublishToggle"
+import { getWikisFromDb } from "@/lib/server-data"
 
 export const dynamic = "force-dynamic"
 
@@ -19,6 +21,9 @@ export default async function EditorWikiDashboardPage({
   const { kit: selectedKitSlug } = searchParams
   const wiki = getWiki(wikiSlug)
   if (!wiki) notFound()
+  const dbWikis = await getWikisFromDb()
+  const dbWiki = dbWikis.find((item) => item.slug === wiki.slug)
+  const initialIsPublished = dbWiki?.isPublished ?? wiki.isPublished ?? true
 
   // Only use absolute domain URL in production to ensure local previews work via relative paths
   const viewBaseUrl = process.env.NODE_ENV === 'production' 
@@ -58,9 +63,12 @@ export default async function EditorWikiDashboardPage({
             </>
           )}
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          {selectedKitSlug ? `${filteredKits[0]?.title} - Reorder Lessons` : wiki.displayName || wiki.slug}
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-bold text-gray-900">
+            {selectedKitSlug ? `${filteredKits[0]?.title} - Reorder Lessons` : wiki.displayName || wiki.slug}
+          </h1>
+          <WikiPublishToggle wikiSlug={wiki.slug} initialIsPublished={initialIsPublished} />
+        </div>
         <p className="text-sm text-gray-600">
           {selectedKitSlug ? "Drag and drop to reorder lessons. Getting Started lesson is fixed and cannot be moved or deleted." : "Select a lesson to open it in the editor."}
         </p>

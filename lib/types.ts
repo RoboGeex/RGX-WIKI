@@ -4,6 +4,7 @@ export interface Wiki {
   domains?: string[];
   grade?: string;
   picture?: string;
+  isPublished?: boolean;
   defaultLocale?: string;
   defaultLessonSlug?: string;
   resourcesUrl?: string;

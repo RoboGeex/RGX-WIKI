@@ -6,8 +6,17 @@ import { getPrisma } from '@/lib/prisma-multi'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-async function ensureWikiTable(): Promise<void> {
-  const prisma: any = getPrisma()
+function getWikiPrisma(slug: string): any {
+  try {
+    return getPrisma(slug)
+  } catch {
+    // Fallback to default DB if a per-wiki DB is not configured.
+    return getPrisma()
+  }
+}
+
+async function ensureWikiTable(slug: string): Promise<void> {
+  const prisma: any = getWikiPrisma(slug)
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS Wiki (
       slug VARCHAR(191) NOT NULL,
@@ -63,7 +72,7 @@ async function readWikiFromFile(slug: string): Promise<any | null> {
 }
 
 async function upsertWikiPublishState(slug: string, isPublished: boolean): Promise<number> {
-  const prisma: any = getPrisma()
+  const prisma: any = getWikiPrisma(slug)
   const updated = await prisma.$executeRaw`
     UPDATE Wiki
     SET isPublished = ${isPublished}
@@ -116,7 +125,7 @@ export async function PATCH(
     const body = await req.json().catch(() => ({}))
     const isPublished = Boolean(body?.isPublished)
 
-    await ensureWikiTable()
+    await ensureWikiTable(slug)
     const result = await upsertWikiPublishState(slug, isPublished)
 
     if (!result || Number(result) === 0) {

@@ -15,8 +15,8 @@ export default function UnlockPage({ params }: { params: { locale: Locale } }) {
   })
   const searchParams = useSearchParams()
 
-  const kit = searchParams.get('kit')
-  const redirect = searchParams.get('redirect')
+  const kit = searchParams?.get('kit') ?? null
+  const redirect = searchParams?.get('redirect') ?? null
   const locale = params.locale
 
   const kitDisplayNames: Record<string, string> = {

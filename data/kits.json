@@ -1,29 +1,38 @@
 [
-  {
-    "slug": "ziggy",
-    "wikiSlug": "ziggy",
-    "title_en": "Ziggy Learning Kit",
-    "title_ar": "Ziggy Learning Kit",
-    "heroImage": "/images/student-kit-hero.jpg",
-    "overview_en": "Learn electronics and programming with hands-on projects using Ziggy.",
-    "overview_ar": "Learn electronics and programming with hands-on projects using Ziggy."
-  },
-  {
-    "slug": "clicky",
-    "wikiSlug": "clicky",
-    "title_en": "Clicky Learning Kit",
-    "title_ar": "Clicky Learning Kit",
-    "heroImage": "/images/student-kit-hero.jpg",
-    "overview_en": "Learn electronics and programming with hands-on projects using Clicky.",
-    "overview_ar": "Learn electronics and programming with hands-on projects using Clicky."
-  },
-  {
-    "slug": "student-kit",
-    "wikiSlug": "student-kit",
-    "title_en": "Arduino Student Kit",
-    "title_ar": "مجموعة أدوات الطالب Arduino",
-    "heroImage": "/images/student-kit-hero.jpg",
-    "overview_en": "Learn electronics and programming with hands-on projects using Arduino UNO.",
-    "overview_ar": "تعلم الإلكترونيات والبرمجة من خلال المشاريع العملية باستخدام Arduino UNO."
-  }
+    {
+        "slug":  "ziggy",
+        "wikiSlug":  "ziggy",
+        "title_en":  "Ziggy Learning Kit",
+        "title_ar":  "Ziggy Learning Kit",
+        "heroImage":  "/images/student-kit-hero.jpg",
+        "overview_en":  "Learn electronics and programming with hands-on projects using Ziggy.",
+        "overview_ar":  "Learn electronics and programming with hands-on projects using Ziggy."
+    },
+    {
+        "slug":  "clicky",
+        "wikiSlug":  "clicky",
+        "title_en":  "Clicky Learning Kit",
+        "title_ar":  "Clicky Learning Kit",
+        "heroImage":  "/images/student-kit-hero.jpg",
+        "overview_en":  "Learn electronics and programming with hands-on projects using Clicky.",
+        "overview_ar":  "Learn electronics and programming with hands-on projects using Clicky."
+    },
+    {
+        "slug":  "student-kit",
+        "wikiSlug":  "student-kit",
+        "title_en":  "Arduino Student Kit",
+        "title_ar":  "Ù…Ø¬Ù…ÙˆØ¹Ø© Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø·Ø§Ù„Ø¨ Arduino",
+        "heroImage":  "/images/student-kit-hero.jpg",
+        "overview_en":  "Learn electronics and programming with hands-on projects using Arduino UNO.",
+        "overview_ar":  "ØªØ¹Ù„Ù… Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠØ§Øª ÙˆØ§Ù„Ø¨Ø±Ù…Ø¬Ø© Ù…Ù† Ø®Ù„Ø§Ù„ Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹ Ø§Ù„Ø¹Ù…Ù„ÙŠØ© Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Arduino UNO."
+    },
+    {
+        "slug":  "scratch",
+        "wikiSlug":  "scratch",
+        "title_en":  "Scratch Learning Kit",
+        "title_ar":  "Scratch Learning Kit",
+        "heroImage":  "/images/robogeex-logo.png",
+        "overview_en":  "All Levels level learning content for Scratch.",
+        "overview_ar":  "All Levels level learning content for Scratch."
+    }
 ]

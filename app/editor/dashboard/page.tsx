@@ -3,11 +3,13 @@ import { getWikis, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import EditorDashboardClient from "./editor-dashboard-client"
 import AdminNavbar from "@/components/admin-navbar"
+import { getWikisFromDb } from "@/lib/server-data"
 
 export const dynamic = "force-dynamic"
 
 export default async function EditorDashboardPage() {
-  const wikis = getWikis()
+  const dbWikis = await getWikisFromDb()
+  const wikis = dbWikis.length > 0 ? dbWikis : getWikis()
 
   const summaries = await Promise.all(
     wikis.map(async (wiki) => {

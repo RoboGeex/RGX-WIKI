@@ -1,0 +1,18 @@
+[
+    {
+        "id":  "intro",
+        "order":  1,
+        "title_en":  "Introduction",
+        "title_ar":  "Introduction",
+        "summary_en":  "Setup and first steps for Scratch learning.",
+        "summary_ar":  "Setup and first steps for Scratch learning."
+    },
+    {
+        "id":  "basics",
+        "order":  2,
+        "title_en":  "Scratch Basics",
+        "title_ar":  "Scratch Basics",
+        "summary_en":  "Learn the fundamental concepts of Scratch.",
+        "summary_ar":  "Learn the fundamental concepts of Scratch."
+    }
+]

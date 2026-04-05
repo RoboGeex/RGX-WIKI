@@ -109,6 +109,48 @@ export function pickPublicVersion<T extends VersionedLessonLike>(rows: T[]): T |
   return sortVersionRowsDesc(rows).find((row) => normalizeLessonStatus(row.status) === LESSON_STATUS.PUBLISHED)
 }
 
+function stableSerialize(value: unknown): string {
+  if (value === null || value === undefined) return 'null'
+  if (typeof value === 'string') return JSON.stringify(value)
+  if (typeof value === 'number' || typeof value === 'boolean') return JSON.stringify(value)
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(',')}]`
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableSerialize(v)}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+function normalizeLessonForComparison(lesson: any) {
+  return {
+    order: Number.isFinite(lesson?.order) ? Number(lesson.order) : 0,
+    slug: String(lesson?.slug || ''),
+    title_en: String(lesson?.title_en || ''),
+    title_ar: String(lesson?.title_ar || ''),
+    coverImage: String(lesson?.coverImage || ''),
+    duration_min: Number.isFinite(lesson?.duration_min) ? Number(lesson.duration_min) : 0,
+    difficulty: String(lesson?.difficulty || ''),
+    prerequisites_en: Array.isArray(lesson?.prerequisites_en) ? lesson.prerequisites_en : [],
+    prerequisites_ar: Array.isArray(lesson?.prerequisites_ar) ? lesson.prerequisites_ar : [],
+    materials: Array.isArray(lesson?.materials) ? lesson.materials : [],
+    body: Array.isArray(lesson?.body) ? lesson.body : [],
+  }
+}
+
+export function hasLessonContentChanges(
+  draft: VersionedLessonLike | Record<string, any> | undefined,
+  published: VersionedLessonLike | Record<string, any> | undefined
+): boolean {
+  if (!draft || !published) return false
+  const draftSignature = stableSerialize(normalizeLessonForComparison(draft))
+  const publishedSignature = stableSerialize(normalizeLessonForComparison(published))
+  return draftSignature !== publishedSignature
+}
+
 export function collapseLessonsForEditor<T extends VersionedLessonLike>(rows: T[]): T[] {
   const collapsed: T[] = []
   groupLessonsByKey(rows).forEach((versions) => {

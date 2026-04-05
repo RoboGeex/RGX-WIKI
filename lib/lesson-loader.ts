@@ -2,6 +2,7 @@
 import { getLessons, getKits, getWiki } from "@/lib/data"
 import { getLessonsFromDb, getLessonVersionRowsFromDb } from "@/lib/server-data"
 import type { Lesson } from "@/lib/types"
+import { hasLessonContentChanges, pickLatestDraft, pickLatestPublished, sortVersionRowsDesc } from "@/lib/lesson-versions"
 
 export type LessonGroup = {
   kit: { slug: string; title: string }
@@ -50,10 +51,32 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
     } catch {}
   }
   const allSourceLessons = dbVersionRows.length > 0 ? dbVersionRows : [...fileLessons, ...dbLessons]
-  const familyState = new Map<string, { hasDraft: boolean; hasPublished: boolean; lastPublishedAt: string }>()
+  const familyRows = new Map<string, Lesson[]>()
   allSourceLessons.forEach((lesson) => {
     const familyKey = getLessonFamilyKey(lesson)
-    const current = familyState.get(familyKey) || { hasDraft: false, hasPublished: false, lastPublishedAt: '' }
+    const list = familyRows.get(familyKey) || []
+    list.push(lesson)
+    familyRows.set(familyKey, list)
+  })
+
+  const familyState = new Map<string, { hasPublished: boolean; lastPublishedAt: string; hasUnpublishedChanges: boolean }>()
+  familyRows.forEach((rows, familyKey) => {
+    const sorted = sortVersionRowsDesc(rows)
+    const latestDraft = pickLatestDraft(sorted)
+    const latestPublished = pickLatestPublished(sorted)
+    const hasPublished = Boolean(latestPublished)
+    const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt || '')
+    const hasUnpublishedChanges =
+      Boolean(latestDraft) &&
+      Boolean(latestPublished) &&
+      hasLessonContentChanges(latestDraft, latestPublished)
+
+    familyState.set(familyKey, { hasPublished, lastPublishedAt, hasUnpublishedChanges })
+  })
+
+  allSourceLessons.forEach((lesson) => {
+    const familyKey = getLessonFamilyKey(lesson)
+    const current = familyState.get(familyKey) || { hasPublished: false, lastPublishedAt: '', hasUnpublishedChanges: false }
     const publishedAt = toIsoDate((lesson as any).publishedAt)
     const lastPublishedAt = toIsoDate((lesson as any).lastPublishedAt)
     if (lesson.status === 'published') {
@@ -61,8 +84,6 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
       if (!current.lastPublishedAt && publishedAt) {
         current.lastPublishedAt = publishedAt
       }
-    } else {
-      current.hasDraft = true
     }
     if (!current.lastPublishedAt && lastPublishedAt) {
       current.lastPublishedAt = lastPublishedAt
@@ -92,7 +113,7 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
         lastPublishedAt: lesson.lastPublishedAt || family.lastPublishedAt || '',
         hasUnpublishedChanges:
           Boolean(lesson.hasUnpublishedChanges) ||
-          Boolean(family.hasDraft && family.hasPublished),
+          Boolean(family.hasUnpublishedChanges),
       }
     })
     .sort((a, b) => {

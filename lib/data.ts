@@ -5,7 +5,7 @@ import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 import { getPrisma } from '@/lib/prisma-multi'
-import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, pickLatestPublished } from '@/lib/lesson-versions'
+import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasLessonContentChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
 
 function isLessonKeyColumnMissingError(error: any): boolean {
   const message = typeof error?.message === 'string' ? error.message : ''
@@ -128,12 +128,17 @@ function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], incl
   const grouped = groupLessonsByKey(rows)
   return collapsed.map((lesson) => {
     const versions = grouped.get(lesson.lessonKey || lesson.id) || []
+    const latestDraft = pickLatestDraft(versions)
     const latestPublished = pickLatestPublished(versions)
     const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt)
     return {
       ...lesson,
       lastPublishedAt,
-      hasUnpublishedChanges: lesson.status === LESSON_STATUS.DRAFT && Boolean(latestPublished),
+      hasUnpublishedChanges:
+        lesson.status === LESSON_STATUS.DRAFT &&
+        Boolean(latestDraft) &&
+        Boolean(latestPublished) &&
+        hasLessonContentChanges(latestDraft, latestPublished),
     }
   })
 }

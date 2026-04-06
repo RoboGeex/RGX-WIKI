@@ -1,0 +1,83 @@
+[
+    {
+        "id":  "getting-started",
+        "wikiSlug":  "arduino-lvl1",
+        "order":  0,
+        "slug":  "getting-started",
+        "title_en":  "Getting Started",
+        "title_ar":  "Getting Started",
+        "duration_min":  30,
+        "difficulty":  "Beginner",
+        "prerequisites_en":  [
+
+                             ],
+        "prerequisites_ar":  [
+
+                             ],
+        "materials":  [
+
+                      ],
+        "body":  [
+                     {
+                         "type":  "heading",
+                         "en":  "Getting Started",
+                         "level":  1,
+                         "ar":  "Getting Started"
+                     },
+                     {
+                         "type":  "heading",
+                         "en":  "Welcome to Arduino level 1 Learning",
+                         "level":  2,
+                         "ar":  "Welcome to Arduino level 1 Learning"
+                     },
+                     {
+                         "type":  "paragraph",
+                         "en":  "Welcome to the Arduino level 1 learning kit! This is your starting point for learning about Arduino level 1 concepts.",
+                         "ar":  "Welcome to the Arduino level 1 learning kit! This is your starting point for learning about Arduino level 1 concepts."
+                     },
+                     {
+                         "type":  "heading",
+                         "en":  "What You\u0027ll Learn",
+                         "level":  2,
+                         "ar":  "What You Will Learn"
+                     },
+                     {
+                         "type":  "paragraph",
+                         "en":  "In this kit, you will learn the fundamentals of Arduino level 1 and how to apply them in practical projects.",
+                         "ar":  "In this kit, you will learn the fundamentals of Arduino level 1 and how to apply them in practical projects."
+                     }
+                 ]
+    },
+    {
+        "id":  "resources",
+        "wikiSlug":  "arduino-lvl1",
+        "order":  1,
+        "slug":  "resources",
+        "title_en":  "Resources",
+        "title_ar":  "Resources",
+        "duration_min":  15,
+        "difficulty":  "Beginner",
+        "prerequisites_en":  [
+
+                             ],
+        "prerequisites_ar":  [
+
+                             ],
+        "materials":  [
+
+                      ],
+        "body":  [
+                     {
+                         "type":  "heading",
+                         "en":  "Resources",
+                         "level":  1,
+                         "ar":  "Resources"
+                     },
+                     {
+                         "type":  "paragraph",
+                         "en":  "Resources for Arduino level 1 will appear here.",
+                         "ar":  "Resources for Arduino level 1 will appear here."
+                     }
+                 ]
+    }
+]

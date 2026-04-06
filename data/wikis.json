@@ -182,5 +182,18 @@
         "defaultLessonSlug":  "getting-started",
         "resourcesUrl":  "/resources",
         "createdAt":  "2026-04-06T09:39:27.231Z"
+    },
+    {
+        "slug":  "arduino-lvl1",
+        "displayName":  "Arduino level 1",
+        "grade":  "All Levels",
+        "picture":  "/images/robogeex-logo.png",
+        "domains":  [
+
+                    ],
+        "defaultLocale":  "en",
+        "defaultLessonSlug":  "getting-started",
+        "resourcesUrl":  "/resources",
+        "createdAt":  "2026-04-06T10:58:40.683Z"
     }
 ]

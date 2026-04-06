@@ -1,0 +1,18 @@
+[
+    {
+        "id":  "intro",
+        "order":  1,
+        "title_en":  "Introduction",
+        "title_ar":  "Introduction",
+        "summary_en":  "Setup and first steps for Arduino level 1 learning.",
+        "summary_ar":  "Setup and first steps for Arduino level 1 learning."
+    },
+    {
+        "id":  "basics",
+        "order":  2,
+        "title_en":  "Arduino level 1 Basics",
+        "title_ar":  "Arduino level 1 Basics",
+        "summary_en":  "Learn the fundamental concepts of Arduino level 1.",
+        "summary_ar":  "Learn the fundamental concepts of Arduino level 1."
+    }
+]

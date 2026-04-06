@@ -21,10 +21,10 @@
         "slug":  "student-kit",
         "wikiSlug":  "student-kit",
         "title_en":  "Arduino Student Kit",
-        "title_ar":  "Ù…Ø¬Ù…ÙˆØ¹Ø© Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø·Ø§Ù„Ø¨ Arduino",
+        "title_ar":  "Ã™â€¦Ã˜Â¬Ã™â€¦Ã™Ë†Ã˜Â¹Ã˜Â© Ã˜Â£Ã˜Â¯Ã™Ë†Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â·Ã˜Â§Ã™â€žÃ˜Â¨ Arduino",
         "heroImage":  "/images/student-kit-hero.jpg",
         "overview_en":  "Learn electronics and programming with hands-on projects using Arduino UNO.",
-        "overview_ar":  "ØªØ¹Ù„Ù… Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠØ§Øª ÙˆØ§Ù„Ø¨Ø±Ù…Ø¬Ø© Ù…Ù† Ø®Ù„Ø§Ù„ Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹ Ø§Ù„Ø¹Ù…Ù„ÙŠØ© Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Arduino UNO."
+        "overview_ar":  "Ã˜ÂªÃ˜Â¹Ã™â€žÃ™â€¦ Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€žÃ™Æ’Ã˜ÂªÃ˜Â±Ã™Ë†Ã™â€ Ã™Å Ã˜Â§Ã˜Âª Ã™Ë†Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â±Ã™â€¦Ã˜Â¬Ã˜Â© Ã™â€¦Ã™â€  Ã˜Â®Ã™â€žÃ˜Â§Ã™â€ž Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â´Ã˜Â§Ã˜Â±Ã™Å Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€¦Ã™â€žÃ™Å Ã˜Â© Ã˜Â¨Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã˜Â§Ã™â€¦ Arduino UNO."
     },
     {
         "slug":  "scratch",
@@ -34,5 +34,14 @@
         "heroImage":  "/images/robogeex-logo.png",
         "overview_en":  "All Levels level learning content for Scratch.",
         "overview_ar":  "All Levels level learning content for Scratch."
+    },
+    {
+        "slug":  "scratch-jr",
+        "wikiSlug":  "scratch-jr",
+        "title_en":  "Scratch Junior Learning Kit",
+        "title_ar":  "Scratch Junior Learning Kit",
+        "heroImage":  "/images/robogeex-logo.png",
+        "overview_en":  "All Levels level learning content for Scratch Junior.",
+        "overview_ar":  "All Levels level learning content for Scratch Junior."
     }
 ]

@@ -1,0 +1,18 @@
+[
+    {
+        "id":  "intro",
+        "order":  1,
+        "title_en":  "Introduction",
+        "title_ar":  "Introduction",
+        "summary_en":  "Setup and first steps for Scratch Junior learning.",
+        "summary_ar":  "Setup and first steps for Scratch Junior learning."
+    },
+    {
+        "id":  "basics",
+        "order":  2,
+        "title_en":  "Scratch Junior Basics",
+        "title_ar":  "Scratch Junior Basics",
+        "summary_en":  "Learn the fundamental concepts of Scratch Junior.",
+        "summary_ar":  "Learn the fundamental concepts of Scratch Junior."
+    }
+]

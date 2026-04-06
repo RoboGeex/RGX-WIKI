@@ -1,0 +1,83 @@
+[
+    {
+        "id":  "getting-started",
+        "wikiSlug":  "scratch-jr",
+        "order":  0,
+        "slug":  "getting-started",
+        "title_en":  "Getting Started",
+        "title_ar":  "Getting Started",
+        "duration_min":  30,
+        "difficulty":  "Beginner",
+        "prerequisites_en":  [
+
+                             ],
+        "prerequisites_ar":  [
+
+                             ],
+        "materials":  [
+
+                      ],
+        "body":  [
+                     {
+                         "type":  "heading",
+                         "en":  "Getting Started",
+                         "level":  1,
+                         "ar":  "Getting Started"
+                     },
+                     {
+                         "type":  "heading",
+                         "en":  "Welcome to Scratch Junior Learning",
+                         "level":  2,
+                         "ar":  "Welcome to Scratch Junior Learning"
+                     },
+                     {
+                         "type":  "paragraph",
+                         "en":  "Welcome to the Scratch Junior learning kit! This is your starting point for learning about Scratch Junior concepts.",
+                         "ar":  "Welcome to the Scratch Junior learning kit! This is your starting point for learning about Scratch Junior concepts."
+                     },
+                     {
+                         "type":  "heading",
+                         "en":  "What You\u0027ll Learn",
+                         "level":  2,
+                         "ar":  "What You Will Learn"
+                     },
+                     {
+                         "type":  "paragraph",
+                         "en":  "In this kit, you will learn the fundamentals of Scratch Junior and how to apply them in practical projects.",
+                         "ar":  "In this kit, you will learn the fundamentals of Scratch Junior and how to apply them in practical projects."
+                     }
+                 ]
+    },
+    {
+        "id":  "resources",
+        "wikiSlug":  "scratch-jr",
+        "order":  1,
+        "slug":  "resources",
+        "title_en":  "Resources",
+        "title_ar":  "Resources",
+        "duration_min":  15,
+        "difficulty":  "Beginner",
+        "prerequisites_en":  [
+
+                             ],
+        "prerequisites_ar":  [
+
+                             ],
+        "materials":  [
+
+                      ],
+        "body":  [
+                     {
+                         "type":  "heading",
+                         "en":  "Resources",
+                         "level":  1,
+                         "ar":  "Resources"
+                     },
+                     {
+                         "type":  "paragraph",
+                         "en":  "Resources for Scratch Junior will appear here.",
+                         "ar":  "Resources for Scratch Junior will appear here."
+                     }
+                 ]
+    }
+]

@@ -48,12 +48,14 @@ export default function KitNavbar({
     setStoredLocale(nextLocale)
     if (locale !== nextLocale) {
       const currentPath = pathname ?? `/${locale}`
+      const parts = currentPath.split('/').filter(Boolean)
+      const localeIndex = parts.findIndex((part) => part === 'en' || part === 'ar')
       const updated =
-        currentPath === `/${locale}`
-          ? `/${nextLocale}`
-          : currentPath.startsWith(`/${locale}/`)
-            ? currentPath.replace(`/${locale}/`, `/${nextLocale}/`)
-            : currentPath
+        localeIndex >= 0
+          ? `/${parts.map((part, index) => (index === localeIndex ? nextLocale : part)).join('/')}`
+          : currentPath === '/'
+            ? `/${nextLocale}`
+            : `/${nextLocale}${currentPath.startsWith('/') ? currentPath : `/${currentPath}`}`
       const query = searchParams?.toString()
       router.push(query ? `${updated}?${query}` : updated)
     }

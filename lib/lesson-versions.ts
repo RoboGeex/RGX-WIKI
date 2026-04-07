@@ -14,6 +14,8 @@ type VersionedLessonLike = {
   publishedAt?: Date | string | null
 }
 
+const LEGACY_DRAFT_SUFFIX = '--draft'
+
 export const LESSON_STATUS = {
   DRAFT: 'draft',
   PUBLISHED: 'published',
@@ -126,9 +128,13 @@ function stableSerialize(value: unknown): string {
 }
 
 function normalizeLessonForComparison(lesson: any) {
+  const rawSlug = String(lesson?.slug || '')
+  const comparableSlug = rawSlug.endsWith(LEGACY_DRAFT_SUFFIX)
+    ? rawSlug.slice(0, rawSlug.length - LEGACY_DRAFT_SUFFIX.length)
+    : rawSlug
   return {
     order: Number.isFinite(lesson?.order) ? Number(lesson.order) : 0,
-    slug: String(lesson?.slug || ''),
+    slug: comparableSlug,
     title_en: String(lesson?.title_en || ''),
     title_ar: String(lesson?.title_ar || ''),
     coverImage: String(lesson?.coverImage || ''),

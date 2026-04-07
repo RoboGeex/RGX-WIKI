@@ -76,6 +76,15 @@ export default async function LessonPage(
     return hours * 3600 + minutes * 60 + seconds
   }
 
+  const normalizeTextAlign = (value: unknown): 'left' | 'center' | 'right' | 'justify' | undefined => {
+    if (typeof value !== 'string') return undefined
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'left' || normalized === 'center' || normalized === 'right' || normalized === 'justify') {
+      return normalized
+    }
+    return undefined
+  }
+
   const toYoutubeEmbed = (url: string): string => {
     try {
       const u = new URL(url)
@@ -148,17 +157,25 @@ export default async function LessonPage(
     const jType = jsonNode.type
     switch (jType) {
       case 'paragraph':
-        return {
-          type: 'paragraph',
-          [localeTextKey]: block[localeTextKey] || '',
-          [localeHtmlKey]: block[localeHtmlKey] || '',
+        {
+          const align = normalizeTextAlign(jsonNode.attrs?.textAlign || jsonNode.attrs?.align || block.align)
+          return {
+            type: 'paragraph',
+            align,
+            [localeTextKey]: block[localeTextKey] || '',
+            [localeHtmlKey]: block[localeHtmlKey] || '',
+          }
         }
       case 'heading':
-        return {
-          type: 'heading',
-          level: jsonNode.attrs?.level || block.level || 2,
-          [localeTextKey]: block[localeTextKey] || '',
-          [localeHtmlKey]: block[localeHtmlKey] || '',
+        {
+          const align = normalizeTextAlign(jsonNode.attrs?.textAlign || jsonNode.attrs?.align || block.align)
+          return {
+            type: 'heading',
+            level: jsonNode.attrs?.level || block.level || 2,
+            align,
+            [localeTextKey]: block[localeTextKey] || '',
+            [localeHtmlKey]: block[localeHtmlKey] || '',
+          }
         }
       case 'blockquote':
         return {
@@ -276,18 +293,21 @@ export default async function LessonPage(
     if (block.type === 'paragraph') {
       const html = locale === 'ar' ? block.html_ar : block.html_en
       const text = locale === 'ar' ? (block.ar || '') : (block.en || '')
+      const align = normalizeTextAlign(block.align)
+      const alignStyle = align ? { textAlign: align } : undefined
       if (html) {
         return (
           <InteractiveHtml
             key={index}
             className="text-gray-700"
             html={html}
+            style={alignStyle}
           />
         )
       }
       if (!text) return null
       return (
-        <p key={index} className="text-gray-700">
+        <p key={index} className="text-gray-700" style={alignStyle}>
           {text}
         </p>
       )
@@ -368,6 +388,7 @@ export default async function LessonPage(
           data-level={level}
           data-toc-text={anchorText}
           className={`${sizeClass} font-semibold text-gray-900 mt-8 mb-4`}
+          style={normalizeTextAlign(block.align) ? { textAlign: normalizeTextAlign(block.align) } : undefined}
         >
           {htmlValue ? (
             <span dangerouslySetInnerHTML={{ __html: htmlValue }} />

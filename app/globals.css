@@ -494,25 +494,27 @@ html {
 }
 
 .tiptap table {
+  --table-border-color: #353535;
+  --table-border-width: 0.75px;
   width: 100%;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   margin: 0;
-  border: 2px solid #000000;
+  border: var(--table-border-width) solid var(--table-border-color);
   border-radius: 1.5rem;
   overflow: hidden;
   background: hsl(var(--card));
   box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.25);
 }
-.tiptap table thead tr:first-child th {
-  border-top: none;
-}
-.tiptap table tbody tr:last-child td {
-  border-bottom: none;
-}
 .tiptap table colgroup col {
   width: auto !important;
+}
+.tiptap table > :is(thead, tbody, tfoot):last-child > tr:last-child > * {
+  border-block-end: none;
+}
+.tiptap table tr > :last-child {
+  border-inline-end: none;
 }
 .tiptap thead th {
   background: rgba(240, 93, 78, 0.12);
@@ -521,13 +523,39 @@ html {
 }
 .tiptap th,
 .tiptap td {
-  border: 1px solid #000000;
+  border: none;
+  border-inline-end: var(--table-border-width) solid var(--table-border-color);
+  border-block-end: var(--table-border-width) solid var(--table-border-color);
   padding: 1rem 1.25rem;
   vertical-align: middle;
   text-align: center;
   background: hsl(var(--card));
+  background-clip: padding-box;
   font-size: 1.05rem;
   line-height: 1.5;
+}
+.tiptap th img,
+.tiptap td img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+.tiptap th :is(.media-node-block, figure.media-block, [data-node-view-wrapper]),
+.tiptap td :is(.media-node-block, figure.media-block, [data-node-view-wrapper]) {
+  max-width: 100% !important;
+}
+.tiptap table > :is(thead, tbody, tfoot):first-child > tr:first-child > :first-child,
+.tiptap table > colgroup:first-child + :is(thead, tbody, tfoot) > tr:first-child > :first-child {
+  border-start-start-radius: calc(1.5rem - var(--table-border-width));
+}
+.tiptap table > :is(thead, tbody, tfoot):first-child > tr:first-child > :last-child,
+.tiptap table > colgroup:first-child + :is(thead, tbody, tfoot) > tr:first-child > :last-child {
+  border-start-end-radius: calc(1.5rem - var(--table-border-width));
+}
+.tiptap table > :is(thead, tbody, tfoot):last-child > tr:last-child > :first-child {
+  border-end-start-radius: calc(1.5rem - var(--table-border-width));
+}
+.tiptap table > :is(thead, tbody, tfoot):last-child > tr:last-child > :last-child {
+  border-end-end-radius: calc(1.5rem - var(--table-border-width));
 }
 .tiptap thead th {
   font-size: 1.1rem;

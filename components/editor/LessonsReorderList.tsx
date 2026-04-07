@@ -390,9 +390,7 @@ export default function LessonsReorderList({ wikiSlug, kitSlug, defaultLocale, l
           const isDraft = lesson.status && lesson.status !== 'published'
           const familyKey = getLessonFamilyKey(lesson)
           const family = lessonFamilies.get(familyKey)
-          const hasUnpublishedChanges =
-            Boolean(lesson.hasUnpublishedChanges) ||
-            Boolean(family?.hasDraft && family?.hasPublished)
+          const hasUnpublishedChanges = Boolean(lesson.hasUnpublishedChanges)
           const hasPublishedVersion = lesson.status === 'published' || Boolean(lesson.lastPublishedAt) || Boolean(family?.hasPublished)
           const displayStatus = hasPublishedVersion ? 'published' : (lesson.status || 'draft')
           const publishStateLabel = hasPublishedVersion

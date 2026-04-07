@@ -306,13 +306,33 @@ async function createModuleFilesForWiki(wiki: any): Promise<void> {
   await fs.writeFile(modulesPath, JSON.stringify(defaultModules, null, 2), 'utf-8')
 }
 
+function mergeWikis(primary: any[], fallback: any[]): any[] {
+  const bySlug = new Map<string, any>()
+
+  fallback.forEach((wiki) => {
+    const slug = typeof wiki?.slug === 'string' ? wiki.slug.trim() : ''
+    if (!slug) return
+    bySlug.set(slug, wiki)
+  })
+
+  primary.forEach((wiki) => {
+    const slug = typeof wiki?.slug === 'string' ? wiki.slug.trim() : ''
+    if (!slug) return
+    bySlug.set(slug, { ...(bySlug.get(slug) || {}), ...wiki })
+  })
+
+  return Array.from(bySlug.values())
+}
+
 export async function GET() {
   try {
+    const fileWikis = await readWikisFromFile()
+    const fallbackWikis = fileWikis.length > 0 ? fileWikis : getWikis()
     const dbWikis = await readWikisFromDb()
     if (dbWikis.length > 0) {
-      return NextResponse.json(dbWikis)
+      return NextResponse.json(mergeWikis(dbWikis, fallbackWikis))
     }
-    return NextResponse.json(getWikis())
+    return NextResponse.json(fallbackWikis)
   } catch {
     try {
       return NextResponse.json(getWikis())

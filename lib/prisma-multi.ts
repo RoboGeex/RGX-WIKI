@@ -7,6 +7,7 @@ type ClientCache = {
 
 const globalForPrisma = globalThis as unknown as {
   prismaClients?: ClientCache
+  prismaMissingWikiUrlWarnings?: Set<string>
 }
 
 function getUrlForWiki(wikiSlug?: string): string | undefined {
@@ -31,6 +32,7 @@ function getUrlForWiki(wikiSlug?: string): string | undefined {
   const upper = wikiSlug.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_')
   const envKey = `DATABASE_URL_${upper}`
   const directEnvKey = `${envKey}_DIRECT`
+  const hasWikiSpecificUrl = Boolean(process.env[directEnvKey] || process.env[envKey])
   const specific = resolvePrismaDirectUrl(
     process.env[directEnvKey],
     process.env[envKey],
@@ -40,6 +42,26 @@ function getUrlForWiki(wikiSlug?: string): string | undefined {
     process.env.DATABASE_URL,
   )
   if (specific) return specific
+
+  if (!hasWikiSpecificUrl) {
+    const strictWikiUrl = process.env.STRICT_WIKI_DB_URL === 'true'
+    if (strictWikiUrl) {
+      throw new Error(
+        `No ${directEnvKey} or ${envKey} configured for wiki "${wikiSlug}". Set one of them or disable STRICT_WIKI_DB_URL.`,
+      )
+    }
+
+    if (!globalForPrisma.prismaMissingWikiUrlWarnings) {
+      globalForPrisma.prismaMissingWikiUrlWarnings = new Set<string>()
+    }
+    const warnKey = `${wikiSlug}:${envKey}`
+    if (!globalForPrisma.prismaMissingWikiUrlWarnings.has(warnKey)) {
+      globalForPrisma.prismaMissingWikiUrlWarnings.add(warnKey)
+      console.warn(
+        `[prisma-multi] Missing ${envKey}/${directEnvKey}; falling back to default DB for wiki "${wikiSlug}".`,
+      )
+    }
+  }
 
   const configured =
     process.env[envKey] ||

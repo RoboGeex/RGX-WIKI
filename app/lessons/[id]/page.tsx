@@ -61,6 +61,19 @@ const LessonPage = () => {
         return <div>Lesson not found.</div>;
     }
 
+    const normalizeTextAlign = (value: unknown): 'left' | 'center' | 'right' | 'justify' | undefined => {
+        if (typeof value !== 'string') return undefined;
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'left' || normalized === 'center' || normalized === 'right' || normalized === 'justify') {
+            return normalized;
+        }
+        return undefined;
+    };
+
+    const getBlockAlign = (item: any): 'left' | 'center' | 'right' | 'justify' | undefined => {
+        return normalizeTextAlign(item?.align || item?.json_en?.attrs?.textAlign || item?.json_en?.attrs?.align);
+    };
+
 
     // Render lesson.body as HTML and add IDs to headings
     const renderBody = () => {
@@ -69,14 +82,16 @@ const LessonPage = () => {
             if (item.type === 'heading' && item.en) {
                 const Tag = `h${item.level || 2}` as keyof JSX.IntrinsicElements;
                 const id = (item.en as string).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + blockIdx;
+                const textAlign = getBlockAlign(item);
                 return <Tag key={id} id={id} className={
                     item.level === 1 ? 'text-2xl font-bold mt-8 mb-4' :
                         item.level === 2 ? 'text-xl font-semibold mt-6 mb-3' :
                             'text-lg font-medium mt-4 mb-2'
-                }>{item.html_en ? <span dangerouslySetInnerHTML={{ __html: item.html_en }} /> : item.en}</Tag>;
+                } style={textAlign ? { textAlign } : undefined}>{item.html_en ? <span dangerouslySetInnerHTML={{ __html: item.html_en }} /> : item.en}</Tag>;
             }
             if (item.type === 'paragraph' && (item.html_en || item.en)) {
-                return <InteractiveHtml key={blockIdx} className="mb-4" html={item.html_en || item.en} />;
+                const textAlign = getBlockAlign(item);
+                return <InteractiveHtml key={blockIdx} className="mb-4" html={item.html_en || item.en} style={textAlign ? { textAlign } : undefined} />;
             }
             if (item.type === 'table') {
                 const html = item.html_en || ''

@@ -32,9 +32,33 @@ function isLessonKeyUnsupportedError(error: any): boolean {
   )
 }
 
+const LEGACY_LESSON_OPTIONAL_COLUMNS = ['lessonkey', 'version', 'activeeditorid', 'lockeduntil'] as const
+
+function isLegacyLessonReadSchemaError(error: any): boolean {
+  if (isLessonKeyUnsupportedError(error)) return true
+
+  const message = typeof error?.message === 'string' ? error.message : ''
+  const lowerMessage = message.toLowerCase()
+  const missingColumnHint =
+    lowerMessage.includes('unknown column') ||
+    lowerMessage.includes('does not exist') ||
+    lowerMessage.includes('unknown field') ||
+    lowerMessage.includes('unknown argument') ||
+    lowerMessage.includes('field does not exist')
+  const mentionsLegacyColumn = LEGACY_LESSON_OPTIONAL_COLUMNS.some((column) => lowerMessage.includes(column))
+  const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''
+  const prismaMetaColumn = LEGACY_LESSON_OPTIONAL_COLUMNS.some(
+    (column) => metaColumn.endsWith(`.lesson.${column}`) || metaColumn === column
+  )
+  const unknownPrismaField = ['version', 'activeEditorId', 'lockedUntil'].some(
+    (column) => message.includes(`Unknown argument \`${column}\``) || message.includes(`Unknown field \`${column}\``)
+  )
+  return (missingColumnHint && mentionsLegacyColumn) || prismaMetaColumn || unknownPrismaField
+}
+
 const LEGACY_DRAFT_SUFFIX = '--draft'
 
-const legacyLessonSelect = {
+const legacyLessonReadSelect = {
   id: true,
   order: true,
   slug: true,
@@ -54,9 +78,6 @@ const legacyLessonSelect = {
   body: true,
   createdAt: true,
   updatedAt: true,
-  version: true,
-  activeEditorId: true,
-  lockedUntil: true,
 } as const
 
 function stripLegacyDraftSuffix(value: string | undefined | null): string {
@@ -81,6 +102,9 @@ function mapLegacyLessonRow(row: any) {
   return {
     ...row,
     lessonKey: normalizedLessonKey,
+    version: Number.isFinite(row?.version) ? Number(row.version) : 0,
+    activeEditorId: row?.activeEditorId || null,
+    lockedUntil: row?.lockedUntil || null,
   }
 }
 
@@ -94,14 +118,14 @@ async function findLessonMatch(prisma: any, wikiSlug: string | undefined, identi
       orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
     })
   } catch (error: any) {
-    if (!isLessonKeyUnsupportedError(error)) throw error
+    if (!isLegacyLessonReadSchemaError(error)) throw error
     const row = await prisma.lesson.findFirst({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
         OR: [{ id: identifier }, { slug: identifier }],
       },
-      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-      select: legacyLessonSelect,
+      orderBy: [{ updatedAt: 'desc' }],
+      select: legacyLessonReadSelect,
     })
     return row ? mapLegacyLessonRow(row) : row
   }
@@ -139,7 +163,7 @@ export async function GET(
         orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
       })
     } catch (error: any) {
-      if (!isLessonKeyUnsupportedError(error)) throw error
+      if (!isLegacyLessonReadSchemaError(error)) throw error
       const baseId = stripLegacyDraftSuffix((matched as any)?.id)
       const baseSlug = stripLegacyDraftSuffix((matched as any)?.slug)
       const legacyRows = await prisma.lesson.findMany({
@@ -150,8 +174,8 @@ export async function GET(
             ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
           ],
         },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-        select: legacyLessonSelect,
+        orderBy: [{ updatedAt: 'desc' }],
+        select: legacyLessonReadSelect,
       })
       familyRows = legacyRows.map(mapLegacyLessonRow)
     }
@@ -246,7 +270,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
       })
     } catch (error: any) {
-      if (!isLessonKeyUnsupportedError(error)) throw error
+      if (!isLegacyLessonReadSchemaError(error)) throw error
       const baseId = stripLegacyDraftSuffix((existing as any)?.id)
       const baseSlug = stripLegacyDraftSuffix((existing as any)?.slug)
       const legacyRows = await prisma.lesson.findMany({
@@ -257,8 +281,8 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
             ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
           ],
         },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-        select: legacyLessonSelect,
+        orderBy: [{ updatedAt: 'desc' }],
+        select: legacyLessonReadSelect,
       })
       familyRows = legacyRows.map(mapLegacyLessonRow)
     }

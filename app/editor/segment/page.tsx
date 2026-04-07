@@ -40,7 +40,7 @@ export default function SegmentEditorPage() {
         // Always fetch developer identity and wikis, even for new lessons
         const [meRes, wikisRes] = await Promise.all([
           fetch('/api/developers/me', { headers: applyDeveloperHeader({}) }),
-          fetch('/api/wikis')
+          fetch('/api/wikis', { headers: applyDeveloperHeader({}), cache: 'no-store' })
         ])
 
         if (meRes.ok) {
@@ -60,7 +60,10 @@ export default function SegmentEditorPage() {
           return
         }
 
-        const lessonRes = await fetch(`/api/lessons/${lessonId}?kit=${wikiSlug}`)
+        const lessonRes = await fetch(`/api/lessons/${lessonId}?kit=${wikiSlug}`, {
+          headers: applyDeveloperHeader({}),
+          cache: 'no-store',
+        })
 
         if (lessonRes.ok) {
           const data = await lessonRes.json()

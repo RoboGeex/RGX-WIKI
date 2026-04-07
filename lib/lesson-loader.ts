@@ -91,19 +91,21 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
     familyState.set(familyKey, current)
   })
 
-  const map = new Map<string, Lesson>()
-  
+  const lessonMap = new Map<string, Lesson>()
+
   fileLessons.forEach((lesson) => {
-    map.set(lesson.slug, lesson)
+    const key = getLessonFamilyKey(lesson) || lesson.slug
+    if (!key) return
+    lessonMap.set(key, lesson)
   })
 
   dbLessons.forEach((lesson) => {
-    if (lesson?.slug) {
-      map.set(lesson.slug, lesson)
-    }
+    const key = getLessonFamilyKey(lesson) || lesson.slug
+    if (!key) return
+    lessonMap.set(key, lesson)
   })
 
-  const allLessons = Array.from(map.values())
+  const allLessons = Array.from(lessonMap.values())
     .filter((lesson) => !lesson.wikiSlug || lesson.wikiSlug === wikiSlug)
     .map((lesson) => {
       const family = familyState.get(getLessonFamilyKey(lesson))

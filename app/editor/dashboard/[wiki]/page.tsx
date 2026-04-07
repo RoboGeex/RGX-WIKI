@@ -19,11 +19,12 @@ export default async function EditorWikiDashboardPage({
 }: Params & { searchParams: { kit?: string } }) {
   const { wiki: wikiSlug } = params
   const { kit: selectedKitSlug } = searchParams
-  const wiki = getWiki(wikiSlug)
-  if (!wiki) notFound()
+  const fileWiki = getWiki(wikiSlug)
   const dbWikis = await getWikisFromDb()
-  const dbWiki = dbWikis.find((item) => item.slug === wiki.slug)
-  const initialIsPublished = dbWiki?.isPublished ?? wiki.isPublished ?? true
+  const dbWiki = dbWikis.find((item) => item.slug === wikiSlug)
+  const wiki = dbWiki ? { ...(fileWiki || {}), ...dbWiki } : fileWiki
+  if (!wiki) notFound()
+  const initialIsPublished = wiki.isPublished ?? true
 
   // Only use absolute domain URL in production to ensure local previews work via relative paths
   const viewBaseUrl = process.env.NODE_ENV === 'production' 
@@ -57,7 +58,7 @@ export default async function EditorWikiDashboardPage({
           {selectedKitSlug && (
             <>
               <span className="text-xs text-gray-400">/</span>
-              <Link href={`/dashboard/${wiki.slug}`} className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700">
+              <Link href={`/editor/dashboard/${wiki.slug}`} className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700">
                 Back to wiki
               </Link>
             </>

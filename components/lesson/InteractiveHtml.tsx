@@ -8,9 +8,10 @@ import 'yet-another-react-lightbox/styles.css'
 interface InteractiveHtmlProps {
   html: string
   className?: string
+  style?: React.CSSProperties
 }
 
-export function InteractiveHtml({ html, className = '' }: InteractiveHtmlProps) {
+export function InteractiveHtml({ html, className = '', style }: InteractiveHtmlProps) {
   const [open, setOpen] = useState(false)
   const [activeImage, setActiveImage] = useState<{ src: string; alt: string }>({ src: '', alt: '' })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -173,6 +174,7 @@ export function InteractiveHtml({ html, className = '' }: InteractiveHtmlProps) 
       <div
         ref={containerRef}
         className={`${className} [&_img]:cursor-zoom-in`}
+        style={style}
         onClick={handleClick}
         dangerouslySetInnerHTML={{ __html: htmlWithMediaSkeleton }}
       />

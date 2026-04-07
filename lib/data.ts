@@ -7,13 +7,49 @@ import wikisData from '@/data/wikis.json'
 import { getPrisma } from '@/lib/prisma-multi'
 import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasLessonContentChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
 
-function isLessonKeyColumnMissingError(error: any): boolean {
+const LEGACY_LESSON_OPTIONAL_COLUMNS = ['lessonkey', 'version', 'activeeditorid', 'lockeduntil'] as const
+
+const legacyLessonReadSelect = {
+  id: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  body: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
+
+function isLegacyLessonSchemaError(error: any): boolean {
   const message = typeof error?.message === 'string' ? error.message : ''
   const lowerMessage = message.toLowerCase()
-  const missingColumn = lowerMessage.includes('lessonkey') && lowerMessage.includes('does not exist')
+  const missingColumnHint =
+    lowerMessage.includes('unknown column') ||
+    lowerMessage.includes('does not exist') ||
+    lowerMessage.includes('unknown field') ||
+    lowerMessage.includes('unknown argument') ||
+    lowerMessage.includes('field does not exist')
+  const mentionsLegacyColumn = LEGACY_LESSON_OPTIONAL_COLUMNS.some((column) => lowerMessage.includes(column))
   const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''
-  const prismaMetaColumn = metaColumn.endsWith('.lesson.lessonkey') || metaColumn === 'lessonkey'
-  return missingColumn || prismaMetaColumn
+  const prismaMetaColumn = LEGACY_LESSON_OPTIONAL_COLUMNS.some(
+    (column) => metaColumn.endsWith(`.lesson.${column}`) || metaColumn === column
+  )
+  const unknownPrismaField = ['lessonKey', 'version', 'activeEditorId', 'lockedUntil'].some(
+    (column) => message.includes(`Unknown argument \`${column}\``) || message.includes(`Unknown field \`${column}\``)
+  )
+
+  return (missingColumnHint && mentionsLegacyColumn) || prismaMetaColumn || unknownPrismaField
 }
 
 function mapLegacyLessonRow(row: any): Lesson {
@@ -25,6 +61,9 @@ function mapLegacyLessonRow(row: any): Lesson {
   return {
     ...row,
     lessonKey: normalizedLessonKey,
+    version: Number.isFinite(row?.version) ? Number(row.version) : 0,
+    activeEditorId: row?.activeEditorId || null,
+    lockedUntil: row?.lockedUntil || null,
   } as Lesson
 }
 
@@ -206,37 +245,14 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
         orderBy: [{ order: 'asc' }, { version: 'desc' }],
       })
     } catch (error: any) {
-      if (!isLessonKeyColumnMissingError(error)) throw error
+      if (!isLegacyLessonSchemaError(error)) throw error
       const legacyRows = await prisma.lesson.findMany({
         where: {
           wikiSlug,
           ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
         },
-        orderBy: [{ order: 'asc' }, { version: 'desc' }],
-        select: {
-          id: true,
-          order: true,
-          slug: true,
-          wikiSlug: true,
-          title_en: true,
-          title_ar: true,
-          coverImage: true,
-          ownerId: true,
-          lastModifiedBy: true,
-          status: true,
-          publishedAt: true,
-          duration_min: true,
-          difficulty: true,
-          prerequisites_en: true,
-          prerequisites_ar: true,
-          materials: true,
-          body: true,
-          createdAt: true,
-          updatedAt: true,
-          version: true,
-          activeEditorId: true,
-          lockedUntil: true,
-        },
+        orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
+        select: legacyLessonReadSelect,
       })
       rows = legacyRows.map(mapLegacyLessonRow)
     }

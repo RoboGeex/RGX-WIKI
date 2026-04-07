@@ -1,5 +1,6 @@
 import { Extension, type Editor } from '@tiptap/core'
 import Suggestion, { SuggestionOptions } from '@tiptap/suggestion'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 
 export type SlashItem = {
   title: string
@@ -34,6 +35,47 @@ const isSelectionInList = (editor: Editor): boolean => {
     }
   }
   return false
+}
+
+const toImageFiles = (event: ClipboardEvent): File[] => {
+  const clipboard = event.clipboardData
+  if (!clipboard) return []
+
+  const fromFiles = Array.from(clipboard.files ?? []).filter((file) => file.type.startsWith('image/'))
+  if (fromFiles.length) return fromFiles
+
+  return Array.from(clipboard.items ?? [])
+    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+    .map((item) => item.getAsFile())
+    .filter((file): file is File => !!file)
+}
+
+const uploadImageFile = async (editor: Editor, file: File): Promise<string> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const context = getUploadContext(editor)
+  if (context.wikiSlug) formData.append('wikiSlug', context.wikiSlug)
+  formData.append('mediaType', 'image')
+
+  const res = await fetch('/api/upload', { method: 'POST', body: formData })
+  const data = await res.json().catch(() => ({} as Record<string, any>))
+
+  if (!res.ok) {
+    throw new Error((data?.error as string) || `Upload failed (${res.status})`)
+  }
+  if (!data?.url || typeof data.url !== 'string') {
+    throw new Error('Upload failed')
+  }
+
+  return data.url
+}
+
+const insertUploadedImage = (editor: Editor, src: string) => {
+  const attrs: Record<string, any> = { src }
+  if (isSelectionInList(editor)) {
+    attrs.textAlign = 'center'
+  }
+  editor.chain().focus().insertContent({ type: 'image', attrs }).run()
 }
 
 const insertListWithFallback = (editor: Editor, range: { from: number; to: number }, listType: 'bulletList' | 'orderedList') => {
@@ -238,17 +280,9 @@ const items: SlashItem[] = [
       input.onchange = async () => {
         const file = input.files?.[0]
         if (!file) return
-        const fd = new FormData()
-        fd.append('file', file)
-        const context = getUploadContext(editor)
-        if (context.wikiSlug) fd.append('wikiSlug', context.wikiSlug)
-        fd.append('mediaType', file.type.startsWith('video/') ? 'video' : 'image')
         try {
-          const res = await fetch('/api/upload', { method: 'POST', body: fd })
-          const data = await res.json()
-          if (!res.ok) throw new Error(data.error || 'Upload failed')
-          const textAlign = isSelectionInList(editor) ? 'center' : undefined
-          editor.chain().focus().setImage({ src: data.url, textAlign }).run()
+          const url = await uploadImageFile(editor, file)
+          insertUploadedImage(editor, url)
         } catch (e: any) {
           alert('Upload error: ' + (e?.message || 'unknown'))
         }
@@ -272,24 +306,11 @@ const items: SlashItem[] = [
       input.onchange = async () => {
         const files = Array.from(input.files ?? []).filter((file) => file.type.startsWith('image/'))
         if (!files.length) return
-        const context = getUploadContext(editor)
         try {
           const uploads = await Promise.all(files.map(async (file) => {
-            const formData = new FormData()
-            formData.append('file', file)
-            if (context.wikiSlug) formData.append('wikiSlug', context.wikiSlug)
-            formData.append('mediaType', file.type.startsWith('video/') ? 'video' : 'image')
-            const res = await fetch('/api/upload', { method: 'POST', body: formData })
-            if (!res.ok) {
-              const data = await res.json().catch(() => ({}))
-              throw new Error(data.error || 'Upload failed')
-            }
-            const data = await res.json()
-            if (!data?.url) {
-              throw new Error('Upload failed')
-            }
+            const url = await uploadImageFile(editor, file)
             // Initialize with an empty caption
-            return { url: data.url as string, caption: '' }
+            return { url, caption: '' }
           }))
           if (!uploads.length) return
           const attrs: any = { images: uploads }
@@ -546,7 +567,37 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
   },
   addProseMirrorPlugins() {
     // @ts-ignore
-    return [Suggestion({ editor: this.editor, ...this.options.suggestion })]
+    const clipboardImagePastePlugin = new Plugin({
+      key: new PluginKey('slash-command-clipboard-image-paste'),
+      props: {
+        handlePaste: (_view, event) => {
+          const imageFiles = toImageFiles(event as ClipboardEvent)
+          if (!imageFiles.length) return false
+
+          event.preventDefault()
+          const editor = this.editor
+
+          void (async () => {
+            try {
+              for (const file of imageFiles) {
+                const url = await uploadImageFile(editor, file)
+                insertUploadedImage(editor, url)
+              }
+            } catch (error: any) {
+              console.error('Clipboard image paste upload failed', error)
+              alert(error?.message || 'Failed to paste image from clipboard')
+            }
+          })()
+
+          return true
+        },
+      },
+    })
+
+    return [
+      Suggestion({ editor: this.editor, ...this.options.suggestion }),
+      clipboardImagePastePlugin,
+    ]
   },
 })
 

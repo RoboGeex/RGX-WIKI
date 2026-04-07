@@ -1,199 +1,171 @@
 [
-    {
-        "slug":  "ziggy",
-        "displayName":  "Ziggy, the Turtle Robot",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-01-01T00:00:00.000Z"
-    },
-    {
-        "slug":  "clicky",
-        "displayName":  "Clicky",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-01-01T00:00:00.000Z"
-    },
-    {
-        "slug":  "smart-systems-using-microbit",
-        "displayName":  "Smart Systems using Micro:Bit",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "coding-using-microbit",
-        "displayName":  "Coding using Micro:Bit",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z",
-        "isPublished":  false
-    },
-    {
-        "slug":  "smart-systems-using-rgx",
-        "displayName":  "Smart Systems using RGX",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "video-games-using-microbit",
-        "displayName":  "Video Games using Micro:Bit",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "i-project-kit-projects",
-        "displayName":  "i-Project Kit Projects",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "3d-design-using-tinkercad",
-        "displayName":  "3D Design using TinkerCAD",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z",
-        "isPublished":  true
-    },
-    {
-        "slug":  "mobile-apps",
-        "displayName":  "Mobile Apps",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "resources-ai-challenge",
-        "displayName":  "Resources - AI Challenge",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "smart-systems-using-arduino",
-        "displayName":  "Smart Systems using Arduino",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "3d-design-using-pictoblox",
-        "displayName":  "3D Design using Pictoblox",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2025-03-14T00:00:00.000Z"
-    },
-    {
-        "slug":  "scratch",
-        "displayName":  "Scratch",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2026-04-05T09:52:54.994Z"
-    },
-    {
-        "slug":  "scratch-jr",
-        "displayName":  "Scratch Junior",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2026-04-06T09:39:27.231Z"
-    },
-    {
-        "slug":  "arduino-lvl1",
-        "displayName":  "Arduino level 1",
-        "grade":  "All Levels",
-        "picture":  "/images/robogeex-logo.png",
-        "domains":  [
-
-                    ],
-        "defaultLocale":  "en",
-        "defaultLessonSlug":  "getting-started",
-        "resourcesUrl":  "/resources",
-        "createdAt":  "2026-04-06T10:58:40.683Z"
-    }
+  {
+    "slug": "ziggy",
+    "displayName": "Ziggy, the Turtle Robot",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "slug": "clicky",
+    "displayName": "Clicky",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "slug": "smart-systems-using-microbit",
+    "displayName": "Smart Systems using Micro:Bit",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "coding-using-microbit",
+    "displayName": "Coding using Micro:Bit",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z",
+    "isPublished": false
+  },
+  {
+    "slug": "smart-systems-using-rgx",
+    "displayName": "Smart Systems using RGX",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "video-games-using-microbit",
+    "displayName": "Video Games using Micro:Bit",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "i-project-kit-projects",
+    "displayName": "i-Project Kit Projects",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "3d-design-using-tinkercad",
+    "displayName": "3D Design using TinkerCAD",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z",
+    "isPublished": true
+  },
+  {
+    "slug": "mobile-apps",
+    "displayName": "Mobile Apps",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "resources-ai-challenge",
+    "displayName": "Resources - AI Challenge",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "smart-systems-using-arduino",
+    "displayName": "Smart Systems using Arduino",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z",
+    "isPublished": false
+  },
+  {
+    "slug": "3d-design-using-pictoblox",
+    "displayName": "3D Design using Pictoblox",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2025-03-14T00:00:00.000Z"
+  },
+  {
+    "slug": "scratch",
+    "displayName": "Scratch",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2026-04-05T09:52:54.994Z",
+    "isPublished": true
+  },
+  {
+    "slug": "scratch-jr",
+    "displayName": "Scratch Junior",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2026-04-06T09:39:27.231Z"
+  },
+  {
+    "slug": "arduino-lvl1",
+    "displayName": "Arduino level 1",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2026-04-06T10:58:40.683Z"
+  }
 ]

@@ -2329,7 +2329,10 @@ export default function WikiEditor() {
 
     async function load() {
       try {
-        const res = await fetch(`/api/lessons?wiki=${wiki}`)
+        const res = await fetch(`/api/lessons?wiki=${wiki}`, {
+          headers: applyDeveloperHeader({}),
+          cache: 'no-store',
+        })
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data)) setWikiLessons(data)

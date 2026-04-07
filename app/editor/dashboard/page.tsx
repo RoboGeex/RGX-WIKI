@@ -8,8 +8,18 @@ import { getWikisFromDb } from "@/lib/server-data"
 export const dynamic = "force-dynamic"
 
 export default async function EditorDashboardPage() {
+  const fileWikis = getWikis()
   const dbWikis = await getWikisFromDb()
-  const wikis = dbWikis.length > 0 ? dbWikis : getWikis()
+  const wikis =
+    dbWikis.length > 0
+      ? (() => {
+          const bySlug = new Map(fileWikis.map((wiki) => [wiki.slug, wiki]))
+          dbWikis.forEach((wiki) => {
+            bySlug.set(wiki.slug, { ...(bySlug.get(wiki.slug) || {}), ...wiki })
+          })
+          return Array.from(bySlug.values())
+        })()
+      : fileWikis
 
   const summaries = await Promise.all(
     wikis.map(async (wiki) => {

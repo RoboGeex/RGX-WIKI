@@ -6,6 +6,12 @@ import { getPrisma } from '@/lib/prisma-multi'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+function isReadOnlyFsError(error: any): boolean {
+  const code = typeof error?.code === 'string' ? error.code : ''
+  const message = typeof error?.message === 'string' ? error.message.toLowerCase() : ''
+  return code === 'EROFS' || message.includes('read-only file system')
+}
+
 function getWikiPrisma(slug: string): any {
   try {
     return getPrisma(slug)
@@ -56,7 +62,16 @@ async function updateFileWikiPublishState(slug: string, isPublished: boolean): P
   const updated = wikis.map((wiki) =>
     wiki.slug === slug ? { ...wiki, isPublished } : wiki
   )
-  await fs.writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8')
+  try {
+    await fs.writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8')
+  } catch (error: any) {
+    if (isReadOnlyFsError(error)) {
+      // Serverless deployments (for example Vercel) can have read-only filesystems.
+      // DB is source of truth, so treat file sync as best effort.
+      return
+    }
+    throw error
+  }
 }
 
 async function readWikiFromFile(slug: string): Promise<any | null> {

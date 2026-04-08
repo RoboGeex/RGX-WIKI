@@ -8,25 +8,74 @@ type ClientCache = {
 const globalForPrisma = globalThis as unknown as {
   prismaClients?: ClientCache
   prismaMissingWikiUrlWarnings?: Set<string>
+  prismaMissingDefaultUrlWarnings?: Set<string>
+}
+
+function getFirstConfiguredWikiDatabaseUrl(): { url?: string; source?: string } {
+  const suffixes = new Set<string>()
+  Object.keys(process.env).forEach((key) => {
+    const match = key.match(/^DATABASE_URL_([A-Z0-9_]+?)(?:_DIRECT)?$/)
+    if (!match) return
+    const suffix = match[1]
+    if (suffix === 'DEFAULT' || suffix === 'HUB') return
+    suffixes.add(suffix)
+  })
+
+  for (const suffix of Array.from(suffixes).sort()) {
+    const envKey = `DATABASE_URL_${suffix}`
+    const directEnvKey = `${envKey}_DIRECT`
+    const resolved = resolvePrismaDirectUrl(
+      process.env[directEnvKey],
+      process.env[envKey],
+    )
+    if (!resolved || isPrismaProxyUrl(resolved)) continue
+    return {
+      url: resolved,
+      source: process.env[directEnvKey] ? directEnvKey : envKey,
+    }
+  }
+
+  return {}
 }
 
 function getUrlForWiki(wikiSlug?: string): string | undefined {
   if (!wikiSlug) {
     const direct = resolvePrismaDirectUrl(
+      process.env.DATABASE_URL_HUB_DIRECT,
       process.env.DATABASE_URL_DEFAULT_DIRECT,
       process.env.DIRECT_URL,
+      process.env.DATABASE_URL_HUB,
       process.env.DATABASE_URL_DEFAULT,
       process.env.DATABASE_URL,
     )
     if (direct) return direct
 
-    const fallback = process.env.DATABASE_URL_DEFAULT || process.env.DATABASE_URL
+    const fallback =
+      process.env.DATABASE_URL_HUB ||
+      process.env.DATABASE_URL_DEFAULT ||
+      process.env.DATABASE_URL
     if (isPrismaProxyUrl(fallback)) {
       throw new Error(
-        'Default database is configured with a prisma:// URL. Set DATABASE_URL_DEFAULT_DIRECT or DIRECT_URL to a direct mysql:// connection.',
+        'Default/hub database is configured with a prisma:// URL. Set DATABASE_URL_HUB_DIRECT, DATABASE_URL_DEFAULT_DIRECT, or DIRECT_URL to a direct mysql:// connection.',
       )
     }
-    return fallback
+    if (fallback) return fallback
+
+    const discovered = getFirstConfiguredWikiDatabaseUrl()
+    if (discovered.url) {
+      if (!globalForPrisma.prismaMissingDefaultUrlWarnings) {
+        globalForPrisma.prismaMissingDefaultUrlWarnings = new Set<string>()
+      }
+      const warnKey = discovered.source || 'unknown'
+      if (!globalForPrisma.prismaMissingDefaultUrlWarnings.has(warnKey)) {
+        globalForPrisma.prismaMissingDefaultUrlWarnings.add(warnKey)
+        console.warn(
+          `[prisma-multi] Missing DATABASE_URL_HUB/DATABASE_URL_DEFAULT; using ${warnKey} for shared DB operations.`,
+        )
+      }
+      return discovered.url
+    }
+    return undefined
   }
 
   const upper = wikiSlug.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_')
@@ -78,7 +127,12 @@ function getUrlForWiki(wikiSlug?: string): string | undefined {
 export function getPrisma(wikiSlug?: string): PrismaClient {
   const url = getUrlForWiki(wikiSlug)
   if (!url) {
-    throw new Error('No database URL configured for this wiki')
+    if (wikiSlug) {
+      throw new Error(`No database URL configured for wiki "${wikiSlug}"`)
+    }
+    throw new Error(
+      'No database URL configured for shared operations. Set DATABASE_URL_HUB or DATABASE_URL_DEFAULT.',
+    )
   }
 
   if (!globalForPrisma.prismaClients) {

@@ -52,5 +52,14 @@
         "heroImage":  "/images/robogeex-logo.png",
         "overview_en":  "All Levels level learning content for Arduino level 1.",
         "overview_ar":  "All Levels level learning content for Arduino level 1."
+    },
+    {
+        "slug":  "fusion-360",
+        "wikiSlug":  "fusion-360",
+        "title_en":  "Fusion 360 Learning Kit",
+        "title_ar":  "Fusion 360 Learning Kit",
+        "heroImage":  "/images/robogeex-logo.png",
+        "overview_en":  "All Levels level learning content for Fusion 360.",
+        "overview_ar":  "All Levels level learning content for Fusion 360."
     }
 ]

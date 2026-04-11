@@ -251,7 +251,7 @@ export default memo(function SegmentTiptapEditor({
 
   if (!isMounted) return <div className={`min-h-[1em] ${className}`} />;
 
-  const textColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#000000']
+  const textColors = ['#ef4444', '#F09D4F', '#10b981', '#1D91D0', '#8b5cf6', '#000000']
   const highlightColors = ['#fef3c7', '#d1fae5', '#dbeafe', '#f3e8ff', '#fee2e2']
 
   return (

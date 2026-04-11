@@ -123,7 +123,7 @@ export function InteractiveHtml({ html, className = '', style }: InteractiveHtml
       applyAspectRatioVar(img as HTMLElement, '4 / 3')
       markLoading(img)
       const imageEl = img as HTMLImageElement
-      if (imageEl.complete && imageEl.naturalWidth > 0) {
+      if (imageEl.complete) {
         markLoaded(img)
         return
       }

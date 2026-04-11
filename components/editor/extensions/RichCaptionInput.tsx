@@ -12,8 +12,9 @@ import { Link2, Unlock, X } from 'lucide-react'
 import './SafeBubbleMenu'
 
 // Basic text colors matching the main editor
-const textColors = ['#000000', '#475569', '#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899']
+const textColors = ['#000000', '#475569', '#ef4444', '#f97316', '#F09D4F', '#22c55e', '#1D91D0', '#8b5cf6', '#ec4899']
 const highlightColors = ['transparent', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5ff', '#fecdd3']
+const CAPTION_FOCUS_EVENT = 'badex:caption-focus-change'
 
 interface Props {
     initialContent: string
@@ -27,6 +28,10 @@ interface Props {
 export function RichCaptionInput({ initialContent, onChange, onBlur, onFocus, placeholder = 'Add a caption...', className = '' }: Props) {
     const [isFocused, setIsFocused] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
+    const emitCaptionFocusChange = (focused: boolean) => {
+        if (typeof window === 'undefined') return
+        window.dispatchEvent(new CustomEvent(CAPTION_FOCUS_EVENT, { detail: { focused } }))
+    }
 
     const editor = useEditor({
         extensions: [
@@ -63,10 +68,12 @@ export function RichCaptionInput({ initialContent, onChange, onBlur, onFocus, pl
         },
         onFocus: () => {
             setIsFocused(true)
+            emitCaptionFocusChange(true)
             if (onFocus) onFocus()
         },
         onBlur: () => {
             setIsFocused(false)
+            emitCaptionFocusChange(false)
             if (onBlur) onBlur()
         },
     })

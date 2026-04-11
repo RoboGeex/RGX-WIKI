@@ -53,6 +53,7 @@ export function LessonImageSlider({ images, layoutMode = 'fit' }: Props) {
                     src={src}
                     alt={cap || "Lesson slide"}
                     zoomable
+                    trimWhitespace={!layoutMode || layoutMode === 'fit'}
                     minHeightClassName={(!layoutMode || layoutMode === 'fit') ? 'min-h-[14rem]' : undefined}
                     imgClassName={`block w-full !m-0 !p-0 ${
                       (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'

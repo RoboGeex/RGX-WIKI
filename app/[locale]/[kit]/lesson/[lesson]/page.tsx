@@ -489,6 +489,7 @@ export default async function LessonPage(
                 src={imageUrl}
                 alt={caption || ''}
                 zoomable
+                trimWhitespace={layoutMode === 'fit'}
                 minHeightClassName={layoutMode === 'fit' ? 'min-h-[14rem]' : undefined}
                 imgClassName={`block w-full !m-0 !p-0 ${
                   (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'

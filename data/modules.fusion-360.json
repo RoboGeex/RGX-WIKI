@@ -1,0 +1,18 @@
+[
+  {
+    "id": "intro",
+    "order": 1,
+    "title_en": "Introduction",
+    "title_ar": "Introduction",
+    "summary_en": "Setup and first steps for Fusion 360 learning.",
+    "summary_ar": "Setup and first steps for Fusion 360 learning."
+  },
+  {
+    "id": "basics",
+    "order": 2,
+    "title_en": "Fusion 360 Basics",
+    "title_ar": "Fusion 360 Basics",
+    "summary_en": "Learn the fundamental concepts of Fusion 360.",
+    "summary_ar": "Learn the fundamental concepts of Fusion 360."
+  }
+]

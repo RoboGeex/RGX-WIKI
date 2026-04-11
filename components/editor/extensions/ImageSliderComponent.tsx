@@ -46,24 +46,13 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
 
   const [isReplacing, setIsReplacing] = useState(false)
   const [localCaption, setLocalCaption] = useState(props.item.caption || '')
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setLocalCaption(props.item.caption || '')
   }, [props.item.caption])
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    }
-  }, [])
-
   const handleBlur = () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = null
-    }
-    // Always flush latest caption on blur
+    // Persist caption once editing ends to avoid focus-stealing node refreshes while typing.
     try {
       if (localCaption !== props.item.caption) {
         props.onCaptionChange(localCaption)
@@ -152,10 +141,6 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
           initialContent={localCaption}
           onChange={(html) => {
             setLocalCaption(html)
-            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-            debounceTimerRef.current = setTimeout(() => {
-              props.onCaptionChange(html)
-            }, 300)
           }}
           onBlur={handleBlur}
           placeholder="Add caption..."

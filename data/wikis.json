@@ -121,7 +121,7 @@
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
     "createdAt": "2025-03-14T00:00:00.000Z",
-    "isPublished": false
+    "isPublished": true
   },
   {
     "slug": "3d-design-using-pictoblox",
@@ -167,5 +167,17 @@
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
     "createdAt": "2026-04-06T10:58:40.683Z"
+  },
+  {
+    "slug": "fusion-360",
+    "displayName": "Fusion 360",
+    "grade": "All Levels",
+    "picture": "/images/robogeex-logo.png",
+    "domains": [],
+    "defaultLocale": "en",
+    "defaultLessonSlug": "getting-started",
+    "resourcesUrl": "/resources",
+    "createdAt": "2026-04-11T00:00:00.000Z",
+    "isPublished": true
   }
 ]

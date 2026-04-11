@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ZoomableImage } from '@/components/zoomable-image'
 
 type BaseProps = {
@@ -13,6 +14,7 @@ type LessonImageProps = BaseProps & {
   alt?: string
   imgClassName?: string
   zoomable?: boolean
+  trimWhitespace?: boolean
   loading?: 'eager' | 'lazy'
 }
 
@@ -50,24 +52,111 @@ export function LessonImage({
   imgClassName = '',
   minHeightClassName,
   zoomable = false,
+  trimWhitespace = false,
   loading = 'lazy',
 }: LessonImageProps) {
   const [loaded, setLoaded] = useState(false)
+  const [trimStyle, setTrimStyle] = useState<CSSProperties | undefined>(undefined)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const reserveClass = minHeightClassName || 'min-h-[12rem]'
 
+  const detectWhitespaceTrim = useCallback(() => {
+    if (!trimWhitespace) {
+      setTrimStyle(undefined)
+      return
+    }
+
+    const imageEl = imgRef.current
+    if (!imageEl || !imageEl.complete) return
+
+    const naturalWidth = imageEl.naturalWidth
+    const naturalHeight = imageEl.naturalHeight
+    if (!naturalWidth || !naturalHeight) return
+
+    try {
+      const sampleTarget = 512
+      const downscale = Math.max(1, Math.ceil(Math.max(naturalWidth, naturalHeight) / sampleTarget))
+      const sampleWidth = Math.max(1, Math.floor(naturalWidth / downscale))
+      const sampleHeight = Math.max(1, Math.floor(naturalHeight / downscale))
+
+      const canvas = document.createElement('canvas')
+      canvas.width = sampleWidth
+      canvas.height = sampleHeight
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (!ctx) return
+
+      ctx.drawImage(imageEl, 0, 0, sampleWidth, sampleHeight)
+      const { data } = ctx.getImageData(0, 0, sampleWidth, sampleHeight)
+
+      let minX = sampleWidth
+      let minY = sampleHeight
+      let maxX = -1
+      let maxY = -1
+
+      // Detect visible content by alpha to trim transparent canvas padding safely.
+      for (let y = 0; y < sampleHeight; y += 1) {
+        for (let x = 0; x < sampleWidth; x += 1) {
+          const idx = (y * sampleWidth + x) * 4
+          const alpha = data[idx + 3]
+          if (alpha > 10) {
+            if (x < minX) minX = x
+            if (y < minY) minY = y
+            if (x > maxX) maxX = x
+            if (y > maxY) maxY = y
+          }
+        }
+      }
+
+      if (maxX < 0 || maxY < 0) {
+        setTrimStyle(undefined)
+        return
+      }
+
+      const left = minX / sampleWidth
+      const right = (sampleWidth - 1 - maxX) / sampleWidth
+      const top = minY / sampleHeight
+      const bottom = (sampleHeight - 1 - maxY) / sampleHeight
+
+      const horizontalTrim = left + right
+      const verticalTrim = top + bottom
+      const minTrimThreshold = 0.08
+
+      if (horizontalTrim < minTrimThreshold && verticalTrim < minTrimThreshold) {
+        setTrimStyle(undefined)
+        return
+      }
+
+      const safeHorizontal = Math.min(horizontalTrim, 0.92)
+      const safeVertical = Math.min(verticalTrim, 0.92)
+      const scaleX = 1 / Math.max(0.08, 1 - safeHorizontal)
+      const scaleY = 1 / Math.max(0.08, 1 - safeVertical)
+      const scale = Math.min(3, Math.max(scaleX, scaleY))
+
+      setTrimStyle({
+        clipPath: `inset(${(top * 100).toFixed(2)}% ${(right * 100).toFixed(2)}% ${(bottom * 100).toFixed(2)}% ${(left * 100).toFixed(2)}%)`,
+        transform: `scale(${scale.toFixed(3)})`,
+        transformOrigin: 'center center',
+      })
+    } catch {
+      // Cross-origin images can taint canvas; skip auto-trim in that case.
+      setTrimStyle(undefined)
+    }
+  }, [trimWhitespace])
+
   useEffect(() => {
     setLoaded(false)
+    setTrimStyle(undefined)
   }, [src])
 
   useEffect(() => {
     const el = imgRef.current
-    if (el && el.complete && el.naturalWidth > 0) {
+    if (el && el.complete) {
       setLoaded(true)
+      detectWhitespaceTrim()
       return
     }
     return
-  }, [src])
+  }, [src, detectWhitespaceTrim])
 
   const image = (
     <img
@@ -75,9 +164,13 @@ export function LessonImage({
       src={src}
       alt={alt}
       loading={loading}
-      onLoad={() => setLoaded(true)}
+      onLoad={() => {
+        setLoaded(true)
+        detectWhitespaceTrim()
+      }}
       onError={() => setLoaded(true)}
       className={`${imgClassName} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      style={trimStyle}
     />
   )
 

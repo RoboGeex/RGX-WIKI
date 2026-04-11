@@ -7,6 +7,8 @@ import { NodeViewErrorBoundary } from './NodeViewErrorBoundary'
 const isListNodeType = (typeName?: string | null) =>
   typeName === 'listItem' || typeName === 'bulletList' || typeName === 'orderedList'
 
+const CAPTION_DRAFT_EVENT = 'badex:caption-draft-change'
+
 export default function VideoComponent(props: any) {
   const { node, updateAttributes, selected, deleteNode, editor, getPos } = props
   const isVimeo = typeof node.attrs.src === 'string' && node.attrs.src.includes('vimeo.com')
@@ -35,8 +37,8 @@ export default function VideoComponent(props: any) {
   const [isReplacing, setIsReplacing] = useState(false)
   const [isInsideListByDom, setIsInsideListByDom] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const latestCaptionRef = useRef(caption)
   const isInsideListByDoc = (() => {
     if (!editor?.state?.doc || typeof getPos !== 'function') return false
     try {
@@ -80,12 +82,31 @@ export default function VideoComponent(props: any) {
     mediaWrapperStyle.marginInlineEnd = 'auto'
   }
 
+  const emitCaptionDraft = (mode: 'draft' | 'clear', value: string) => {
+    if (typeof window === 'undefined') return
+    const src = typeof node.attrs?.src === 'string' ? node.attrs.src.trim() : ''
+    if (!src) return
+    window.dispatchEvent(new CustomEvent(CAPTION_DRAFT_EVENT, {
+      detail: {
+        kind: 'video',
+        src,
+        mode,
+        value,
+      },
+    }))
+  }
+
   useEffect(() => {
     setCaption(node.attrs.title || '')
+    latestCaptionRef.current = node.attrs.title || ''
     setWidth(node.attrs.width || '100%')
     setTextAlign(node.attrs.textAlign || 'center')
     setLayoutMode(node.attrs.layoutMode || 'fit')
   }, [node.attrs.title, node.attrs.width, node.attrs.textAlign, node.attrs.layoutMode])
+
+  useEffect(() => {
+    latestCaptionRef.current = caption
+  }, [caption])
 
   useEffect(() => {
     const updateListContextFromDom = () => {
@@ -105,28 +126,19 @@ export default function VideoComponent(props: any) {
     return () => cancelAnimationFrame(raf)
   }, [getPos, node.attrs.textAlign, node.attrs.width, node.attrs.layoutMode])
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    }
-  }, [])
-
   const handleBlur = () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = null
-    }
-    // Always flush latest caption on blur
-    try {
-      if (caption !== node.attrs.title) {
-        updateAttributes({ title: caption })
+    const nextCaption = latestCaptionRef.current
+    const persistedCaption = node.attrs.title || ''
+    if (nextCaption !== persistedCaption) {
+      try {
+        updateAttributes({ title: nextCaption })
+      } catch {
+        setTimeout(() => {
+          try { updateAttributes({ title: nextCaption }) } catch { /* give up */ }
+        }, 50)
       }
-    } catch {
-      // Retry once if updateAttributes fails due to stale node
-      setTimeout(() => {
-        try { updateAttributes({ title: caption }) } catch { /* give up */ }
-      }, 50)
     }
+    emitCaptionDraft('clear', '')
   }
 
   const removeVideo = (e: React.MouseEvent) => {
@@ -457,10 +469,8 @@ export default function VideoComponent(props: any) {
               initialContent={caption}
               onChange={(html) => {
                 setCaption(html)
-                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-                debounceTimerRef.current = setTimeout(() => {
-                  updateAttributes({ title: html })
-                }, 300)
+                latestCaptionRef.current = html
+                emitCaptionDraft('draft', html)
               }}
               onBlur={handleBlur}
               placeholder="Add a caption..."

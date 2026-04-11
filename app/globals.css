@@ -534,6 +534,12 @@ html {
   font-size: 1.05rem;
   line-height: 1.5;
 }
+.tiptap th :is(p, div:not([data-type]):not(.media-node-block)),
+.tiptap td :is(p, div:not([data-type]):not(.media-node-block)) {
+  margin: 0 !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
 .tiptap th img,
 .tiptap td img {
   max-width: 100% !important;
@@ -1082,7 +1088,8 @@ html {
     0 4px 6px -1px rgb(0 0 0 / 0.1),
     0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md sync */
   border-radius: 1.5rem; /* rounded-3xl sync */
-  overflow: hidden;
+  /* Keep floating media toolbars (image/video controls) visible near column edges. */
+  overflow: visible;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
 }

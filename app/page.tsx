@@ -2,12 +2,20 @@ import { redirect } from 'next/navigation'
 import { getWikiByDomain, getKits } from '@/lib/data'
 import { headers } from 'next/headers'
 import Link from 'next/link'
+import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
 
 // This is the root page of the application. 
 // It checks for a custom domain and displays the corresponding wiki.
 // If no custom domain is found, it shows a default landing page.
 export default function RootPage() {
   const host = headers().get('host')
+  const normalizedHost = normalizeHost(host)
+
+  // The hub root should always open the wiki index.
+  if (normalizedHost === HUB_DOMAIN) {
+    redirect('/wikis')
+  }
+
   const wiki = getWikiByDomain(host)
 
   if (wiki) {

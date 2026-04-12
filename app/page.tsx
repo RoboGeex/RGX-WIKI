@@ -1,19 +1,19 @@
 import { redirect } from 'next/navigation'
 import { getWikiByDomain, getKits } from '@/lib/data'
 import { headers } from 'next/headers'
-import Link from 'next/link'
 import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
+import WikisLandingPage from './wikis/page'
 
 // This is the root page of the application. 
 // It checks for a custom domain and displays the corresponding wiki.
 // If no custom domain is found, it shows a default landing page.
-export default function RootPage() {
+export default async function RootPage() {
   const host = headers().get('host')
   const normalizedHost = normalizeHost(host)
 
-  // The hub root should always open the wiki index.
+  // The hub root should render the wiki index at "/" without URL changes.
   if (normalizedHost === HUB_DOMAIN) {
-    redirect('/wikis')
+    return <WikisLandingPage />
   }
 
   const wiki = getWikiByDomain(host)
@@ -32,31 +32,4 @@ export default function RootPage() {
   // If no wiki is matched (e.g., when accessing via the .vercel.app URL),
   // redirect to the default "ziggy" kit page.
   redirect('/en/ziggy')
-
-  // The code below would show a list of all available kits,
-  // but the current requirement is to redirect to a specific kit.
-  /*
-  const kits = getKits()
-  
-  return (
-    <div className="min-h-screen bg-[#eef2f1] flex items-center justify-center px-6">
-      <div className="text-center max-w-2xl">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8">Welcome to RGX Wiki</h1>
-        <p className="text-lg text-gray-600 mb-8">Choose a learning kit to get started:</p>
-        <div className="grid gap-4 md:grid-cols-2">
-          {kits.map(kit => (
-            <Link 
-              key={kit.slug}
-              href={`/en/${kit.slug}`}
-              className="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow border"
-            >
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">{kit.title_en}</h2>
-              <p className="text-gray-600">{kit.overview_en}</p>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-  */
 }

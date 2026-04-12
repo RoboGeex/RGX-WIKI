@@ -68,9 +68,12 @@ function mapLegacyLessonRow(row: any): Lesson {
 }
 
 function loadJsonFile<T>(file: string, fallback: T): T {
-  const tmpPath = path.join(os.tmpdir(), file)
   const repoPath = path.join(process.cwd(), 'data', file)
-  for (const p of [tmpPath, repoPath]) {
+  const tmpPath = path.join(os.tmpdir(), file)
+
+  // In hosted environments (for example Vercel), /tmp can contain stale artifacts
+  // from previous invocations. Prefer repository data first, then tmp as fallback.
+  for (const p of [repoPath, tmpPath]) {
     try {
       const raw = fs.readFileSync(p, 'utf-8')
       return JSON.parse(raw) as T

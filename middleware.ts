@@ -32,6 +32,12 @@ export function middleware(request: NextRequest) {
   const host = normalizeHost(hostname)
   const allowLocalAdmin = host === 'localhost' || host === '127.0.0.1' || host === '::1'
 
+  // Keep the hub on a single canonical domain.
+  if (host === 'wikis.robogeex.com' && host !== HUB_DOMAIN) {
+    url.host = HUB_DOMAIN
+    return NextResponse.redirect(url)
+  }
+
   if ((pathname.startsWith('/editor') || pathname.startsWith('/dashboard')) && host !== 'admin.robogeex.com' && !allowLocalAdmin) {
     const adminUrl = new URL(pathname, 'https://admin.robogeex.com')
     return NextResponse.redirect(adminUrl)

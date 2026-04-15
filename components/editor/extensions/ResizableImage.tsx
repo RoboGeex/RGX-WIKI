@@ -25,6 +25,7 @@ const ResizableImageComponent = (props: any) => {
   const [caption, setCaption] = useState(node.attrs.title || '')
   const [layoutMode, setLayoutMode] = useState(node.attrs.layoutMode || 'fit') // fit | 1:1 | 16:9
   const [isReplacing, setIsReplacing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [localStickyUntil, setLocalStickyUntil] = useState(0)
   const [isInsideListByDom, setIsInsideListByDom] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -346,6 +347,9 @@ const ResizableImageComponent = (props: any) => {
           </NodeViewErrorBoundary>
         </div>
 
+        {/* Hidden file input for Replace — must be outside toolbar to avoid onClickCapture killing it */}
+        <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleReplace} disabled={isReplacing} />
+
         {/* Toolbar */}
         <div
           className={`media-node-toolbar absolute -top-12 ${toolbarPositionClass} flex items-center gap-1 bg-white/95 backdrop-blur shadow-lg rounded-lg border border-gray-200 p-1.5 z-50 whitespace-nowrap min-w-max transition-opacity ${
@@ -402,15 +406,18 @@ const ResizableImageComponent = (props: any) => {
             {/* Replace */}
             <button
               type="button"
-              onMouseDown={runToolbarAction(() => replaceInputRef.current?.click())}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                markToolbarSticky(5000)
+                fileInputRef.current?.click()
+              }}
               className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded hover:bg-gray-100 text-gray-600 ${isReplacing ? 'opacity-50 pointer-events-none' : ''}`}
               title="Replace image"
-              disabled={isReplacing}
             >
               {isReplacing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               <span>Replace</span>
             </button>
-            <input ref={replaceInputRef} type="file" accept="image/*" className="hidden" onChange={handleReplace} disabled={isReplacing} />
 
             {/* Remove */}
             <button

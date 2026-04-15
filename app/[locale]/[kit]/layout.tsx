@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import KitNavbar from '@/components/kit-navbar'
 import { getKit, getLessons, getWiki } from '@/lib/data'
 import { redirect } from 'next/navigation'

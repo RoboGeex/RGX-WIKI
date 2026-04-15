@@ -1721,6 +1721,23 @@ export default function SegmentEditor({
                                     >
                                       <ListOrdered size={12} /> Numbered
                                     </button>
+                                    
+                                    {segment.ordered && (
+                                      <div className="flex items-center gap-1 ml-auto">
+                                        <span className="text-[10px] text-gray-400">Start at:</span>
+                                        <input
+                                          type="number"
+                                          value={segment.start || 1}
+                                          onChange={(e) => {
+                                            const val = parseInt(e.target.value) || 1
+                                            setSegments(prev => prev.map(s => s.id === segment.id ? { ...s, start: val, updatedAt: new Date().toISOString() } : s))
+                                            scheduleAutoSave()
+                                          }}
+                                          className="w-12 h-6 text-xs text-center border border-gray-200 rounded focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                                          min={1}
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                   
                                   {(segment.items_en || [{ text: '', indent: 0 }]).map((item, idx) => (
@@ -1730,7 +1747,7 @@ export default function SegmentEditor({
                                       style={{ marginLeft: `${(typeof item === 'object' ? item.indent : 0) * 20}px` }}
                                     >
                                       <span className="w-6 text-right shrink-0 text-slate-700 text-base py-0 select-none font-medium leading-normal">
-                                        {getListMarker(segment.items_en || [], idx, !!segment.ordered)}
+                                        {getListMarker(segment.items_en || [], idx, !!segment.ordered, segment.start)}
                                       </span>
                                       <SegmentTiptapEditor
                                         content={typeof item === 'object' ? item.text : String(item)}
@@ -2088,7 +2105,7 @@ export default function SegmentEditor({
                                       style={{ marginRight: `${(typeof item === 'object' ? item.indent : 0) * 20}px` }}
                                     >
                                       <span className="w-6 text-left shrink-0 text-slate-700 text-base py-0 select-none font-medium leading-normal">
-                                        {getListMarker(segment.items_ar || [], idx, !!segment.ordered)}
+                                        {getListMarker(segment.items_ar || [], idx, !!segment.ordered, segment.start)}
                                       </span>
                                       <SegmentTiptapEditor
                                         dir="rtl"

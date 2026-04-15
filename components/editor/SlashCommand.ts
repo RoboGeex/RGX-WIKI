@@ -197,7 +197,7 @@ const items: SlashItem[] = [
     icon: '—',
     category: 'structure',
     keywords: ['divider', 'line', 'rule', 'hr'],
-    command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+    command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHorizontalRule().insertContent('<p></p>').run(),
   },
   {
     title: 'Table',
@@ -218,14 +218,17 @@ const items: SlashItem[] = [
     category: 'structure',
     keywords: ['columns', 'layout', 'grid', 'split', 'side'],
     command: ({ editor, range }: any) => {
-      editor.chain().focus().deleteRange(range).insertContent({
-        type: 'columns',
-        attrs: { count: 2 },
-        content: [
-          { type: 'column', content: [{ type: 'paragraph' }] },
-          { type: 'column', content: [{ type: 'paragraph' }] },
-        ]
-      }).run()
+      editor.chain().deleteRange(range).insertColumns({ count: 2 }).focus().run()
+      // Use a tiny delay to override Tiptap's internal selection management after slash command
+      setTimeout(() => {
+        const { state } = editor
+        state.doc.descendants((node: any, pos: number) => {
+          if (node.type.name === 'columns' && Math.abs(pos - range.from) < 10) {
+            editor.commands.setTextSelection(pos + 3)
+            return false
+          }
+        })
+      }, 0)
     },
   },
   {
@@ -236,15 +239,17 @@ const items: SlashItem[] = [
     category: 'structure',
     keywords: ['columns', 'layout', 'grid', 'split', 'side'],
     command: ({ editor, range }: any) => {
-      editor.chain().focus().deleteRange(range).insertContent({
-        type: 'columns',
-        attrs: { count: 3 },
-        content: [
-          { type: 'column', content: [{ type: 'paragraph' }] },
-          { type: 'column', content: [{ type: 'paragraph' }] },
-          { type: 'column', content: [{ type: 'paragraph' }] },
-        ]
-      }).run()
+      editor.chain().deleteRange(range).insertColumns({ count: 3 }).focus().run()
+      // Use a tiny delay to override Tiptap's internal selection management after slash command
+      setTimeout(() => {
+        const { state } = editor
+        state.doc.descendants((node: any, pos: number) => {
+          if (node.type.name === 'columns' && Math.abs(pos - range.from) < 10) {
+            editor.commands.setTextSelection(pos + 3)
+            return false
+          }
+        })
+      }, 0)
     },
   },
   {

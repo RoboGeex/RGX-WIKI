@@ -1,4 +1,4 @@
-﻿import { Node, mergeAttributes } from '@tiptap/core'
+import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import VideoComponent from './VideoComponent'
 
@@ -135,7 +135,13 @@ const Video = Node.create<VideoOptions>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(VideoComponent)
+    return ReactNodeViewRenderer(VideoComponent, {
+      stopEvent: ({ event }: any) => {
+        const target = event?.target as HTMLElement | null
+        if (!target) return false
+        return Boolean(target.closest('button, label, input, .absolute'))
+      },
+    })
   },
 
   addCommands() {

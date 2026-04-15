@@ -45,6 +45,7 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
   }
 
   const [isReplacing, setIsReplacing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [localCaption, setLocalCaption] = useState(props.item.caption || '')
 
   useEffect(() => {
@@ -121,13 +122,19 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
         </button>
 
         {/* Replace Button */}
-        <label
+        <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleReplace} disabled={isReplacing} />
+        <button
+          type="button"
           className={`absolute bottom-2 right-2 p-1.5 bg-blue-500/90 text-white rounded-lg opacity-0 group-hover:opacity-100 hover:bg-blue-500 transition-all shadow-sm z-10 cursor-pointer ${isReplacing ? 'pointer-events-none opacity-70' : ''}`}
           title="Replace image"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            fileInputRef.current?.click()
+          }}
         >
           {isReplacing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-          <input type="file" accept="image/*" className="hidden" onChange={handleReplace} disabled={isReplacing} />
-        </label>
+        </button>
 
         {/* Index Badge */}
         <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 backdrop-blur-sm text-white text-xs font-medium rounded-md pointer-events-none">
@@ -483,28 +490,28 @@ export default function ImageSliderComponent(props: any) {
               <>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); prev(); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100 z-20"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-primary text-white rounded-full hover:bg-primary/90 transition-all active:scale-95 shadow-lg opacity-0 group-hover:opacity-100 z-20 group/btn"
                   type="button"
                   title="Previous"
                 >
-                  <ChevronLeft size={20} className="text-slate-700" />
+                  <ChevronLeft size={20} className="transition-transform group-hover/btn:-translate-x-0.5" />
                 </button>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); next(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100 z-20"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-primary text-white rounded-full hover:bg-primary/90 transition-all active:scale-95 shadow-lg opacity-0 group-hover:opacity-100 z-20 group/btn"
                   type="button"
                   title="Next"
                 >
-                  <ChevronRight size={20} className="text-slate-700" />
+                  <ChevronRight size={20} className="transition-transform group-hover/btn:translate-x-0.5" />
                 </button>
 
                 {/* Dots */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 p-1 rounded-full bg-black/10 backdrop-blur-[2px]">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 p-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
                   {images.map((_: any, idx: number) => (
                     <button
                       key={idx}
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentIndex(idx); }}
-                      className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-white scale-110' : 'bg-white/50 hover:bg-white/80'}`}
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-primary ring-2 ring-white/50 scale-125' : 'bg-white/40 hover:bg-white/70'}`}
                       type="button"
                       aria-label={`Go to slide ${idx + 1}`}
                     />

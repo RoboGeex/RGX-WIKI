@@ -119,7 +119,13 @@ const ImageSlider = Node.create<ImageSliderOptions>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ImageSliderComponent)
+    return ReactNodeViewRenderer(ImageSliderComponent, {
+      stopEvent: ({ event }: any) => {
+        const target = event?.target as HTMLElement | null
+        if (!target) return false
+        return Boolean(target.closest('button, label, input, .absolute'))
+      },
+    })
   },
 
   addCommands() {

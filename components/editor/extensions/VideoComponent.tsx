@@ -34,6 +34,7 @@ export default function VideoComponent(props: any) {
   const [layoutMode, setLayoutMode] = useState(node.attrs.layoutMode || 'fit') // fit | 1:1 | 16:9
   const [showReplaceUrl, setShowReplaceUrl] = useState(false)
   const [replaceUrlValue, setReplaceUrlValue] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isReplacing, setIsReplacing] = useState(false)
   const [isInsideListByDom, setIsInsideListByDom] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -380,6 +381,9 @@ export default function VideoComponent(props: any) {
           </div>
         )}
 
+        {/* Hidden file input for Replace — must be outside toolbar */}
+        <input type="file" accept="video/*" className="hidden" ref={fileInputRef} onChange={handleReplaceFile} disabled={isReplacing} />
+
         {/* Toolbar */}
         {selected && (
           <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/95 backdrop-blur shadow-lg rounded-lg border border-gray-200 p-1.5 z-50 whitespace-nowrap min-w-max">
@@ -439,14 +443,19 @@ export default function VideoComponent(props: any) {
                 </button>
               )
             ) : (
-              <label
-                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded cursor-pointer hover:bg-gray-100 text-gray-600 ${isReplacing ? 'opacity-50 pointer-events-none' : ''}`}
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  fileInputRef.current?.click()
+                }}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded hover:bg-gray-100 text-gray-600 ${isReplacing ? 'opacity-50 pointer-events-none' : ''}`}
                 title="Replace video file"
               >
                 {isReplacing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                 <span>Replace</span>
-                <input type="file" accept="video/*" className="hidden" onChange={handleReplaceFile} disabled={isReplacing} />
-              </label>
+              </button>
             )}
 
             {/* Remove */}

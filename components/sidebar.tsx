@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
-import { buildLessonHref } from "@/lib/wikiPaths";
+import { buildLessonHref, stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from "@/lib/wikiPaths";
 import type { Module } from "@/lib/types";
 
 interface Props {
@@ -195,6 +195,7 @@ export default function Sidebar({
     if (isOpen) onClose();
   };
 
+
   return (
     <>
       {isOpen && (
@@ -218,27 +219,37 @@ export default function Sidebar({
                 {t("lessons", safeLocale)}
               </div>
               <div className="space-y-1">
-                {lessons?.map((lesson) => {
-                  const isActive = activeSlug ? activeSlug === lesson.slug : pathname?.endsWith(`/${lesson.slug}`);
-                  return (
-                    <a
-                      key={lesson.slug}
-                      href={onLessonClick ? "#" : buildLessonHref({ locale: safeLocale, kitSlug, lessonSlug: lesson.slug, isHubDomain })}
-                      onClick={(e) => {
-                        if (onLessonClick) {
-                          e.preventDefault();
-                          onLessonClick(lesson);
-                        }
-                      }}
-                      className={`block rounded-md px-3 py-2 text-sm transition ${
-                        isActive ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-primary/10 hover:text-primary"
-                      }`}
-                    >
-                      <div className="font-medium">{locale === "ar" ? lesson.title_ar : lesson.title_en}</div>
-                      <div className="text-[11px] text-gray-500">{lesson.duration_min}m</div>
-                    </a>
-                  );
-                })}
+                {(() => {
+                  let displayIdx = 0;
+                  return lessons?.map((lesson) => {
+                    const root = stripLegacyDraftSuffix(lesson.slug || '');
+                    const isSpecial = root === DEFAULT_LESSON_SLUG || root === RESOURCES_LESSON_SLUG;
+                    if (!isSpecial) displayIdx++;
+                    
+                    const isActive = activeSlug ? activeSlug === lesson.slug : pathname?.endsWith(`/${lesson.slug}`);
+                    return (
+                      <a
+                        key={lesson.slug}
+                        href={onLessonClick ? "#" : buildLessonHref({ locale: safeLocale, kitSlug, lessonSlug: lesson.slug, isHubDomain })}
+                        onClick={(e) => {
+                          if (onLessonClick) {
+                            e.preventDefault();
+                            onLessonClick(lesson);
+                          }
+                        }}
+                        className={`block rounded-md px-3 py-2 text-sm transition ${
+                          isActive ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-primary/10 hover:text-primary"
+                        }`}
+                      >
+                        <div className="font-medium">
+                          {!isSpecial && <span className="mr-1">{displayIdx}.</span>}
+                          {locale === "ar" ? lesson.title_ar : lesson.title_en}
+                        </div>
+                        <div className="text-[11px] text-gray-500">{lesson.duration_min}m</div>
+                      </a>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
@@ -271,4 +282,3 @@ export default function Sidebar({
     </>
   );
 }
-

@@ -128,7 +128,7 @@ const LessonPage = () => {
                         {items.map((li: any, liIdx: number) => {
                             const text = typeof li === 'object' ? li.text : li;
                             const indent = typeof li === 'object' ? (li.indent || 0) : 0;
-                            const marker = getListMarker(items, liIdx, !!item.ordered)
+                            const marker = getListMarker(items, liIdx, !!item.ordered, item.start)
 
                             return (
                                 <div

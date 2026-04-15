@@ -188,9 +188,35 @@ export function InteractiveHtml({ html, className = '', style }: InteractiveHtml
           zoom={{ scrollToZoom: true, maxZoomPixelRatio: 5 }}
           carousel={{ finite: true }}
           controller={{ closeOnBackdropClick: true }}
+          styles={{
+            root: {
+              "--yarl__container_background_color": "#ffffff",
+              "--yarl__color_button": "#000000",
+              "--yarl__color_button_active": "#666666",
+            },
+          }}
           render={{
             buttonPrev: () => null,
             buttonNext: () => null,
+            slide: ({ slide, rect }) => {
+              const slideIsSvg = slide.src.toLowerCase().endsWith('.svg') || slide.src.includes('.svg?') || slide.src.includes('data:image/svg+xml');
+              return (
+                <div className="flex items-center justify-center w-full h-full pointer-events-none">
+                  <img
+                    src={slide.src}
+                    alt={slide.alt}
+                    className="yarl__slide_image pointer-events-auto"
+                    style={{
+                      width: slideIsSvg ? rect.width : undefined,
+                      height: slideIsSvg ? rect.height : undefined,
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                    }}
+                  />
+                </div>
+              );
+            }
           }}
         />
       ) : null}

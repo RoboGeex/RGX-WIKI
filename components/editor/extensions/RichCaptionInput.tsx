@@ -12,7 +12,7 @@ import { Link2, Unlock, X } from 'lucide-react'
 import './SafeBubbleMenu'
 
 // Basic text colors matching the main editor
-const textColors = ['#000000', '#475569', '#ef4444', '#f97316', '#F09D4F', '#22c55e', '#1D91D0', '#8b5cf6', '#ec4899']
+const textColors = ['#000000', '#475569', '#F05D4E', '#f97316', '#F09D4F', '#22c55e', '#1D91D0', '#8b5cf6', '#ec4899']
 const highlightColors = ['transparent', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5ff', '#fecdd3']
 const CAPTION_FOCUS_EVENT = 'badex:caption-focus-change'
 

@@ -21,7 +21,7 @@ import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
-import { TableHeader } from '@tiptap/extension-table-header'
+// import { TableHeader } from '@tiptap/extension-table-header'
 import { common, createLowlight } from 'lowlight'
 const lowlightInstance = createLowlight(common)
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
@@ -29,7 +29,7 @@ import BubbleMenuExt from '@tiptap/extension-bubble-menu'
 import './extensions/SafeBubbleMenu'
 import { DOMSerializer, DOMParser as ProseDOMParser } from 'prosemirror-model'
 import { SlashCommand } from './SlashCommand'
-import TableCellWithBackground from './extensions/TableCellWithBackground'
+import { TableCellWithBackground, TableHeaderWithBackground } from './extensions/TableCellWithBackground'
 import Video from './extensions/Video'
 import ImageSlider from './extensions/ImageSlider'
 import TagBlock from './extensions/TagBlock'
@@ -639,25 +639,35 @@ export default function WikiEditor() {
                 if (!transactions.some(tr => tr.docChanged)) return null
                 let tr: any = null
                 newState.doc.descendants((node, pos) => {
+                  
                   if (node.type.name !== 'heading') return
-                  const align = node.attrs.textAlign
-                  if (!align || align === 'left') return
-                  // Check if this was already a heading in the old state
-                  let wasHeading = false
-                  try {
-                    const mappedPos = transactions.reduce(
-                      (p, t) => t.mapping.map(p, -1), pos
-                    )
-                    const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
-                    if (oldNode && oldNode.type.name === 'heading') {
-                      wasHeading = true
-                    }
-                  } catch { /* position doesn't exist in old state */ }
 
-                  // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
-                  if (!wasHeading) {
+                  // 1. Reset alignment for new headings
+                  const align = node.attrs.textAlign
+                  if (align && align !== 'left') {
+                    let wasHeading = false
+                    try {
+                      const mappedPos = transactions.reduce(
+                        (p, t) => t.mapping.map(p, -1), pos
+                      )
+                      const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
+                      if (oldNode && oldNode.type.name === 'heading') {
+                        wasHeading = true
+                      }
+                    } catch { /* position doesn't exist in old state */ }
+
+                    if (!wasHeading) {
+                      if (!tr) tr = newState.tr
+                      tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                    }
+                  }
+
+                  // 2. Prevent ":" at the end of headings
+                  const textContent = node.textContent
+                  if (textContent.endsWith(':')) {
                     if (!tr) tr = newState.tr
-                    tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                    const endPos = pos + node.nodeSize - 1
+                    tr.delete(endPos - 1, endPos)
                   }
                 })
                 return tr
@@ -709,9 +719,17 @@ export default function WikiEditor() {
       TextStyle,
       Color.configure({ types: ['textStyle'] }),
       Highlight.configure({ multicolor: true }),
-      Table.configure({ resizable: false }),
+      Table.configure({ 
+        resizable: false,
+        lastColumnResizable: false,
+        allowTableNodeSelection: true,
+        // @ts-ignore - Some versions of Table kit provide these
+        tableCell: false,
+        // @ts-ignore
+        tableHeader: false,
+      }),
       TableRow,
-      TableHeader,
+      TableHeaderWithBackground,
       TableCellWithBackground,
       CodeBlockLowlight.extend({
         addNodeView() {
@@ -768,24 +786,35 @@ export default function WikiEditor() {
                 if (!transactions.some(tr => tr.docChanged)) return null
                 let tr: any = null
                 newState.doc.descendants((node, pos) => {
+                  
                   if (node.type.name !== 'heading') return
-                  const align = node.attrs.textAlign
-                  if (!align || align === 'left') return
-                  let wasHeading = false
-                  try {
-                    const mappedPos = transactions.reduce(
-                      (p, t) => t.mapping.map(p, -1), pos
-                    )
-                    const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
-                    if (oldNode && oldNode.type.name === 'heading') {
-                      wasHeading = true
-                    }
-                  } catch { /* position doesn't exist in old state */ }
 
-                  // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
-                  if (!wasHeading) {
+                  // 1. Reset alignment for new headings
+                  const align = node.attrs.textAlign
+                  if (align && align !== 'left') {
+                    let wasHeading = false
+                    try {
+                      const mappedPos = transactions.reduce(
+                        (p, t) => t.mapping.map(p, -1), pos
+                      )
+                      const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
+                      if (oldNode && oldNode.type.name === 'heading') {
+                        wasHeading = true
+                      }
+                    } catch { /* position doesn't exist in old state */ }
+
+                    if (!wasHeading) {
+                      if (!tr) tr = newState.tr
+                      tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                    }
+                  }
+
+                  // 2. Prevent ":" at the end of headings
+                  const textContent = node.textContent
+                  if (textContent.endsWith(':')) {
                     if (!tr) tr = newState.tr
-                    tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                    const endPos = pos + node.nodeSize - 1
+                    tr.delete(endPos - 1, endPos)
                   }
                 })
                 return tr
@@ -837,9 +866,17 @@ export default function WikiEditor() {
       TextStyle,
       Color.configure({ types: ['textStyle'] }),
       Highlight.configure({ multicolor: true }),
-      Table.configure({ resizable: false }),
+      Table.configure({ 
+        resizable: false,
+        lastColumnResizable: false,
+        allowTableNodeSelection: true,
+        // @ts-ignore - Some versions of Table kit provide these
+        tableCell: false,
+        // @ts-ignore
+        tableHeader: false,
+      }),
       TableRow,
-      TableHeader,
+      TableHeaderWithBackground,
       TableCellWithBackground,
       CodeBlockLowlight.extend({
         addNodeView() {
@@ -1316,6 +1353,7 @@ export default function WikiEditor() {
               const editor = language === 'ar' ? editorAr : editorEn
               nodes.push({
                 type: item.ordered ? 'orderedList' : 'bulletList',
+                attrs: item.ordered ? { start: item.start || 1 } : {},
                 content: listItems.map((entry: any) => {
                   // Handle both string format and ListItem object format ({text, indent})
                   const rawText = typeof entry === 'string' ? entry : (entry?.text || '')
@@ -1778,7 +1816,7 @@ export default function WikiEditor() {
     { name: 'Red', value: '#FEE2E2' },
     { name: 'Purple', value: '#EDE9FE' },
   ]
-  const textColors = ['#111827', '#ef4444', '#F09D4F', '#10b981', '#1D91D0', '#8b5cf6']
+  const textColors = ['#111827', '#F05D4E', '#F09D4F', '#10b981', '#1D91D0', '#8b5cf6']
   const highlightColors = ['#fff59d', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff']
   const hasExcelLikeFocusRef = useRef(false)
 
@@ -1914,6 +1952,7 @@ export default function WikiEditor() {
           return {
             type: 'list',
             ordered: node.type === 'orderedList',
+            start: node.type === 'orderedList' ? (node.attrs?.start || 1) : undefined,
             [itemsKey]: htmlItems,
             [textKey]: textItems.join('\n'),
             [jsonKey]: cloneNode(node),
@@ -2085,7 +2124,7 @@ export default function WikiEditor() {
   ])
   const SHARED_FIELDS = new Set([
     'type', 'image', 'image_ar', 'url', 'poster', 'provider',
-    'width', 'align', 'layoutMode', 'images', 'level', 'ordered',
+    'width', 'align', 'layoutMode', 'images', 'level', 'ordered', 'start',
     'count', 'language', 'variant',
   ])
 

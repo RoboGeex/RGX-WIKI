@@ -43,6 +43,7 @@ export interface Segment {
   images?: string[]; // For image slider
   url?: string; // For youtube/video
   layoutMode?: string; // For aspect ratio rendering
+  start?: number; // Starting index for ordered lists
   
   // HTML versions for rich text
   html_en?: string;
@@ -213,6 +214,7 @@ export function convertBodyToSegments(body: any[]): Segment[] {
       url: item.url,
       language: item.language,
       layoutMode: item.layoutMode,
+      start: item.start,
       html_en: item.html_en,
       html_ar: item.html_ar,
       // Restore versioning and sync status from metadata
@@ -269,6 +271,7 @@ export function convertSegmentsToBody(segments: Segment[]): any[] {
       url: seg.url,
       language: seg.language,
       layoutMode: seg.layoutMode,
+      start: seg.start,
       // Store segment metadata for sync tracking
       _segment: {
         id: seg.id,
@@ -326,7 +329,7 @@ export function convertSegmentsToBody(segments: Segment[]): any[] {
   });
 }
 // Helper to get list marker based on indent level
-export function getListMarker(items: ListItem[], currentIdx: number, isOrdered: boolean): string {
+export function getListMarker(items: ListItem[], currentIdx: number, isOrdered: boolean, start: number = 1): string {
   const currentItem = items[currentIdx];
   const currentIndent = typeof currentItem === 'object' ? currentItem.indent : 0;
   
@@ -339,7 +342,7 @@ export function getListMarker(items: ListItem[], currentIdx: number, isOrdered: 
     return bullets[currentIndent % bullets.length];
   } else {
     // Calculate position within this indent level (reset numbering)
-    let count = 1;
+    let count = (currentIndent === 0) ? start : 1;
     for (let i = 0; i < currentIdx; i++) {
       const prevItem = items[i];
       const prevIndent = typeof prevItem === 'object' ? prevItem.indent : 0;
@@ -347,7 +350,7 @@ export function getListMarker(items: ListItem[], currentIdx: number, isOrdered: 
         count++;
       } else if (prevIndent < currentIndent) {
         // Reset count when we enter a new group
-        count = 1;
+        count = (currentIndent === 0) ? start : 1;
       }
     }
     return `${count}.`;

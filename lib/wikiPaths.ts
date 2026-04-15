@@ -1,7 +1,8 @@
 import type { Locale } from './i18n'
 
-const DEFAULT_LESSON_SLUG = 'getting-started'
-const RESOURCES_LESSON_SLUG = 'resources'
+export const DEFAULT_LESSON_SLUG = 'getting-started'
+export const RESOURCES_LESSON_SLUG = 'resources'
+export const LEGACY_DRAFT_SUFFIX = '--draft'
 const DEFAULT_LOCALE: Locale = 'en'
 
 function normalizeLocale(locale?: Locale) {
@@ -10,6 +11,16 @@ function normalizeLocale(locale?: Locale) {
 
 function normalizeLessonSlug(slug?: string | null) {
   return slug && slug.trim().length ? slug.trim() : DEFAULT_LESSON_SLUG
+}
+
+export const normalizeSlug = (s: string) => s.replace(/_/g, '-')
+
+export function stripLegacyDraftSuffix(value: string): string {
+  const normalized = normalizeSlug(value || '')
+  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {
+    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
+  }
+  return normalized
 }
 
 type PathArgs = {

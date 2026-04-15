@@ -44,3 +44,8 @@ yarn-error.log*
 
 # Uploads
 public/uploads
+
+# Scratch / debug scripts (local only)
+scratch.js
+check-clicky.js
+scratch/

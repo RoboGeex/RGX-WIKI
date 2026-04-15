@@ -6,6 +6,7 @@ import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 import { getPrisma } from '@/lib/prisma-multi'
 import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasLessonContentChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
+import { normalizeSlug, stripLegacyDraftSuffix, LEGACY_DRAFT_SUFFIX, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from './wikiPaths'
 
 const LEGACY_LESSON_OPTIONAL_COLUMNS = ['lessonkey', 'version', 'activeeditorid', 'lockeduntil'] as const
 
@@ -113,19 +114,8 @@ function wikiSlugForKit(kitSlug: string): string {
   return kit?.wikiSlug || kitSlug
 }
 
-const normalizeSlug = (s: string) => s.replace(/_/g, '-')
-const LEGACY_DRAFT_SUFFIX = '--draft'
-
-function stripLegacyDraftSuffix(value: string): string {
-  const normalized = normalizeSlug(value || '')
-  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {
-    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
-  }
-  return normalized
-}
-
 function ensureResourcesLesson(list: Lesson[], wikiSlug: string): Lesson[] {
-  const hasResources = list.some((lesson) => normalizeSlug(lesson.slug || '') === 'resources')
+  const hasResources = list.some((lesson) => normalizeSlug(lesson.slug || '') === RESOURCES_LESSON_SLUG)
   if (hasResources) return list
 
   const maxOrder = list.reduce((max, lesson) => Math.max(max, Number(lesson.order) || 0), 0)

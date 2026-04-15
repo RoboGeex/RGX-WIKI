@@ -9,9 +9,7 @@ import Color from '@tiptap/extension-color'
 import Highlight from '@tiptap/extension-highlight'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
-import { TableHeader } from '@tiptap/extension-table-header'
-import { TableCell } from '@tiptap/extension-table-cell'
-import TableCellWithBackground from './extensions/TableCellWithBackground'
+import { TableCellWithBackground, TableHeaderWithBackground } from './extensions/TableCellWithBackground'
 import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import { isTextSelection } from '@tiptap/core'
 import { Trash2 } from 'lucide-react'
@@ -89,10 +87,18 @@ export default memo(function SegmentTiptapEditor({
     TextStyle,
     Color.configure({ types: ['textStyle'] }),
     Highlight.configure({ multicolor: true }),
-    Table.configure({ resizable: false }),
+    Table.configure({ 
+      resizable: false,
+      lastColumnResizable: false,
+      allowTableNodeSelection: true,
+      // @ts-ignore
+      tableCell: false,
+      // @ts-ignore
+      tableHeader: false,
+    }),
     TableRow,
-    TableHeader,
-    TableCell,
+    TableHeaderWithBackground,
+    TableCellWithBackground,
   ], [])
 
   const updateBubbleMenu = useCallback((editor: any) => {
@@ -251,7 +257,7 @@ export default memo(function SegmentTiptapEditor({
 
   if (!isMounted) return <div className={`min-h-[1em] ${className}`} />;
 
-  const textColors = ['#ef4444', '#F09D4F', '#10b981', '#1D91D0', '#8b5cf6', '#000000']
+  const textColors = ['#F05D4E', '#F09D4F', '#10b981', '#1D91D0', '#8b5cf6', '#000000']
   const highlightColors = ['#fef3c7', '#d1fae5', '#dbeafe', '#f3e8ff', '#fee2e2']
 
   return (
@@ -280,6 +286,26 @@ export default memo(function SegmentTiptapEditor({
          <button type="button" className="px-1.5 py-1 rounded hover:bg-gray-100 text-red-600" onMouseDown={(e) => { e.preventDefault(); editor?.chain().focus().deleteColumn().run() }} title="Del Col">DC</button>
          <div className="mx-1 h-3 w-px bg-gray-200" />
          <button type="button" className="px-1.5 py-1 rounded hover:bg-gray-100 text-red-700" onClick={() => editor?.chain().focus().deleteTable().run()} title="Delete Table"><Trash2 className="inline w-3.5 h-3.5" /></button>
+         <div className="mx-1 h-3 w-px bg-gray-200" />
+         <div className="flex items-center gap-1">
+           {['#FEF9C3', '#DCFCE7', '#DBEAFE', '#FEE2E2', '#EDE9FE'].map(col => (
+             <button 
+               type="button"
+               key={col} 
+               className="w-3.5 h-3.5 rounded-full border border-gray-200 hover:scale-110 transition-transform" 
+               style={{ background: col }} 
+               onClick={(e) => { e.preventDefault(); editor?.chain().focus().setCellAttribute('backgroundColor', col).run() }} 
+             />
+           ))}
+           <button 
+             type="button"
+             className="px-1 text-gray-400 hover:text-gray-600" 
+             title="Clear color"
+             onClick={(e) => { e.preventDefault(); editor?.chain().focus().setCellAttribute('backgroundColor', null).run() }}
+           >
+             ×
+           </button>
+         </div>
       </div>
 
       {/* Manual Bubble Menu (Text) */}

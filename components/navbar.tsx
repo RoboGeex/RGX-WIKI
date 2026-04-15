@@ -8,7 +8,7 @@ import { Locale, t } from '../lib/i18n'
 import { setStoredLocale } from '../lib/unlock'
 import SearchPanel from './search-panel'
 import type { Lesson } from '../lib/types'
-import { buildDefaultLessonHref, buildKitHomeHref, buildLessonHref, buildResourcesHref } from '@/lib/wikiPaths'
+import { buildDefaultLessonHref, buildKitHomeHref, buildLessonHref, buildResourcesHref, stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
 
 interface Props {
   locale: Locale
@@ -56,8 +56,11 @@ export default function Navbar({
 
   const sortedLessons = useMemo(() => {
     return lessons
-      .filter((lesson) => lesson.slug !== 'getting-started' && lesson.slug !== 'resources')
-      .sort((a, b) => a.order - b.order)
+      .filter((lesson) => {
+        const root = stripLegacyDraftSuffix(lesson.slug || '')
+        return root !== DEFAULT_LESSON_SLUG && root !== RESOURCES_LESSON_SLUG
+      })
+      .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
   }, [lessons])
 
   const gettingStartedHref = buildDefaultLessonHref({
@@ -132,17 +135,35 @@ export default function Navbar({
               <div className="absolute left-0 top-full mt-2 w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg z-50">
                 <div className="p-3 text-xs uppercase tracking-wider text-gray-500">{t('lessons', safeLocale)}</div>
                 <div className="divide-y divide-gray-100">
-                  {sortedLessons.map((lesson) => (
-                    <Link
-                      key={lesson.id}
-                      href={buildLessonLink(lesson.slug)}
-                      className="block px-3 py-2 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition"
-                      onClick={() => setLessonsOpen(false)}
-                    >
-                      <div className="font-medium">{safeLocale === 'ar' ? lesson.title_ar : lesson.title_en}</div>
-                      <div className="text-[10px] text-gray-400">{lesson.duration_min}m آ· {lesson.difficulty}</div>
-                    </Link>
-                  ))}
+                  {(() => {
+                    let displayIdx = 0;
+                    return sortedLessons.map((lesson) => {
+                      const root = stripLegacyDraftSuffix(lesson.slug || '');
+                      const isSpecial = root === DEFAULT_LESSON_SLUG || root === RESOURCES_LESSON_SLUG;
+                      if (!isSpecial) displayIdx++;
+                      
+                      const isActive = pathname?.endsWith(`/${lesson.slug}`) || pathname?.endsWith(`/${lesson.slug}--draft`);
+
+                      return (
+                        <Link
+                          key={lesson.id}
+                          href={buildLessonLink(lesson.slug)}
+                          className={`block px-3 py-2 text-sm transition ${
+                            isActive 
+                              ? "bg-primary/10 text-primary font-bold" 
+                              : "text-gray-700 hover:bg-primary/10 hover:text-primary"
+                          }`}
+                          onClick={() => setLessonsOpen(false)}
+                        >
+                          <div className="font-medium">
+                            {!isSpecial && <span className="mr-1">{displayIdx}.</span>}
+                            {safeLocale === 'ar' ? lesson.title_ar : lesson.title_en}
+                          </div>
+                          <div className="text-[10px] text-gray-400">{lesson.duration_min}m · {lesson.difficulty}</div>
+                        </Link>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -215,4 +236,3 @@ export default function Navbar({
     </nav>
   )
 }
-

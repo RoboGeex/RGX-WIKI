@@ -5,6 +5,7 @@ import {
   getLessons,
   getNextLesson, getPrevLesson,
 } from '@/lib/data'
+import { stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
 import type { Locale } from '@/lib/i18n'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
@@ -47,7 +48,34 @@ export default async function LessonPage(
     notFound()
   }
 
-  const lessonDisplayTitle = locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')
+  // Calculate dynamic rank for numbering (skipping special lessons)
+  const allLessons = await getLessons(kit, { includeDrafts: preview })
+  const currentSlug = stripLegacyDraftSuffix(lesson.slug || '')
+  const currentKey = stripLegacyDraftSuffix(lesson.lessonKey || '')
+  
+  const isSpecial = currentSlug === DEFAULT_LESSON_SLUG || 
+                    currentSlug === RESOURCES_LESSON_SLUG ||
+                    currentKey === DEFAULT_LESSON_SLUG || 
+                    currentKey === RESOURCES_LESSON_SLUG
+
+  const normalLessons = allLessons.filter(l => {
+    const root = stripLegacyDraftSuffix(l.slug || '')
+    const key = stripLegacyDraftSuffix(l.lessonKey || '')
+    return root !== DEFAULT_LESSON_SLUG && root !== RESOURCES_LESSON_SLUG &&
+           key !== DEFAULT_LESSON_SLUG && key !== RESOURCES_LESSON_SLUG
+  })
+  
+  const lessonIndex = isSpecial ? -1 : normalLessons.findIndex(l => {
+    const root = stripLegacyDraftSuffix(l.slug || '')
+    const key = stripLegacyDraftSuffix(l.lessonKey || '')
+    const currentRootSlug = currentKey || currentSlug
+    return stripLegacyDraftSuffix(l.lessonKey || l.slug || '') === currentRootSlug
+  })
+  
+  const lessonOrder = lessonIndex !== -1 ? lessonIndex + 1 : null
+
+  const rawTitle = locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')
+  const lessonDisplayTitle = isSpecial ? rawTitle : (lessonOrder ? `${lessonOrder}. ${rawTitle}` : rawTitle)
   const headingCounts = new Map<string, number>()
   const slugify = (value: string) =>
     value
@@ -189,6 +217,7 @@ export default async function LessonPage(
         return {
           type: 'list',
           ordered: jType === 'orderedList',
+          start: jsonNode.attrs?.start || block.start || 1,
           [localeItemsKey]: block[localeItemsKey] || [],
           [localeTextKey]: block[localeTextKey] || '',
         }
@@ -328,7 +357,7 @@ export default async function LessonPage(
           {items.map((item: any, itemIndex: number) => {
             const text = typeof item === 'object' ? item.text : item
             const indent = typeof item === 'object' ? (item.indent || 0) : 0
-            const marker = getListMarker(items, itemIndex, !!block.ordered)
+            const marker = getListMarker(items, itemIndex, !!block.ordered, block.start)
 
             return (
               <div
@@ -489,10 +518,10 @@ export default async function LessonPage(
                 src={imageUrl}
                 alt={caption || ''}
                 zoomable
-                trimWhitespace={layoutMode === 'fit'}
+                trimWhitespace={false}
                 minHeightClassName={layoutMode === 'fit' ? 'min-h-[14rem]' : undefined}
                 imgClassName={`block w-full !m-0 !p-0 ${
-                  (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
+                  (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full absolute inset-0' : 'h-auto object-cover'
                 }`}
               />
             </div>
@@ -748,12 +777,14 @@ export default async function LessonPage(
                 <header className="space-y-2 border-b border-gray-200 pb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-primary font-medium uppercase tracking-wide text-[11px]">
-                      {locale === 'ar' ? '\u0627\u0644\u062F\u0631\u0633' : 'Lesson'}
+                      {locale === 'ar' 
+                        ? (isSpecial ? '\u0627\u0644\u062F\u0631\u0633' : `\u0627\u0644\u062F\u0631\u0633 ${lessonOrder}`) 
+                        : (isSpecial ? 'Lesson' : `Lesson ${lessonOrder}`)}
                     </span>
                     <span className="text-sm font-semibold text-gray-700">{kitData.title_en}</span>
                   </div>
                   <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
-                    {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
+                    {lessonDisplayTitle}
                   </h1>
                   {(lesson.duration_min || lesson.difficulty) && (
                     <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">

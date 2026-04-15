@@ -1,9 +1,10 @@
-
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { getWiki } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { findDeveloperById } from '@/lib/developers'
 import { canManageWiki } from '@/lib/assignments'
+import { getPrisma } from "@/lib/prisma-multi"
 
 export const dynamic = "force-dynamic"
 
@@ -14,13 +15,12 @@ type ReorderPayload = {
 }
 
 function getActorIdFromRequest(req: Request): string | undefined {
-  const headers = (req as any)?.headers as Headers | undefined
-  if (!headers) return undefined
+  const h = req.headers
   const raw =
-    headers.get('x-user-id') ||
-    headers.get('x-actor-id') ||
-    headers.get('x-developer-id') ||
-    headers.get('x-dev-id')
+    h.get('x-user-id') ||
+    h.get('x-actor-id') ||
+    h.get('x-developer-id') ||
+    h.get('x-dev-id')
   return raw ? raw.trim() || undefined : undefined
 }
 
@@ -34,6 +34,7 @@ export async function POST(req: Request) {
     if (!wikiSlug || !kitSlug) {
       return NextResponse.json({ error: "wikiSlug and kitSlug are required" }, { status: 400 })
     }
+
     if (!getWiki(wikiSlug)) {
       return NextResponse.json({ error: "Unknown wiki" }, { status: 400 })
     }
@@ -46,47 +47,51 @@ export async function POST(req: Request) {
     if (isEnforcementOn && !isAdmin && !canManageWiki(developer, wikiSlug)) {
       return NextResponse.json({ error: "Forbidden: You are not assigned to this wiki" }, { status: 403 })
     }
+
     if (!sequence.length) {
       return NextResponse.json({ error: "Nothing to reorder" }, { status: 400 })
     }
 
     if (process.env.USE_DB !== "true") {
-      return NextResponse.json({ error: "Reordering is only supported when USE_DB is true" }, { status: 400 });
+      return NextResponse.json({ error: "Reordering is only supported when USE_DB is true" }, { status: 400 })
     }
 
-    const { getPrisma } = await import("@/lib/prisma-multi")
-    const prisma: any = getPrisma(wikiSlug)
-    
+    const prisma = getPrisma(wikiSlug)
     const allLessons = await loadLessonsForKit(kitSlug, wikiSlug)
     if (!allLessons.length) {
       return NextResponse.json({ error: "No lessons found for this kit" }, { status: 404 })
     }
 
+    const LEGACY_DRAFT_SUFFIX = '--draft'
+    const getRootSlug = (s: string) => s.endsWith(LEGACY_DRAFT_SUFFIX) ? s.slice(0, -LEGACY_DRAFT_SUFFIX.length) : s
+
+    // Build map for quick lookup
     const lessonsBySlug = new Map(allLessons.map(lesson => [lesson.slug, lesson]))
+    
+    // Map sequence to lesson objects
     const ordered = sequence
-      .map(slug => lessonsBySlug.get(slug))
-      .filter((lesson): lesson is typeof allLessons[number] => Boolean(lesson))
-    const seen = new Set(ordered.map((lesson) => lesson.slug))
-    const remaining = allLessons.filter(lesson => !seen.has(lesson.slug))
+      .map(slug => lessonsBySlug.get(slug) || lessonsBySlug.get(getRootSlug(slug)) || lessonsBySlug.get(`${slug}${LEGACY_DRAFT_SUFFIX}`))
+      .filter((lesson): lesson is typeof allLessons[0] => !!lesson)
+    
+    const seenRootSlugs = new Set(ordered.map((lesson) => getRootSlug(lesson.slug)))
+    const remaining = allLessons.filter(lesson => !seenRootSlugs.has(getRootSlug(lesson.slug)))
     const finalOrder = [...ordered, ...remaining]
     
+    // Perform reorder in a single transaction
     await prisma.$transaction(
-      finalOrder.map((lesson, idx) =>
-        (lesson as any).lessonKey
-          ? prisma.lesson.updateMany({
-              where: {
-                wikiSlug,
-                lessonKey: (lesson as any).lessonKey,
-              },
-              data: { order: idx + 1 },
-            })
-          : prisma.lesson.update({
-              where: { id: lesson.id },
-              data: { order: idx + 1 },
-            })
-      )
+      finalOrder.map((lesson, idx) => {
+        const baseSlug = getRootSlug(lesson.slug)
+        return prisma.$executeRawUnsafe(
+          "UPDATE Lesson SET `order` = ? WHERE (slug = ? OR slug = ?) AND wikiSlug = ?",
+          idx + 1,
+          baseSlug,
+          `${baseSlug}${LEGACY_DRAFT_SUFFIX}`,
+          wikiSlug
+        )
+      })
     )
 
+    revalidatePath('/', 'layout')
     return NextResponse.json({ ok: true })
 
   } catch (error: any) {

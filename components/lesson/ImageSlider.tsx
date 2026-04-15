@@ -78,29 +78,29 @@ export function LessonImageSlider({ images, layoutMode = 'fit' }: Props) {
                 type="button"
                 aria-label="Previous image"
                 onClick={goPrev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors z-20"
+                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary border border-white/20 shadow-lg hover:bg-primary/90 transition-all active:scale-95 z-20 group/btn"
               >
-                <span className="text-lg leading-none text-gray-700">‹</span>
+                <span className="text-2xl leading-none text-white font-bold transition-transform group-hover/btn:-translate-x-0.5">‹</span>
               </button>
               <button
                 type="button"
                 aria-label="Next image"
                 onClick={goNext}
-                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors z-20"
+                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary border border-white/20 shadow-lg hover:bg-primary/90 transition-all active:scale-95 z-20 group/btn"
               >
-                <span className="text-lg leading-none text-gray-700">›</span>
+                <span className="text-2xl leading-none text-white font-bold transition-transform group-hover/btn:translate-x-0.5">›</span>
               </button>
             </>
           ) : null}
 
           {/* Dots */}
           {images.length > 1 ? (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 p-1 rounded-full bg-black/10 backdrop-blur-[2px]">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 p-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
               {images.map((_: any, idx: number) => (
                 <button
                   key={idx}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIndex(idx); }}
-                  className={`w-2 h-2 rounded-full transition-all ${idx === current ? 'bg-white scale-110' : 'bg-white/50 hover:bg-white/80'}`}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === current ? 'bg-primary ring-2 ring-white/50 scale-125' : 'bg-white/40 hover:bg-white/70'}`}
                   type="button"
                   aria-label={`Go to slide ${idx + 1}`}
                 />

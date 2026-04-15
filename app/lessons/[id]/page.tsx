@@ -5,6 +5,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import KitHeader from '@/components/kit-header';
 import { getListMarker } from '@/lib/segment-types';
+import { ZoomableImage } from '@/components/zoomable-image'
+import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 
 const LessonPage = () => {
     const params = useParams();
@@ -87,30 +89,15 @@ const LessonPage = () => {
                 const images = Array.isArray(item.images) ? item.images : []
                 const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || ''
                 if (!images.length) return null
+                const nodeAttrs = item?.json_en?.attrs || item?.json_ar?.attrs || {}
+                const layoutMode = item.layoutMode || nodeAttrs.layoutMode || 'fit'
+                
                 return (
-                    <figure key={blockIdx} className="mt-2 mb-6 flex flex-col items-center w-full">
-                        <div className="tiptap-image-slider overflow-x-auto w-full">
-                            <div className="tiptap-image-slider-track">
-                                {images.map((imgItem: any, slideIdx: number) => {
-                                    const url = typeof imgItem === 'string' ? imgItem : imgItem.url;
-                                    const itemCaption = typeof imgItem === 'string' ? '' : imgItem.caption;
-                                    if (!url) return null;
-                                    return (
-                                        <div key={slideIdx} className="tiptap-image-slide relative">
-                                            <img src={url} alt={itemCaption || `Slide ${slideIdx + 1}`} />
-                                            {itemCaption && (
-                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 max-w-[80%] px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg text-white text-sm text-center">
-                                                    {itemCaption}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
+                    <figure key={blockIdx} className="mt-2 mb-8 flex flex-col items-center w-full">
+                        <LessonImageSlider images={images} layoutMode={layoutMode} />
                         {caption ? (
                             <figcaption
-                                className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
+                                className="mt-1 pb-2 text-[11px] text-gray-500 text-center leading-tight [&_p]:m-0"
                                 dangerouslySetInnerHTML={{ __html: caption }}
                             />
                         ) : null}
@@ -148,28 +135,46 @@ const LessonPage = () => {
                 );
             }
 
-            if (item.type === 'image' && item.image) {
+            if (item.type === 'image') {
                 const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || '';
-                const width = item.width || '100%';
-                const align = item.align || 'center';
+                const nodeAttrs = item?.json_en?.attrs || item?.json_ar?.attrs || {};
+                const imageUrl = item.image || item.image_ar || nodeAttrs.src;
+                if (!imageUrl) return null;
+                const width = item.width || nodeAttrs.width || '100%';
+                const align = item.align || item.textAlign || nodeAttrs.textAlign || nodeAttrs.align || 'center';
+                const layoutMode = item.layoutMode || nodeAttrs.layoutMode || 'fit';
                 const alignClass =
                     align === 'left' ? 'items-start' :
                         align === 'right' ? 'items-end' :
                             'items-center';
 
                 return (
-                    <figure key={blockIdx} className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}>
+                    <figure key={blockIdx} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
                         <div style={{ width, maxWidth: '100%' }}>
-                            <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm flex items-center justify-center">
+                            <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${
+                                (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') 
+                                  ? `flex items-center justify-center ${
+                                      layoutMode === '1:1' ? 'aspect-square' :
+                                      layoutMode === '3:4' ? 'aspect-[3/4]' :
+                                      layoutMode === '2:3' ? 'aspect-[2/3]' :
+                                      'aspect-video'
+                                    }`
+                                  : ''
+                            }`}>
                                 <img
-                                    src={item.image}
+                                    src={imageUrl}
                                     alt={caption}
-                                    className="w-full h-auto object-contain block"
+                                    className={`w-full block !m-0 !p-0 ${
+                                      (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
+                                    }`}
                                     loading="lazy"
                                 />
                             </div>
                             {caption ? (
-                                <figcaption className="mt-3 text-xs text-gray-500 text-center">{caption}</figcaption>
+                                <figcaption
+                                    className="mt-1 pb-2 text-[11px] text-gray-500 text-center leading-tight [&_p]:m-0"
+                                    dangerouslySetInnerHTML={{ __html: caption }}
+                                />
                             ) : null}
                         </div>
                     </figure>
@@ -184,11 +189,18 @@ const LessonPage = () => {
                 const width = item.width || '100%'
                 const align = item.align || 'center'
                 const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
+                const layoutMode = item.layoutMode || 'aspect-video'
 
                 return (
-                    <figure key={blockIdx} className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}>
+                    <figure key={blockIdx} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
                         <div style={{ width, maxWidth: '100%' }}>
-                            <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+                            <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm ${
+                              layoutMode === '1:1' ? 'aspect-square' :
+                              layoutMode === '3:4' ? 'aspect-[3/4]' :
+                              layoutMode === '2:3' ? 'aspect-[2/3]' :
+                              layoutMode === '16:9' ? 'aspect-video' :
+                              'aspect-video'
+                            }`}>
                                 <iframe
                                     src={embedUrl}
                                     title={title}
@@ -202,14 +214,18 @@ const LessonPage = () => {
                 );
             }
 
-            if (item.type === 'video' && item.url) {
+            if (item.type === 'video') {
                 const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || ''
-                const width = item.width || '100%'
-                const align = item.align || 'center'
+                const nodeAttrs = item?.json_en?.attrs || item?.json_ar?.attrs || {}
+                const videoUrl = item.url || nodeAttrs.src
+                if (!videoUrl) return null
+                const width = item.width || nodeAttrs.width || '100%'
+                const align = item.align || item.textAlign || nodeAttrs.textAlign || nodeAttrs.align || 'center'
                 const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
+                const layoutMode = item.layoutMode || nodeAttrs.layoutMode || 'aspect-video'
 
-                const isVimeo = typeof item.url === 'string' && item.url.includes('vimeo.com')
-                const isYoutube = typeof item.url === 'string' && (item.url.includes('youtube.com') || item.url.includes('youtu.be'))
+                const isVimeo = typeof videoUrl === 'string' && videoUrl.includes('vimeo.com')
+                const isYoutube = typeof videoUrl === 'string' && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'))
                 const provider = item.provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)
 
                 const getEmbedUrl = (url: string) => {
@@ -226,30 +242,43 @@ const LessonPage = () => {
                 }
 
                 return (
-                    <figure key={blockIdx} className={`mt-2 mb-6 flex flex-col ${alignClass} w-full`}>
+                    <figure key={blockIdx} className={`mt-2 mb-8 flex flex-col ${alignClass} w-full`}>
                         <div style={{ width, maxWidth: '100%' }}>
                             {provider === 'vimeo' || provider === 'youtube' ? (
-                                <div className="aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+                                <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm ${
+                                  layoutMode === '1:1' ? 'aspect-square' :
+                                  layoutMode === '3:4' ? 'aspect-[3/4]' :
+                                  layoutMode === '2:3' ? 'aspect-[2/3]' :
+                                  layoutMode === '16:9' ? 'aspect-video' :
+                                  'aspect-video'
+                                }`}>
                                     <iframe
-                                        src={getEmbedUrl(item.url)}
+                                        src={getEmbedUrl(videoUrl)}
                                         title={caption || 'Video'}
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         allowFullScreen
-                                        className="h-full w-full block"
+                                        className="h-full w-full block object-cover"
                                     />
                                 </div>
                             ) : (
-                                <div className="w-full aspect-video rounded-xl border border-gray-200 shadow-sm overflow-hidden bg-black flex items-center justify-center">
+                                <div className={`relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm flex items-center justify-center ${
+                                  layoutMode === '1:1' ? 'aspect-square' :
+                                  layoutMode === '3:4' ? 'aspect-[3/4]' :
+                                  layoutMode === '2:3' ? 'aspect-[2/3]' :
+                                  layoutMode === '16:9' ? 'aspect-video' :
+                                  layoutMode === 'fit' ? '' :
+                                  'aspect-video'
+                                }`}>
                                     <video
                                         controls
-                                        className="w-full h-full object-contain block"
-                                        src={item.url}
+                                        className={`w-full block object-cover ${layoutMode === 'fit' ? 'h-auto' : 'h-full'}`}
+                                        src={videoUrl}
                                         poster={item.poster || undefined}
                                     />
                                 </div>
                             )}
                             {caption ? (
-                                <figcaption className="mt-3 text-xs text-gray-500 text-center leading-relaxed" dangerouslySetInnerHTML={{ __html: caption }} />
+                                <figcaption className="mt-1 pb-2 text-[11px] text-gray-500 text-center leading-tight [&_p]:m-0" dangerouslySetInnerHTML={{ __html: caption }} />
                             ) : null}
                         </div>
                     </figure>
@@ -318,7 +347,7 @@ const LessonPage = () => {
             <div className="flex-1 min-w-0">
                 <div className="w-full rounded-3xl border border-gray-200 bg-white p-12 shadow-md">
                     <KitHeader lang="en" kitSlug="student-kit" lessonSlug={id} />
-                    <div ref={contentRef} className="tiptap prose prose-lg mt-6 max-w-none">
+                    <div ref={contentRef} className="tiptap prose prose-xl mt-6 max-w-none">
                         {renderBody()}
                     </div>
                 </div>

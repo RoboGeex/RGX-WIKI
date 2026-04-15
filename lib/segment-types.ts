@@ -42,6 +42,7 @@ export interface Segment {
   image_ar?: string; // For images (Arabic - optional override)
   images?: string[]; // For image slider
   url?: string; // For youtube/video
+  layoutMode?: string; // For aspect ratio rendering
   
   // HTML versions for rich text
   html_en?: string;
@@ -211,6 +212,7 @@ export function convertBodyToSegments(body: any[]): Segment[] {
       images: item.images,
       url: item.url,
       language: item.language,
+      layoutMode: item.layoutMode,
       html_en: item.html_en,
       html_ar: item.html_ar,
       // Restore versioning and sync status from metadata
@@ -266,6 +268,7 @@ export function convertSegmentsToBody(segments: Segment[]): any[] {
       images: seg.images,
       url: seg.url,
       language: seg.language,
+      layoutMode: seg.layoutMode,
       // Store segment metadata for sync tracking
       _segment: {
         id: seg.id,

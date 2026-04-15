@@ -17,6 +17,7 @@ import Underline from '@tiptap/extension-underline'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import Highlight from '@tiptap/extension-highlight'
+import TextAlign from '@tiptap/extension-text-align'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
@@ -24,7 +25,7 @@ import { common, createLowlight } from 'lowlight'
 const lowlightInstance = createLowlight(common)
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import BubbleMenuExt from '@tiptap/extension-bubble-menu'
-import { SafeBubbleMenu } from './extensions/SafeBubbleMenu'
+import './extensions/SafeBubbleMenu'
 import { DOMSerializer, DOMParser as ProseDOMParser } from 'prosemirror-model'
 import { SlashCommand } from './SlashCommand'
 import TableCellWithBackground from './extensions/TableCellWithBackground'
@@ -35,7 +36,7 @@ import { Columns, Column } from './extensions/Columns'
 import CodeBlockView from './CodeBlockView'
 import type { EditorView } from '@tiptap/pm/view'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, ShieldAlert, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft, ArrowRight, Download, Upload, ArrowUpToLine, ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, MinusCircle, Merge, Split, Heading as HeadingIcon } from 'lucide-react'
+import { Sparkles, Save, Rocket, Trash2, Link2, Unlock, X, Check, AlertTriangle, ShieldAlert, Globe, Eye, Languages, Settings, Image as ImageIcon, UploadCloud, Loader2, ArrowLeft, ArrowRight, Download, Upload, ArrowUpToLine, ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, MinusCircle, Merge, Split, Heading as HeadingIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
 import './hljs.css'
 import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
 import DeveloperLogin from './DeveloperLogin'
@@ -358,29 +359,6 @@ export default function WikiEditor() {
       releaseLock()
     }
   }, [meta.id, meta.wikiSlug, developerId, hasWikiAccess])
-  const handleTakeover = async () => {
-    try {
-      const res = await fetch('/api/lessons/lock', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...applyDeveloperHeader()
-        },
-        body: JSON.stringify({
-          wikiSlug: meta.wikiSlug,
-          lessonId: meta.id,
-          forceTakeover: true
-        })
-      })
-      if (res.ok) {
-        setIsLockedByOther(false)
-        setLockedBy(null)
-        weOwnLockRef.current = true
-      }
-    } catch (err) {
-      console.error('Takeover failed', err)
-    }
-  }
 
   const handleConfirmEditPublished = () => {
     setMeta((prev: any) => ({ ...prev, status: 'draft' }))
@@ -423,9 +401,6 @@ export default function WikiEditor() {
   const isSuperAdmin = developer?.role === 'superadmin'
   const isEditor = developer?.role === 'editor'
   const isOwner = Boolean(meta.ownerId && developerId && String(meta.ownerId) === String(developerId))
-
-  const canEdit = !isLockedByOther && (isSuperAdmin || (hasWikiAccess && (isAdmin || (isEditor && (isOwner || !meta.ownerId || !!meta.isNew)))))
-  const saveDisabled = !canEdit
 
   // Publish confirmation modal state
   const [showPublishModal, setShowPublishModal] = useState(false)
@@ -482,6 +457,7 @@ export default function WikiEditor() {
     const selectedText = state.doc.textBetween(from, to, ' ', ' ').trim()
     return selectedText.length > 0
   }, [activeEditorTab])
+
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [settingsSnapshot, setSettingsSnapshot] = useState<any>(null)
   const [isUploadingCover, setIsUploadingCover] = useState(false)
@@ -614,11 +590,11 @@ export default function WikiEditor() {
                 style: `width: ${attributes.width}`,
               }),
             },
-            align: {
+            textAlign: {
               default: 'center',
               renderHTML: (attributes: Record<string, any>) => ({
-                'data-align': attributes.align,
-                style: `text-align: ${attributes.align}`,
+                'data-align': attributes.textAlign,
+                style: `text-align: ${attributes.textAlign}`,
               }),
             },
           }
@@ -645,6 +621,7 @@ export default function WikiEditor() {
       ImageSlider,
       Columns,
       Column,
+      TextAlign.configure({ types: ['heading', 'paragraph', 'image', 'video', 'youtube'] }),
       Placeholder.configure({ placeholder: "type '/' to add a new element" }),
       SlashCommand.configure({
         getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
@@ -661,6 +638,10 @@ export default function WikiEditor() {
   }, [])
 
   const [isVerified, setIsVerified] = useState(false)
+
+  const isPublished = meta.status === 'published'
+  const canEdit = !isLockedByOther && !isPublished && (isSuperAdmin || (hasWikiAccess && (isAdmin || (isEditor && (isOwner || !meta.ownerId || !!meta.isNew)))))
+  const saveDisabled = !canEdit || !isVerified
 
 
 
@@ -701,11 +682,11 @@ export default function WikiEditor() {
                 style: `width: ${attributes.width}`,
               }),
             },
-            align: {
+            textAlign: {
               default: 'center',
               renderHTML: (attributes: Record<string, any>) => ({
-                'data-align': attributes.align,
-                style: `text-align: ${attributes.align}`,
+                'data-align': attributes.textAlign,
+                style: `text-align: ${attributes.textAlign}`,
               }),
             },
           }
@@ -732,6 +713,7 @@ export default function WikiEditor() {
       ImageSlider,
       Columns,
       Column,
+      TextAlign.configure({ types: ['heading', 'paragraph', 'image', 'video', 'youtube'] }),
       Placeholder.configure({ placeholder: "اكتب '/' للإدراج" }),
       SlashCommand.configure({
         getUploadContext: () => ({ wikiSlug: metaRef.current?.wikiSlug }),
@@ -760,6 +742,43 @@ export default function WikiEditor() {
 
     setStatus('English Verified! Content mirrored to Arabic pane.')
   }
+
+  // Force a re-render on EVERY selection / update event so all isActive() checks
+  // in the BubbleMenu JSX (bold, italic, color, alignment, etc.) are always fresh.
+  const [enSelectionKey, setEnSelectionKey] = useState(0)
+  const [arSelectionKey, setArSelectionKey] = useState(0)
+
+  const getAlignmentFromEditor = useCallback((editor: any, defaultAlign: string) => {
+    if (!editor || !editor.state) return defaultAlign
+    const node = editor.state.selection.$head?.parent
+    if (!node) return defaultAlign
+    const align = node.attrs?.textAlign
+    if (align) return align
+    if (['image', 'video', 'youtube'].includes(node.type?.name)) return 'center'
+    return defaultAlign
+  }, [])
+
+  useEffect(() => {
+    if (!editorEn) return
+    const update = () => setEnSelectionKey(k => k + 1)
+    editorEn.on('selectionUpdate', update)
+    editorEn.on('update', update)
+    return () => {
+      editorEn.off('selectionUpdate', update)
+      editorEn.off('update', update)
+    }
+  }, [editorEn])
+
+  useEffect(() => {
+    if (!editorAr) return
+    const update = () => setArSelectionKey(k => k + 1)
+    editorAr.on('selectionUpdate', update)
+    editorAr.on('update', update)
+    return () => {
+      editorAr.off('selectionUpdate', update)
+      editorAr.off('update', update)
+    }
+  }, [editorAr])
 
   useEffect(() => {
     if (editorAr) {
@@ -1112,7 +1131,13 @@ export default function WikiEditor() {
             } else {
               const images = Array.isArray(item.images) ? item.images.filter((src: string) => typeof src === 'string' && src.trim().length) : []
               if (images.length) {
-                nodes.push({ type: 'imageSlider', attrs: { images } })
+                nodes.push({
+                  type: 'imageSlider',
+                  attrs: {
+                    images,
+                    layoutMode: item.layoutMode || 'fit',
+                  },
+                })
               }
             }
             break
@@ -1132,7 +1157,8 @@ export default function WikiEditor() {
             break
           }
           case 'image':
-            if (item.image) {
+            if (item.image || item[jsonKey]?.attrs?.src) {
+              const jsonAttrs = (item[jsonKey] && typeof item[jsonKey] === 'object' && item[jsonKey].attrs) ? item[jsonKey].attrs : {}
               const altSource =
                 typeof item[titleKey] === 'string' && item[titleKey]
                   ? item[titleKey]
@@ -1142,11 +1168,12 @@ export default function WikiEditor() {
               nodes.push({
                 type: 'image',
                 attrs: {
-                  src: item.image,
-                  alt: altSource || undefined,
-                  title: altSource || undefined,
-                  width: item.width || '100%',
-                  align: item.align || 'center',
+                  src: item.image || jsonAttrs.src,
+                  alt: altSource || jsonAttrs.alt || undefined,
+                  title: altSource || jsonAttrs.title || undefined,
+                  width: item.width || jsonAttrs.width || '100%',
+                  textAlign: item.textAlign || item.align || jsonAttrs.textAlign || jsonAttrs.align || 'center',
+                  layoutMode: item.layoutMode || jsonAttrs.layoutMode || 'fit',
                 },
               })
             }
@@ -1164,18 +1191,21 @@ export default function WikiEditor() {
             }
             break
           case 'video':
-            if (item.url) {
-              const provider = item.provider || (item.url.includes('vimeo.com') ? 'vimeo' : null)
+            if (item.url || item[jsonKey]?.attrs?.src) {
+              const jsonAttrs = (item[jsonKey] && typeof item[jsonKey] === 'object' && item[jsonKey].attrs) ? item[jsonKey].attrs : {}
+              const src = item.url || jsonAttrs.src
+              const provider = item.provider || jsonAttrs.provider || (src?.includes('vimeo.com') ? 'vimeo' : null)
               nodes.push({
                 type: 'video',
                 attrs: {
-                  src: item.url,
-                  poster: item.poster || null,
+                  src,
+                  poster: item.poster || jsonAttrs.poster || null,
                   title: item[titleKey] || item[captionKey] || null,
                   controls: provider === 'vimeo' ? false : true,
                   provider,
-                  width: item.width || '100%',
-                  align: item.align || 'center',
+                  width: item.width || jsonAttrs.width || '100%',
+                  textAlign: item.textAlign || item.align || jsonAttrs.textAlign || jsonAttrs.align || 'center',
+                  layoutMode: item.layoutMode || jsonAttrs.layoutMode || 'fit',
                 },
               })
             }
@@ -1353,11 +1383,20 @@ export default function WikiEditor() {
     }
   }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId, hasWikiAccess])
 
-  // --- Enforce Read-Only Mode on Document Lock ---
+  // --- Enforce Read-Only Mode: locked by another user OR lesson is published ---
   useEffect(() => {
-    if (editorEn) editorEn.setEditable(!isLockedByOther)
-    if (editorAr) editorAr.setEditable(!isLockedByOther)
-  }, [editorEn, editorAr, isLockedByOther])
+    const enEditable = canEdit
+    const arEditable = canEdit && isVerified
+    // Suppress autosave triggered by setEditable's internal Tiptap update event
+    syncingEnRef.current = true
+    syncingArRef.current = true
+    if (editorEn) editorEn.setEditable(enEditable)
+    if (editorAr) editorAr.setEditable(arEditable)
+    setTimeout(() => {
+      syncingEnRef.current = false
+      syncingArRef.current = false
+    }, 100)
+  }, [editorEn, editorAr, isLockedByOther, meta.status, isVerified, hasWikiAccess])
   // -----------------------------------------------
 
   useEffect(() => {
@@ -1593,6 +1632,7 @@ export default function WikiEditor() {
           const block: any = {
             type: 'imageSlider',
             images,
+            layoutMode: node.attrs?.layoutMode || 'fit',
             [jsonKey]: cloneNode(node),
           }
           if (title) {
@@ -1608,20 +1648,22 @@ export default function WikiEditor() {
           if (!src) return null
           const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt.trim() : ''
           const title = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
+          const textAlign = node.attrs?.textAlign || node.attrs?.align || 'center'
           const block: any = {
             type: 'image',
             image: src,
             width: node.attrs?.width,
-            align: node.attrs?.align,
+            align: textAlign,
+            layoutMode: node.attrs?.layoutMode || 'fit',
             [jsonKey]: cloneNode(node),
           }
-          if (alt) {
-            block[titleKey] = alt
-            block[captionKey] = block[captionKey] || alt
-          }
           if (title) {
-            block[titleKey] = block[titleKey] || title
-            block[captionKey] = block[captionKey] || title
+            block[titleKey] = title
+            block[captionKey] = title
+          }
+          if (alt) {
+            block[titleKey] = block[titleKey] || alt
+            block[captionKey] = block[captionKey] || alt
           }
           return block
         }
@@ -1640,6 +1682,7 @@ export default function WikiEditor() {
           const url = node.attrs?.src
           if (!url) return null
           const provider = node.attrs?.provider || (typeof url === 'string' && url.includes('vimeo.com') ? 'vimeo' : undefined)
+          const textAlign = node.attrs?.textAlign || node.attrs?.align || 'center'
           const block: any = {
             type: 'video',
             url,
@@ -1648,7 +1691,8 @@ export default function WikiEditor() {
             [captionKey]: node.attrs?.title ? String(node.attrs.title) : undefined,
             provider,
             width: node.attrs?.width,
-            align: node.attrs?.align,
+            align: textAlign,
+            layoutMode: node.attrs?.layoutMode || 'fit',
             [jsonKey]: cloneNode(node),
           }
           return block
@@ -1700,6 +1744,26 @@ export default function WikiEditor() {
     return blocks
   }
 
+  function deepMergeBlocks(primary: any[], secondary: any[]): any[] {
+    const merged: any[] = []
+    const length = Math.max(primary.length, secondary.length)
+    
+    for (let i = 0; i < length; i++) {
+      const pBlock = primary[i] || {}
+      const sBlock = secondary[i] || {}
+      
+      const mergedBlock = { ...sBlock, ...pBlock }
+      
+      // If both blocks have an array of children (like columns/column), merge them recursively
+      if (Array.isArray(pBlock.content) && Array.isArray(sBlock.content)) {
+        mergedBlock.content = deepMergeBlocks(pBlock.content, sBlock.content)
+      }
+      
+      merged.push(mergedBlock)
+    }
+    return merged
+  }
+
   async function publish(statusOverride?: 'draft' | 'published') {
     if (!editorEn || !editorAr) return
     if (!meta.wikiSlug) {
@@ -1713,10 +1777,7 @@ export default function WikiEditor() {
     const bodyAr = extractBody(docAr, 'ar', editorAr)
     const primaryBody = activeEditorTab === 'ar' ? bodyAr : bodyEn
     const secondaryBody = activeEditorTab === 'ar' ? bodyEn : bodyAr
-    const mergedBody = [] as any[]
-    for (let i = 0; i < primaryBody.length; i++) {
-      mergedBody.push({ ...(secondaryBody[i] || {}), ...(primaryBody[i] || {}) })
-    }
+    const mergedBody = deepMergeBlocks(primaryBody, secondaryBody)
     if (bodyEn.length !== bodyAr.length) {
       setStatus('Warning: English and Arabic content differ in structure. Please review the Arabic translation.')
     }
@@ -2123,17 +2184,9 @@ export default function WikiEditor() {
             className="fixed top-0 left-0 right-0 z-[100] bg-rose-500 text-white px-6 py-2.5 text-sm font-semibold flex items-center justify-center gap-3 shadow-md"
           >
             <AlertTriangle size={18} />
-            <span className="flex-1 text-center">
+            <span className="text-center">
               Hold up! {lockedBy ? `Developer "${lockedBy}"` : "Another developer"} is currently editing this lesson. Your changes cannot be saved to prevent overwriting their work.
             </span>
-            {isAdmin && (
-              <button
-                onClick={handleTakeover}
-                className="bg-white text-rose-600 px-3 py-1 rounded-lg text-xs font-bold hover:bg-rose-50 transition-colors shadow-sm"
-              >
-                Takeover
-              </button>
-            )}
           </motion.div>
         )}
 
@@ -2142,7 +2195,7 @@ export default function WikiEditor() {
       {/* Revert to Draft Confirmation Modal */}
       <AnimatePresence>
         {showDraftConfirmation && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2171,6 +2224,35 @@ export default function WikiEditor() {
                   Start Editing
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Global Overlay for Published Lessons (Fixed to Viewport) */}
+      <AnimatePresence>
+        {meta.status === 'published' && (
+          <div className="fixed inset-0 z-[155] bg-white/40 backdrop-blur-md flex items-center justify-center p-6 overflow-hidden pointer-events-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white/90 p-10 rounded-[2.5rem] shadow-2xl border border-slate-200 text-center max-w-md w-full relative"
+            >
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                <Check size={32} />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">Lesson is Published</h3>
+              <p className="text-slate-600 mb-8 leading-relaxed">
+                This lesson is live and read-only. To make changes, you'll need to unlock it and revert to Draft status.
+              </p>
+              <button
+                onClick={() => setShowDraftConfirmation(true)}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+              >
+                <Unlock size={20} />
+                Unlock for Editing
+              </button>
             </motion.div>
           </div>
         )}
@@ -2305,16 +2387,21 @@ export default function WikiEditor() {
 
             <button
               onClick={() => {
+                if (!canEdit) return
                 setSettingsSnapshot({
-                  title_en: meta.title_en,
-                  title_ar: meta.title_ar,
-                  slug: meta.slug,
-                  coverImage: meta.coverImage
+                  title_en: meta.title_en || '',
+                  title_ar: meta.title_ar || '',
+                  slug: meta.slug || '',
+                  duration_min: meta.duration_min || 0,
+                  difficulty: meta.difficulty || 'Beginner',
+                  coverImage: meta.coverImage || '',
+                  order: meta.order || 0,
                 })
                 setShowSettingsModal(true)
               }}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              title="Lesson Settings"
+              disabled={!canEdit}
+              className={`p-2 rounded-lg transition-colors ${!canEdit ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+              title={isPublished ? 'Lesson is Published' : isLockedByOther ? 'Locked by another developer' : 'Lesson Settings'}
               type="button"
             >
               <Settings size={18} />
@@ -2448,31 +2535,6 @@ export default function WikiEditor() {
               </div>
 
               <div className="revolutionary-editor-single relative">
-                {/* Overlay to intercept edits on published lessons */}
-                {meta.status === 'published' && (
-                  <div className="absolute inset-0 z-50 bg-white/40 backdrop-blur-[2px] rounded-3xl flex items-center justify-center">
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white/90 p-8 rounded-3xl shadow-xl border border-slate-200 text-center max-w-sm mx-4"
-                    >
-                      <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Check size={24} />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-2">Lesson is Published</h3>
-                      <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                        This lesson is currently live. You can view the content, but editing requires reverting it to Draft status.
-                      </p>
-                      <button
-                        onClick={() => setShowDraftConfirmation(true)}
-                        className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold shadow-md hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-                      >
-                        <Unlock size={16} />
-                        Unlock for Editing
-                      </button>
-                    </motion.div>
-                  </div>
-                )}
                 {/* English Editor Pane */}
                 <div className="glass-editor-panel" style={{ display: activeEditorTab === 'en' ? 'block' : 'none' }}>
                   <div className="glass-editor-header">
@@ -2491,7 +2553,7 @@ export default function WikiEditor() {
                   <div className="glass-editor-content p-5 md:p-8 xl:p-10 space-y-6" data-editor-lang="en">
 
                     {/* Table Bubble Menu */}
-                    {editorEn && (
+                    {editorEn && editorEn.isEditable && (
                       <BubbleMenu
                         editor={editorEn}
                         pluginKey="table-bubble-en"
@@ -2521,7 +2583,7 @@ export default function WikiEditor() {
                     )}
 
                     {/* Text Bubble Menu */}
-                    {editorEn && (
+                    {editorEn && editorEn.isEditable && (
                       <BubbleMenu
                         editor={editorEn}
                         pluginKey="text-bubble-en"
@@ -2529,21 +2591,26 @@ export default function WikiEditor() {
                         options={bubbleMenuOptions}
                       >
                         <div className="glass-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
-                          <button type="button" className="glass-bubble-btn" style={{ fontWeight: 700 }} onClick={() => editorEn?.chain().focus().toggleBold().run()} title="Bold">B</button>
-                          <button type="button" className="glass-bubble-btn" style={{ fontStyle: 'italic' }} onClick={() => editorEn?.chain().focus().toggleItalic().run()} title="Italic">I</button>
-                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'underline' }} onClick={() => editorEn?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
-                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'line-through' }} onClick={() => editorEn?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
+                          <button type="button" className={`glass-bubble-btn ${editorEn?.isActive('bold') ? 'active' : ''}`} style={{ fontWeight: 700 }} onClick={() => editorEn?.chain().focus().toggleBold().run()} title="Bold">B</button>
+                          <button type="button" className={`glass-bubble-btn ${editorEn?.isActive('italic') ? 'active' : ''}`} style={{ fontStyle: 'italic' }} onClick={() => editorEn?.chain().focus().toggleItalic().run()} title="Italic">I</button>
+                          <button type="button" className={`glass-bubble-btn ${editorEn?.isActive('underline') ? 'active' : ''}`} style={{ textDecoration: 'underline' }} onClick={() => editorEn?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
+                          <button type="button" className={`glass-bubble-btn ${editorEn?.isActive('strike') ? 'active' : ''}`} style={{ textDecoration: 'line-through' }} onClick={() => editorEn?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
                           <span className="glass-bubble-divider" />
-                          <button type="button" className="glass-bubble-btn" onClick={() => promptForLink(editorEn)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${editorEn?.isActive('link') ? 'active' : ''}`} onClick={() => promptForLink(editorEn)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
                           <button type="button" className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {textColors.map(col => (
-                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} title="Text color" />
+                            <button type="button" key={col} className={`glass-bubble-color ${editorEn?.isActive('textStyle', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} title="Text color" />
                           ))}
                           <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
                           <span className="glass-bubble-divider" />
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorEn, 'left') === 'left' ? 'active' : ''}`} onClick={() => editorEn?.chain().focus().setTextAlign('left').run()} title="Align left"><AlignLeft className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorEn, 'left') === 'center' ? 'active' : ''}`} onClick={() => editorEn?.chain().focus().setTextAlign('center').run()} title="Align center"><AlignCenter className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorEn, 'left') === 'right' ? 'active' : ''}`} onClick={() => editorEn?.chain().focus().setTextAlign('right').run()} title="Align right"><AlignRight className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorEn, 'left') === 'justify' ? 'active' : ''}`} onClick={() => editorEn?.chain().focus().setTextAlign('justify').run()} title="Justify"><AlignJustify className="inline w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
                           {highlightColors.map(col => (
-                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                            <button type="button" key={col} className={`glass-bubble-color ${editorEn?.isActive('highlight', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
                           ))}
                           <button type="button" className="glass-bubble-btn text-xs" onClick={() => editorEn?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
                         </div>
@@ -2585,7 +2652,7 @@ export default function WikiEditor() {
                       </div>
                     )}
                     {/* Table Bubble Menu AR */}
-                    {editorAr && (
+                    {editorAr && editorAr.isEditable && (
                       <BubbleMenu
                         editor={editorAr}
                         pluginKey="table-bubble-ar"
@@ -2615,7 +2682,7 @@ export default function WikiEditor() {
                     )}
 
                     {/* Text Bubble Menu AR */}
-                    {editorAr && (
+                    {editorAr && editorAr.isEditable && (
                       <BubbleMenu
                         editor={editorAr}
                         pluginKey="text-bubble-ar"
@@ -2623,21 +2690,26 @@ export default function WikiEditor() {
                         options={bubbleMenuOptions}
                       >
                         <div className="glass-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
-                          <button type="button" className="glass-bubble-btn" style={{ fontWeight: 700 }} onClick={() => editorAr?.chain().focus().toggleBold().run()} title="Bold">B</button>
-                          <button type="button" className="glass-bubble-btn" style={{ fontStyle: 'italic' }} onClick={() => editorAr?.chain().focus().toggleItalic().run()} title="Italic">I</button>
-                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'underline' }} onClick={() => editorAr?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
-                          <button type="button" className="glass-bubble-btn" style={{ textDecoration: 'line-through' }} onClick={() => editorAr?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
+                          <button type="button" className={`glass-bubble-btn ${editorAr?.isActive('bold') ? 'active' : ''}`} style={{ fontWeight: 700 }} onClick={() => editorAr?.chain().focus().toggleBold().run()} title="Bold">B</button>
+                          <button type="button" className={`glass-bubble-btn ${editorAr?.isActive('italic') ? 'active' : ''}`} style={{ fontStyle: 'italic' }} onClick={() => editorAr?.chain().focus().toggleItalic().run()} title="Italic">I</button>
+                          <button type="button" className={`glass-bubble-btn ${editorAr?.isActive('underline') ? 'active' : ''}`} style={{ textDecoration: 'underline' }} onClick={() => editorAr?.chain().focus().toggleUnderline().run()} title="Underline">U</button>
+                          <button type="button" className={`glass-bubble-btn ${editorAr?.isActive('strike') ? 'active' : ''}`} style={{ textDecoration: 'line-through' }} onClick={() => editorAr?.chain().focus().toggleStrike().run()} title="Strikethrough">S</button>
                           <span className="glass-bubble-divider" />
-                          <button type="button" className="glass-bubble-btn" onClick={() => promptForLink(editorAr)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${editorAr?.isActive('link') ? 'active' : ''}`} onClick={() => promptForLink(editorAr)} title="Add link"><Link2 className="inline w-3.5 h-3.5" /></button>
                           <button type="button" className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {textColors.map(col => (
-                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr || !supportsColorAr) return; editorAr.chain().focus().setColor(col).run() }} title="Text color" />
+                            <button type="button" key={col} className={`glass-bubble-color ${editorAr?.isActive('textStyle', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorAr || !supportsColorAr) return; editorAr.chain().focus().setColor(col).run() }} title="Text color" />
                           ))}
                           <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorAr ? editorAr?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
                           <span className="glass-bubble-divider" />
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'right' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('right').run()} title="محاذاة لليمين"><AlignRight className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'center' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('center').run()} title="توسيط"><AlignCenter className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'left' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('left').run()} title="محاذاة لليسار"><AlignLeft className="inline w-3.5 h-3.5" /></button>
+                          <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'justify' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('justify').run()} title="ضبط"><AlignJustify className="inline w-3.5 h-3.5" /></button>
+                          <span className="glass-bubble-divider" />
                           {highlightColors.map(col => (
-                            <button type="button" key={col} className="glass-bubble-color" style={{ background: col }} onClick={() => { if (!editorAr) return; editorAr.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                            <button type="button" key={col} className={`glass-bubble-color ${editorAr?.isActive('highlight', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorAr) return; editorAr.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
                           ))}
                           <button type="button" className="glass-bubble-btn text-xs" onClick={() => editorAr?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
                         </div>
@@ -2905,7 +2977,7 @@ export default function WikiEditor() {
       </AnimatePresence>
       <AnimatePresence>
         {showSettingsModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto py-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2916,7 +2988,7 @@ export default function WikiEditor() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden"
+              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden max-h-[90vh] overflow-y-auto"
             >
               <div className="bg-slate-50 px-8 py-6 border-b border-slate-100">
                 <div className="flex items-center gap-3 mb-1">
@@ -2928,7 +3000,7 @@ export default function WikiEditor() {
                 <p className="text-sm text-slate-500">Configure metadata for this lesson.</p>
               </div>
 
-              <div className="p-8 space-y-6">
+              <div className="p-4 sm:p-8 space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">
                     Lesson Title (English)

@@ -24,7 +24,7 @@ export default function CodeBlock({ code, language = 'typescript', locale = 'en'
   const displayLang = language || 'text'
 
   return (
-    <div className={`my-6 relative rounded-xl overflow-hidden border ${isDarkMode ? 'border-gray-800 bg-[#161b22]' : 'border-gray-200 bg-gray-50 text-gray-900'} shadow-sm`} dir="ltr">
+    <div className={`my-6 relative rounded-3xl overflow-hidden border ${isDarkMode ? 'border-gray-800 bg-[#161b22]' : 'border-gray-200 bg-gray-50 text-gray-900'} shadow-md`} dir="ltr">
       {/* Premium minimal header */}
       <div className={`flex items-center justify-between px-4 py-2 text-xs border-b ${isDarkMode ? 'border-gray-800 bg-[#0d1117] text-gray-400' : 'border-gray-200 bg-gray-100 text-gray-500'}`}>
         <div className="font-mono tracking-wider uppercase font-semibold text-[11px]">

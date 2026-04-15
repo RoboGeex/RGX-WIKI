@@ -1,12 +1,14 @@
 'use client'
 
 import { useMemo, useState, type CSSProperties } from 'react'
+import { ZoomableImage } from '@/components/zoomable-image'
 
 type Props = {
   images: any[]
+  layoutMode?: string
 }
 
-export function LessonImageSlider({ images }: Props) {
+export function LessonImageSlider({ images, layoutMode = 'fit' }: Props) {
   const [index, setIndex] = useState(0)
   if (!images.length) return null
   const current = Math.min(index, images.length - 1)
@@ -19,25 +21,55 @@ export function LessonImageSlider({ images }: Props) {
 
   if (!activeSrc) return null
 
-  const containerStyle = useMemo<CSSProperties>(() => ({
-    width: '100%',
-    maxWidth: '720px',
-  }), [])
-
   return (
-    <div className="space-y-3 flex flex-col items-center w-full">
-      <div className="inline-flex max-w-full w-full" style={containerStyle}>
+    <div className="space-y-1 flex flex-col items-center w-full">
+      <div className="w-full max-w-[720px] mx-auto">
         <div
-          className="relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white flex items-center justify-center"
-          style={{ height: '462px' }}
+          className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-md ${
+            layoutMode === '1:1' ? 'aspect-square' :
+            layoutMode === '3:4' ? 'aspect-[3/4]' :
+            layoutMode === '2:3' ? 'aspect-[2/3]' :
+            layoutMode === '16:9' ? 'aspect-video' : ''
+          }`}
+          style={(!layoutMode || layoutMode === 'fit') ? { display: 'grid', gridTemplateAreas: '"stack"', fontSize: 0, lineHeight: 0 } : {}}
         >
-          <img
-            src={activeSrc}
-            alt={activeCaption || "Lesson slide"}
-            className="block h-full w-full object-contain"
-          />
+          {/* All images stacked in the same grid cell — the tallest/widest one sizes the container */}
+          {images.map((item, i) => {
+            const src = typeof item === 'string' ? item : item?.url
+            const cap = typeof item === 'string' ? '' : (item?.caption || '')
+            const isActive = i === current
 
-
+            return (
+              <div
+                key={i}
+                style={(!layoutMode || layoutMode === 'fit') ? { gridArea: 'stack' } : {}}
+                className={`w-full flex items-center justify-center ${isActive ? 'visible opacity-100 z-10' : 'invisible opacity-0 pointer-events-none z-0'} ${
+                  (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'absolute inset-0 h-full' : ''
+                }`}
+                aria-hidden={!isActive}
+              >
+                {isActive ? (
+                  <ZoomableImage>
+                    <img
+                      src={src}
+                      alt={cap || "Lesson slide"}
+                      className={`block w-full !m-0 !p-0 ${
+                        (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'
+                      }`}
+                    />
+                  </ZoomableImage>
+                ) : (
+                  <img
+                    src={src}
+                    alt=""
+                    className={`block w-full !m-0 !p-0 ${
+                      (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'h-full object-cover' : 'h-auto object-cover'
+                    }`}
+                  />
+                )}
+              </div>
+            )
+          })}
 
           {images.length > 1 ? (
             <>
@@ -45,7 +77,7 @@ export function LessonImageSlider({ images }: Props) {
                 type="button"
                 aria-label="Previous image"
                 onClick={goPrev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors"
+                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors z-20"
               >
                 <span className="text-lg leading-none text-gray-700">‹</span>
               </button>
@@ -53,20 +85,25 @@ export function LessonImageSlider({ images }: Props) {
                 type="button"
                 aria-label="Next image"
                 onClick={goNext}
-                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 shadow hover:bg-white transition-colors z-20"
               >
                 <span className="text-lg leading-none text-gray-700">›</span>
               </button>
             </>
           ) : null}
 
-
-
-
-          {/* Inner Image Counter Badge */}
+          {/* Dots */}
           {images.length > 1 ? (
-            <div className="absolute top-3 right-3 text-[10px] font-medium text-gray-400 pointer-events-none">
-              {current + 1} / {images.length}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 p-1 rounded-full bg-black/10 backdrop-blur-[2px]">
+              {images.map((_: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIndex(idx); }}
+                  className={`w-2 h-2 rounded-full transition-all ${idx === current ? 'bg-white scale-110' : 'bg-white/50 hover:bg-white/80'}`}
+                  type="button"
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
             </div>
           ) : null}
         </div>
@@ -75,7 +112,7 @@ export function LessonImageSlider({ images }: Props) {
       {/* Active caption displayed as a standard figure caption */}
       {activeCaption ? (
         <figcaption
-          className="mt-3 text-xs text-gray-500 text-center leading-relaxed"
+          className="mt-1 pb-2 text-[11px] text-gray-500 text-center leading-tight [&_p]:m-0"
           dangerouslySetInnerHTML={{ __html: activeCaption }}
         />
       ) : null}

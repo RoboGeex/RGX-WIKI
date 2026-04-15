@@ -35,7 +35,7 @@ export default function CodeBlockView({ node, updateAttributes }: CodeBlockViewP
 
   return (
     <NodeViewWrapper 
-      className={`my-6 relative rounded-xl overflow-hidden border shadow-sm ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}
+      className={`my-6 relative rounded-2xl overflow-hidden border shadow-sm ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}
       dir="ltr"
     >
       {/* Premium minimal header mirroring the wiki */}

@@ -95,7 +95,7 @@ export const translations = {
     modules: 'وحدات',
     previous: 'السابق',
     next: 'التالي',
-    gettingStarted: 'البدء',
+    gettingStarted: 'البداية',
     resources: 'الموارد',
     noLessonsYet: 'لا توجد دروس بعد.',
     onThisPage: 'في هذه الصفحة',

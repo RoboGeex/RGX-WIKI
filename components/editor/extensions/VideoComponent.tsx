@@ -207,9 +207,21 @@ export default function VideoComponent(props: any) {
             layoutMode === '3:4' ? 'aspect-[3/4]' :
             layoutMode === '2:3' ? 'aspect-[2/3]' :
             layoutMode === '16:9' ? 'aspect-video' :
-            layoutMode === 'fit' ? '' :
+            layoutMode === 'fit' ? 'aspect-video' :
             'aspect-video'
           }`}>
+            {!selected && editor?.isEditable && (
+              <div 
+                className="absolute inset-0 z-20 cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (typeof props.getPos === 'function') {
+                    editor.commands.setNodeSelection(props.getPos())
+                  }
+                }}
+              />
+            )}
             <iframe
               src={getEmbedUrl(node.attrs.src)}
               title={node.attrs.title || (provider === 'youtube' ? 'YouTube video' : 'Vimeo video')}
@@ -241,6 +253,18 @@ export default function VideoComponent(props: any) {
             layoutMode === 'fit' ? '' :
             'aspect-video'
           }`}>
+            {!selected && editor?.isEditable && (
+              <div 
+                className="absolute inset-0 z-20 cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (typeof props.getPos === 'function') {
+                    editor.commands.setNodeSelection(props.getPos())
+                  }
+                }}
+              />
+            )}
             <video
               controls
               src={node.attrs.src}

@@ -64,6 +64,18 @@ export default function YoutubeComponent(props: any) {
     <NodeViewWrapper className={`mt-2 mb-6 flex flex-col items-${textAlign === 'left' ? 'start' : textAlign === 'right' ? 'end' : 'center'} w-full relative group`} style={{ textAlign: textAlign as any }}>
       <div className="relative inline-block group w-full" style={{ width: width, maxWidth: '100%' }}>
         <div ref={containerRef} className={`relative w-full aspect-video overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm flex items-center justify-center ${selected ? 'ring-2 ring-primary' : ''}`}>
+          {!selected && editor?.isEditable && (
+            <div 
+              className="absolute inset-0 z-20 cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (typeof props.getPos === 'function') {
+                  editor.commands.setNodeSelection(props.getPos())
+                }
+              }}
+            />
+          )}
           <iframe
             src={node.attrs.src}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

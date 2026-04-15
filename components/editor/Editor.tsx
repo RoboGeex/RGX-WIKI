@@ -8,7 +8,8 @@ import { BubbleMenu } from '@tiptap/react/menus'
 import { posToDOMRect, isTextSelection } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Heading from '@tiptap/extension-heading'
+import HeadingBase from '@tiptap/extension-heading'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Image from './extensions/ResizableImage'
 import Youtube from '@tiptap/extension-youtube'
 import YoutubeComponent from './extensions/YoutubeComponent'
@@ -564,7 +565,44 @@ export default function WikiEditor() {
         underline: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
       }),
-      Heading.configure({
+      HeadingBase.extend({
+        addProseMirrorPlugins() {
+          const parentPlugins = this.parent?.() || []
+          return [
+            ...parentPlugins,
+            new Plugin({
+              key: new PluginKey('heading-align-reset'),
+              appendTransaction(transactions, oldState, newState) {
+                if (!transactions.some(tr => tr.docChanged)) return null
+                let tr: any = null
+                newState.doc.descendants((node, pos) => {
+                  if (node.type.name !== 'heading') return
+                  const align = node.attrs.textAlign
+                  if (!align || align === 'left') return
+                  // Check if this was already a heading in the old state
+                  let wasHeading = false
+                  try {
+                    const mappedPos = transactions.reduce(
+                      (p, t) => t.mapping.map(p, -1), pos
+                    )
+                    const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
+                    if (oldNode && oldNode.type.name === 'heading') {
+                      wasHeading = true
+                    }
+                  } catch { /* position doesn't exist in old state */ }
+                  
+                  // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
+                  if (!wasHeading) {
+                    if (!tr) tr = newState.tr
+                    tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                  }
+                })
+                return tr
+              },
+            }),
+          ]
+        },
+      }).configure({
         levels: [1, 2, 3],
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {
@@ -656,7 +694,43 @@ export default function WikiEditor() {
         underline: false,
         blockquote: { HTMLAttributes: { class: 'border-l-4 border-gray-300 pl-3 py-2 bg-gray-50 rounded' } },
       }),
-      Heading.configure({
+      HeadingBase.extend({
+        addProseMirrorPlugins() {
+          const parentPlugins = this.parent?.() || []
+          return [
+            ...parentPlugins,
+            new Plugin({
+              key: new PluginKey('heading-align-reset-ar'),
+              appendTransaction(transactions, oldState, newState) {
+                if (!transactions.some(tr => tr.docChanged)) return null
+                let tr: any = null
+                newState.doc.descendants((node, pos) => {
+                  if (node.type.name !== 'heading') return
+                  const align = node.attrs.textAlign
+                  if (!align || align === 'left') return
+                  let wasHeading = false
+                  try {
+                    const mappedPos = transactions.reduce(
+                      (p, t) => t.mapping.map(p, -1), pos
+                    )
+                    const oldNode = oldState.doc.nodeAt(mappedPos < 0 ? 0 : mappedPos)
+                    if (oldNode && oldNode.type.name === 'heading') {
+                      wasHeading = true
+                    }
+                  } catch { /* position doesn't exist in old state */ }
+                  
+                  // If it wasn't a heading before, it's newly created/converted. Strip inherited alignment.
+                  if (!wasHeading) {
+                    if (!tr) tr = newState.tr
+                    tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: null })
+                  }
+                })
+                return tr
+              },
+            }),
+          ]
+        },
+      }).configure({
         levels: [1, 2, 3],
         HTMLAttributes: {
           class: ({ level }: { level: number }) => {

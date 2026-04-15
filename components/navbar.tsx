@@ -73,18 +73,18 @@ export default function Navbar({
     buildLessonHref({ locale: safeLocale, kitSlug, lessonSlug: slug, isHubDomain })
 
   return (
-    <nav className="bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur">
-      <div className="relative max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
-        <div className="flex items-center gap-3">
+    <nav dir="ltr" className="bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur">
+      <div className="relative w-full max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
-            className="lg:hidden p-2 rounded-md hover:bg-white/10"
+            className="lg:hidden p-2 rounded-md hover:bg-white/10 text-white"
             onClick={onMenuClick}
             aria-label="Menu"
           >
-            <Menu size={18} />
+            <Menu size={24} />
           </button>
           <Link href={kitHomeHref} className="flex items-center gap-2">
-            <img src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} />
+            <img src="/images/robogeex-logo.png" alt="RoboGeex Academy" className="w-[120px] sm:w-[150px] md:w-[184px] h-auto" />
             <span className="sr-only">RoboGeex Academy</span>
           </Link>
         </div>

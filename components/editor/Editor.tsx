@@ -271,6 +271,12 @@ export default function WikiEditor() {
   const [isLockedByOther, setIsLockedByOther] = useState(false)
   const [lockedBy, setLockedBy] = useState<string | null>(null)
   const [documentVersion, setDocumentVersion] = useState<number>(meta.version || 1)
+  const documentVersionRef = useRef<number>(meta.version || 1)
+  const setDocumentVersionSynced = useCallback((nextVersion: number) => {
+    documentVersionRef.current = nextVersion
+    setDocumentVersion(nextVersion)
+  }, [])
+  const publishInFlightRef = useRef<Promise<void> | null>(null)
   // ---------------------------
 
   // Logic to determine if user has permission to edit this wiki
@@ -322,7 +328,7 @@ export default function WikiEditor() {
           }
           // Update local version to stay in sync
           if (typeof data.version === 'number') {
-            setDocumentVersion(data.version)
+            setDocumentVersionSynced(data.version)
           }
         }
       } catch (err) {
@@ -1050,9 +1056,33 @@ export default function WikiEditor() {
     const textKey = language === 'ar' ? 'ar' : 'en'
     const titleKey = language === 'ar' ? 'title_ar' : 'title_en'
     const captionKey = language === 'ar' ? 'caption_ar' : 'caption_en'
+    const fallbackTitleKey = language === 'ar' ? 'title_en' : 'title_ar'
+    const fallbackCaptionKey = language === 'ar' ? 'caption_en' : 'caption_ar'
     const htmlKey = language === 'ar' ? 'html_ar' : 'html_en'
     const itemsKey = language === 'ar' ? 'items_ar' : 'items_en'
     const jsonKey = language === 'ar' ? 'json_ar' : 'json_en'
+    const fallbackJsonKey = language === 'ar' ? 'json_en' : 'json_ar'
+    const normalizeMediaTitle = (value: unknown): string => {
+      if (typeof value !== 'string') return ''
+      const trimmed = value.trim()
+      if (!trimmed || trimmed === '<p></p>') return ''
+      return trimmed
+    }
+    const pickMediaTitle = (item: any): string => {
+      const candidates = [
+        item?.[captionKey],
+        item?.[titleKey],
+        item?.[fallbackCaptionKey],
+        item?.[fallbackTitleKey],
+        item?.[jsonKey]?.attrs?.title,
+        item?.[fallbackJsonKey]?.attrs?.title,
+      ]
+      for (const candidate of candidates) {
+        const normalized = normalizeMediaTitle(candidate)
+        if (normalized) return normalized
+      }
+      return ''
+    }
     const nodes: any[] = []
 
     if (Array.isArray(body)) {
@@ -1125,19 +1155,49 @@ export default function WikiEditor() {
             break
           }
           case 'imageSlider': {
+            const sliderTitleSource = pickMediaTitle(item)
             const jsonNode = item[jsonKey]
             if (jsonNode && typeof jsonNode === 'object') {
               const cloned = cloneNode(jsonNode)
+              const existingSliderTitle = normalizeMediaTitle(cloned?.attrs?.title)
               cloned.attrs = {
                 ...(cloned.attrs || {}),
                 layoutMode: item.layoutMode || cloned.attrs?.layoutMode || 'fit',
-                textAlign: item.align || cloned.attrs?.textAlign || cloned.attrs?.align || 'center'
+                textAlign: item.align || cloned.attrs?.textAlign || cloned.attrs?.align || 'center',
+                title: existingSliderTitle || sliderTitleSource || undefined,
               }
               nodes.push(cloned)
             } else {
-              const images = Array.isArray(item.images) ? item.images.filter((src: string) => typeof src === 'string' && src.trim().length) : []
+              const images = Array.isArray(item.images)
+                ? item.images
+                    .map((entry: any) => {
+                      if (typeof entry === 'string') {
+                        const url = entry.trim()
+                        return url ? { url, caption: '' } : null
+                      }
+                      if (entry && typeof entry === 'object' && typeof entry.url === 'string') {
+                        const url = entry.url.trim()
+                        if (!url) return null
+                        return {
+                          ...entry,
+                          url,
+                          caption: typeof entry.caption === 'string' ? entry.caption : '',
+                        }
+                      }
+                      return null
+                    })
+                    .filter(Boolean)
+                : []
               if (images.length) {
-                nodes.push({ type: 'imageSlider', attrs: { images, layoutMode: item.layoutMode || 'fit', textAlign: item.align || 'center' } })
+                nodes.push({
+                  type: 'imageSlider',
+                  attrs: {
+                    images,
+                    layoutMode: item.layoutMode || 'fit',
+                    textAlign: item.align || 'center',
+                    title: sliderTitleSource || undefined,
+                  },
+                })
               }
             }
             break
@@ -1158,22 +1218,23 @@ export default function WikiEditor() {
           }
           case 'image':
             if (item.image) {
+              const titleSource = pickMediaTitle(item)
               const altSource =
-                typeof item[titleKey] === 'string' && item[titleKey]
-                  ? item[titleKey]
-                  : typeof item[captionKey] === 'string'
-                    ? item[captionKey]
-                    : ''
+                typeof item[jsonKey]?.attrs?.alt === 'string' && item[jsonKey].attrs.alt
+                  ? item[jsonKey].attrs.alt
+                  : typeof item[fallbackJsonKey]?.attrs?.alt === 'string' && item[fallbackJsonKey].attrs.alt
+                    ? item[fallbackJsonKey].attrs.alt
+                    : stripHtml(titleSource)
               nodes.push({
                 type: 'image',
                 attrs: {
                   src: item.image,
                   alt: altSource || undefined,
-                  title: altSource || undefined,
-                  width: item.width || item[jsonKey]?.attrs?.width || '100%',
-                  textAlign: item.align || item[jsonKey]?.attrs?.textAlign || item[jsonKey]?.attrs?.align || 'center',
-                  align: item.align || item[jsonKey]?.attrs?.align || item[jsonKey]?.attrs?.textAlign || 'center',
-                  layoutMode: item.layoutMode || item[jsonKey]?.attrs?.layoutMode || 'fit',
+                  title: titleSource || undefined,
+                  width: item.width || item[jsonKey]?.attrs?.width || item[fallbackJsonKey]?.attrs?.width || '100%',
+                  textAlign: item.align || item[jsonKey]?.attrs?.textAlign || item[jsonKey]?.attrs?.align || item[fallbackJsonKey]?.attrs?.textAlign || item[fallbackJsonKey]?.attrs?.align || 'center',
+                  align: item.align || item[jsonKey]?.attrs?.align || item[jsonKey]?.attrs?.textAlign || item[fallbackJsonKey]?.attrs?.align || item[fallbackJsonKey]?.attrs?.textAlign || 'center',
+                  layoutMode: item.layoutMode || item[jsonKey]?.attrs?.layoutMode || item[fallbackJsonKey]?.attrs?.layoutMode || 'fit',
                 },
               })
             }
@@ -1195,18 +1256,19 @@ export default function WikiEditor() {
           case 'video':
             if (item.url) {
               const provider = item.provider || (item.url.includes('vimeo.com') ? 'vimeo' : null)
+              const mediaTitle = pickMediaTitle(item)
               nodes.push({
                 type: 'video',
                 attrs: {
                   src: item.url,
                   poster: item.poster || null,
-                  title: item[titleKey] || item[captionKey] || null,
+                  title: mediaTitle || undefined,
                   controls: provider === 'vimeo' ? false : true,
                   provider,
-                  width: item.width || item[jsonKey]?.attrs?.width || '100%',
-                  textAlign: item.align || item[jsonKey]?.attrs?.textAlign || item[jsonKey]?.attrs?.align || 'center',
-                  align: item.align || item[jsonKey]?.attrs?.align || item[jsonKey]?.attrs?.textAlign || 'center',
-                  layoutMode: item.layoutMode || item[jsonKey]?.attrs?.layoutMode || 'aspect-video',
+                  width: item.width || item[jsonKey]?.attrs?.width || item[fallbackJsonKey]?.attrs?.width || '100%',
+                  textAlign: item.align || item[jsonKey]?.attrs?.textAlign || item[jsonKey]?.attrs?.align || item[fallbackJsonKey]?.attrs?.textAlign || item[fallbackJsonKey]?.attrs?.align || 'center',
+                  align: item.align || item[jsonKey]?.attrs?.align || item[jsonKey]?.attrs?.textAlign || item[fallbackJsonKey]?.attrs?.align || item[fallbackJsonKey]?.attrs?.textAlign || 'center',
+                  layoutMode: item.layoutMode || item[jsonKey]?.attrs?.layoutMode || item[fallbackJsonKey]?.attrs?.layoutMode || 'aspect-video',
                 },
               })
             }
@@ -1286,6 +1348,9 @@ export default function WikiEditor() {
         if (cancelled) return
 
         loadedLessonKeyRef.current = cacheKey
+        if (typeof lesson?.version === 'number') {
+          setDocumentVersionSynced(lesson.version)
+        }
 
         const body = Array.isArray(lesson?.body) ? lesson.body : []
         const hasArabicContent = body.some((block: any) => {
@@ -1382,7 +1447,7 @@ export default function WikiEditor() {
     return () => {
       cancelled = true
     }
-  }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId, hasWikiAccess])
+  }, [editorEn, editorAr, meta.isNew, meta.slug, meta.id, meta.wikiSlug, developerId, hasWikiAccess, setDocumentVersionSynced])
 
   // --- Enforce Read-Only Mode: locked by another user OR lesson is published ---
   useEffect(() => {
@@ -1640,6 +1705,9 @@ export default function WikiEditor() {
           if (title) {
             block[titleKey] = title
             block[captionKey] = title
+          } else {
+            block[titleKey] = ''
+            block[captionKey] = ''
           }
           const html = serializeNodeToHTML(node, editorInstance)
           if (html) block[htmlKey] = html
@@ -1648,7 +1716,6 @@ export default function WikiEditor() {
         case 'image': {
           const src = node.attrs?.src
           if (!src) return null
-          const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt.trim() : ''
           const title = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
           const block: any = {
             type: 'image',
@@ -1658,13 +1725,12 @@ export default function WikiEditor() {
             layoutMode: node.attrs?.layoutMode || 'fit',
             [jsonKey]: cloneNode(node),
           }
-          if (alt) {
-            block[titleKey] = alt
-            block[captionKey] = block[captionKey] || alt
-          }
           if (title) {
-            block[titleKey] = block[titleKey] || title
-            block[captionKey] = block[captionKey] || title
+            block[titleKey] = title
+            block[captionKey] = title
+          } else {
+            block[titleKey] = ''
+            block[captionKey] = ''
           }
           return block
         }
@@ -1684,17 +1750,23 @@ export default function WikiEditor() {
           const url = node.attrs?.src
           if (!url) return null
           const provider = node.attrs?.provider || (typeof url === 'string' && url.includes('vimeo.com') ? 'vimeo' : undefined)
+          const mediaTitle = typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : ''
           const block: any = {
             type: 'video',
             url,
             poster: node.attrs?.poster || undefined,
-            [titleKey]: node.attrs?.title ? String(node.attrs.title) : undefined,
-            [captionKey]: node.attrs?.title ? String(node.attrs.title) : undefined,
             provider,
             width: node.attrs?.width,
             align: node.attrs?.textAlign || node.attrs?.align || 'center',
             layoutMode: node.attrs?.layoutMode || 'aspect-video',
             [jsonKey]: cloneNode(node),
+          }
+          if (mediaTitle) {
+            block[titleKey] = mediaTitle
+            block[captionKey] = mediaTitle
+          } else {
+            block[titleKey] = ''
+            block[captionKey] = ''
           }
           return block
         }
@@ -1745,152 +1817,306 @@ export default function WikiEditor() {
     return blocks
   }
 
-  function deepMergeBlocks(primary: any[], secondary: any[]): any[] {
-    const merged: any[] = []
-    const length = Math.max(primary.length, secondary.length)
-    
-    for (let i = 0; i < length; i++) {
-      const pBlock = primary[i] || {}
-      const sBlock = secondary[i] || {}
-      
-      const mergedBlock = { ...sBlock, ...pBlock }
-      
-      // If both blocks have an array of children (like columns/column), merge them recursively
-      if (Array.isArray(pBlock.content) && Array.isArray(sBlock.content)) {
-        mergedBlock.content = deepMergeBlocks(pBlock.content, sBlock.content)
-      }
-      
-      merged.push(mergedBlock)
+  const EN_LOCALE_FIELDS = ['en', 'html_en', 'title_en', 'caption_en', 'items_en', 'json_en']
+  const AR_LOCALE_FIELDS = ['ar', 'html_ar', 'title_ar', 'caption_ar', 'items_ar', 'json_ar']
+  const ALL_LOCALE_FIELDS = new Set([...EN_LOCALE_FIELDS, ...AR_LOCALE_FIELDS])
+
+  function pickSharedFields(source: any): any {
+    if (!source || typeof source !== 'object') return {}
+    const out: any = {}
+    Object.keys(source).forEach((key) => {
+      if (key === 'content') return
+      if (ALL_LOCALE_FIELDS.has(key)) return
+      out[key] = source[key]
+    })
+    return out
+  }
+
+  function normalizeSliderImageItem(item: any): { url: string; caption?: string } | null {
+    if (typeof item === 'string') {
+      const url = item.trim()
+      return url ? { url, caption: '' } : null
     }
+    if (item && typeof item === 'object' && typeof item.url === 'string') {
+      const url = item.url.trim()
+      if (!url) return null
+      return {
+        ...item,
+        url,
+        caption: typeof item.caption === 'string' ? item.caption : '',
+      }
+    }
+    return null
+  }
+
+  function mergeSliderImages(primaryImages: any, secondaryImages: any): any[] | undefined {
+    const primary = Array.isArray(primaryImages) ? primaryImages : []
+    const secondary = Array.isArray(secondaryImages) ? secondaryImages : []
+    if (primary.length === 0 && secondary.length === 0) return undefined
+
+    const merged: any[] = []
+    const maxLength = Math.max(primary.length, secondary.length)
+
+    for (let i = 0; i < maxLength; i++) {
+      const preferred = normalizeSliderImageItem(primary[i])
+      const fallback = normalizeSliderImageItem(secondary[i])
+      const base = preferred || fallback
+      if (!base) continue
+
+      const preferredCaption = typeof preferred?.caption === 'string' ? preferred.caption : ''
+      const fallbackCaption = typeof fallback?.caption === 'string' ? fallback.caption : ''
+      const caption = preferredCaption || fallbackCaption || ''
+
+      merged.push({
+        ...(fallback || {}),
+        ...(preferred || {}),
+        url: base.url,
+        caption,
+      })
+    }
+
     return merged
   }
 
+  function mergeSharedFields(preferredBlock: any, secondaryBlock: any): any {
+    const preferredShared = pickSharedFields(preferredBlock)
+    const secondaryShared = pickSharedFields(secondaryBlock)
+    const mergedShared: any = {
+      ...secondaryShared,
+      ...preferredShared,
+    }
+
+    const mergedImages = mergeSliderImages(preferredShared.images, secondaryShared.images)
+    if (mergedImages) {
+      mergedShared.images = mergedImages
+    }
+
+    return mergedShared
+  }
+
+  function applyLocaleFields(target: any, source: any, keys: string[]) {
+    if (!source || typeof source !== 'object') return
+    keys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+        target[key] = source[key]
+      }
+    })
+  }
+
+  function composeMergedBlocks(
+    enBlocks: any[],
+    arBlocks: any[],
+    preferredLocale: 'en' | 'ar'
+  ): any[] {
+    const merged: any[] = []
+    const length = Math.max(enBlocks.length, arBlocks.length)
+
+    for (let i = 0; i < length; i++) {
+      const enBlock = enBlocks[i]
+      const arBlock = arBlocks[i]
+      const hasEn = enBlock && typeof enBlock === 'object'
+      const hasAr = arBlock && typeof arBlock === 'object'
+      if (!hasEn && !hasAr) continue
+
+      const preferredBlock = preferredLocale === 'ar'
+        ? (hasAr ? arBlock : enBlock)
+        : (hasEn ? enBlock : arBlock)
+      const secondaryBlock = preferredLocale === 'ar'
+        ? (hasEn ? enBlock : undefined)
+        : (hasAr ? arBlock : undefined)
+
+      const mergedBlock: any = {
+        ...mergeSharedFields(preferredBlock, secondaryBlock),
+      }
+
+      if (!mergedBlock.type) {
+        mergedBlock.type = (hasEn ? enBlock.type : undefined) || (hasAr ? arBlock.type : undefined)
+      }
+
+      applyLocaleFields(mergedBlock, enBlock, EN_LOCALE_FIELDS)
+      applyLocaleFields(mergedBlock, arBlock, AR_LOCALE_FIELDS)
+
+      const enContent = Array.isArray(enBlock?.content) ? enBlock.content : []
+      const arContent = Array.isArray(arBlock?.content) ? arBlock.content : []
+      if (enContent.length || arContent.length) {
+        mergedBlock.content = composeMergedBlocks(enContent, arContent, preferredLocale)
+      } else if (Array.isArray(preferredBlock?.content)) {
+        mergedBlock.content = preferredBlock.content
+      }
+
+      merged.push(mergedBlock)
+    }
+
+    return merged
+  }
+
+  const flushInlineCaptionEdits = async () => {
+    if (typeof document === 'undefined') return
+    const activeElement = document.activeElement as HTMLElement | null
+    if (activeElement && typeof activeElement.blur === 'function') {
+      activeElement.blur()
+    }
+    // Allow caption node views to run blur sync and trailing debounced attribute writes
+    // before we snapshot the document for save/autosave.
+    await new Promise((resolve) => setTimeout(resolve, 1100))
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  }
+
   async function publish(statusOverride?: 'draft' | 'published') {
-    if (!editorEn || !editorAr) return
-    if (!meta.wikiSlug) {
-      setStatus('Missing wiki selection. Open the properties panel to choose a wiki.')
-      return
-    }
-    setStatus('')
-    const docEn = editorEn.getJSON()
-    const docAr = editorAr.getJSON()
-    const bodyEn = extractBody(docEn, 'en', editorEn)
-    const bodyAr = extractBody(docAr, 'ar', editorAr)
-    const primaryBody = activeEditorTab === 'ar' ? bodyAr : bodyEn
-    const secondaryBody = activeEditorTab === 'ar' ? bodyEn : bodyAr
-    const mergedBody = deepMergeBlocks(primaryBody, secondaryBody)
-    if (bodyEn.length !== bodyAr.length) {
-      setStatus('Warning: English and Arabic content differ in structure. Please review the Arabic translation.')
-    }
-    // Generate ID and slug if they don't exist
-    const titleEn = meta.title_en || meta.title_ar || 'Untitled'
-    const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'
-
-    // Generate ID and slug - API will handle uniqueness
-    const baseSlug = slugify(titleEn) || 'lesson'
-    const uniqueToken = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-    const generatedId = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.id && meta.id.trim()) || baseSlug)
-    const generatedSlug = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.slug && meta.slug.trim()) || baseSlug)
-
-    // Ensure we have valid IDs and slugs
-    if (!generatedId || !generatedSlug) {
-      setStatus('Error: Could not generate valid ID or slug from title')
-      return
+    if (publishInFlightRef.current) {
+      try {
+        await publishInFlightRef.current
+      } catch { }
     }
 
-    const payload = {
-      id: generatedId,
-      wikiSlug: meta.wikiSlug,
-      order: Number(meta.order) || 0,
-      slug: generatedSlug,
-      title_en: titleEn,
-      title_ar: titleAr,
-      coverImage: meta.coverImage?.trim() || '',
-      duration_min: Number(meta.duration_min) || 30,
-      difficulty: meta.difficulty,
-      prerequisites_en: [],
-      prerequisites_ar: [],
-      materials: [],
-      body: mergedBody,
-      forceNew: meta.isNew === true,
-      version: documentVersion,
-    }
-    try {
-      if (!developerId) {
-        setStatus('Please sign in as a content developer before saving.')
+    const runPublish = async () => {
+      if (!editorEn || !editorAr) return
+      if (!meta.wikiSlug) {
+        setStatus('Missing wiki selection. Open the properties panel to choose a wiki.')
+        return
+      }
+      await flushInlineCaptionEdits()
+      setStatus('')
+      const docEn = editorEn.getJSON()
+      const docAr = editorAr.getJSON()
+      const bodyEn = extractBody(docEn, 'en', editorEn)
+      const bodyAr = extractBody(docAr, 'ar', editorAr)
+      const mergedBody = composeMergedBlocks(
+        bodyEn,
+        bodyAr,
+        activeEditorTab === 'ar' ? 'ar' : 'en'
+      )
+      if (bodyEn.length !== bodyAr.length) {
+        setStatus('Warning: English and Arabic content differ in structure. Please review the Arabic translation.')
+      }
+
+      // Generate ID and slug if they don't exist
+      const titleEn = meta.title_en || meta.title_ar || 'Untitled'
+      const titleAr = meta.title_ar || meta.title_en || '????? ??? ?????'
+
+      // Generate ID and slug - API will handle uniqueness
+      const baseSlug = slugify(titleEn) || 'lesson'
+      const uniqueToken = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+      const generatedId = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.id && meta.id.trim()) || baseSlug)
+      const generatedSlug = meta.isNew ? `${baseSlug}-${uniqueToken}` : ((meta.slug && meta.slug.trim()) || baseSlug)
+
+      // Ensure we have valid IDs and slugs
+      if (!generatedId || !generatedSlug) {
+        setStatus('Error: Could not generate valid ID or slug from title')
         return
       }
 
-      const currentStatus = meta.status || 'draft'
-      const desiredStatus = (statusOverride || currentStatus) === 'published' && isAdmin ? 'published' : 'draft'
-
-      if (saveDisabled) {
-        setStatus('You can only edit lessons you own (or admin).')
-        return
-      }
-
-      const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
-      const payloadWithOwner = {
-        ...payload,
-        ownerId: meta.ownerId || developerId || '',
-        status: desiredStatus,
-      }
-      const res = await fetch('/api/lessons', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payloadWithOwner),
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        console.error('API Error:', data)
-        const detail = Array.isArray(data.missing) && data.missing.length ? ` (missing: ${data.missing.join(', ')})` : ''
-        throw new Error((data.error || 'Failed') + detail)
-      }
-
-      const savedLesson = data?.lesson ?? {}
-      const isUpdate = Boolean(data?.isUpdate)
-
-      const updatedMeta = {
-        ...meta,
-        id: typeof savedLesson.id === 'string' && savedLesson.id.trim() ? savedLesson.id : generatedId,
-        slug: typeof savedLesson.slug === 'string' && savedLesson.slug.trim() ? savedLesson.slug : generatedSlug,
-        order: typeof savedLesson.order === 'number' ? savedLesson.order : meta.order,
-        isNew: false,
-        ownerId: typeof savedLesson.ownerId === 'string' && savedLesson.ownerId.trim()
-          ? savedLesson.ownerId
-          : meta.ownerId || developerId || '',
-        status: typeof savedLesson.status === 'string' ? savedLesson.status : desiredStatus,
-      }
-
-      setMeta(updatedMeta)
-
-      // Update local documentVersion to match what the backend just saved
-      if (typeof savedLesson.version === 'number') {
-        setDocumentVersion(savedLesson.version)
+      const payload = {
+        id: generatedId,
+        wikiSlug: meta.wikiSlug,
+        order: Number(meta.order) || 0,
+        slug: generatedSlug,
+        title_en: titleEn,
+        title_ar: titleAr,
+        coverImage: meta.coverImage?.trim() || '',
+        duration_min: Number(meta.duration_min) || 30,
+        difficulty: meta.difficulty,
+        prerequisites_en: [],
+        prerequisites_ar: [],
+        materials: [],
+        body: mergedBody,
+        forceNew: meta.isNew === true,
+        version: documentVersionRef.current,
       }
       try {
-        sessionStorage.setItem('lessonMeta', JSON.stringify(updatedMeta))
-      } catch { }
+        if (!developerId) {
+          setStatus('Please sign in as a content developer before saving.')
+          return
+        }
 
-      const params = new URLSearchParams(searchParams?.toString() ?? '')
-      params.set('slug', updatedMeta.slug)
-      params.set('id', updatedMeta.id)
-      if (updatedMeta.wikiSlug) {
-        params.set('wiki', updatedMeta.wikiSlug)
-      }
-      params.delete('new')
-      router.replace(`/editor/lesson?${params.toString()}`, { scroll: false })
+        const currentStatus = meta.status || 'draft'
+        const desiredStatus = (statusOverride || currentStatus) === 'published' && isAdmin ? 'published' : 'draft'
 
-      const slugOrIdChanged = updatedMeta.slug !== generatedSlug || updatedMeta.id !== generatedId
-      if (!isUpdate && slugOrIdChanged) {
-        setStatus(desiredStatus === 'published' ? `Lesson published! Saved as "${updatedMeta.slug}".` : 'Changes saved!')
-      } else {
-        setStatus(desiredStatus === 'published' ? 'Lesson published!' : isUpdate ? 'Changes saved!' : 'Lesson saved!')
+        if (saveDisabled) {
+          setStatus('You can only edit lessons you own (or admin).')
+          return
+        }
+
+        const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
+        const payloadWithOwner = {
+          ...payload,
+          ownerId: meta.ownerId || developerId || '',
+          status: desiredStatus,
+        }
+        const res = await fetch('/api/lessons', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payloadWithOwner),
+        })
+        const data = await res.json()
+
+        if (!res.ok) {
+          console.error('API Error:', data)
+          if (res.status === 409 && data?.errorCode === 'VERSION_CONFLICT' && typeof data?.currentVersion === 'number') {
+            setDocumentVersionSynced(data.currentVersion)
+          }
+          const detail = Array.isArray(data.missing) && data.missing.length ? ` (missing: ${data.missing.join(', ')})` : ''
+          const conflictHint =
+            data?.errorCode === 'VERSION_CONFLICT' && typeof data?.currentVersion === 'number'
+              ? ` Latest version is ${data.currentVersion}.`
+              : ''
+          throw new Error((data.error || 'Failed') + detail + conflictHint)
+        }
+
+        const savedLesson = data?.lesson ?? {}
+        const isUpdate = Boolean(data?.isUpdate)
+
+        const updatedMeta = {
+          ...meta,
+          id: typeof savedLesson.id === 'string' && savedLesson.id.trim() ? savedLesson.id : generatedId,
+          slug: typeof savedLesson.slug === 'string' && savedLesson.slug.trim() ? savedLesson.slug : generatedSlug,
+          order: typeof savedLesson.order === 'number' ? savedLesson.order : meta.order,
+          isNew: false,
+          ownerId: typeof savedLesson.ownerId === 'string' && savedLesson.ownerId.trim()
+            ? savedLesson.ownerId
+            : meta.ownerId || developerId || '',
+          status: typeof savedLesson.status === 'string' ? savedLesson.status : desiredStatus,
+        }
+
+        setMeta(updatedMeta)
+
+        // Update local documentVersion to match what the backend just saved
+        if (typeof savedLesson.version === 'number') {
+          setDocumentVersionSynced(savedLesson.version)
+        }
+        try {
+          sessionStorage.setItem('lessonMeta', JSON.stringify(updatedMeta))
+        } catch { }
+
+        const params = new URLSearchParams(searchParams?.toString() ?? '')
+        params.set('slug', updatedMeta.slug)
+        params.set('id', updatedMeta.id)
+        if (updatedMeta.wikiSlug) {
+          params.set('wiki', updatedMeta.wikiSlug)
+        }
+        params.delete('new')
+        router.replace(`/editor/lesson?${params.toString()}`, { scroll: false })
+
+        const slugOrIdChanged = updatedMeta.slug !== generatedSlug || updatedMeta.id !== generatedId
+        if (!isUpdate && slugOrIdChanged) {
+          setStatus(desiredStatus === 'published' ? `Lesson published! Saved as "${updatedMeta.slug}".` : 'Changes saved!')
+        } else {
+          setStatus(desiredStatus === 'published' ? 'Lesson published!' : isUpdate ? 'Changes saved!' : 'Lesson saved!')
+        }
+      } catch (e: any) {
+        console.error('Publish error:', e)
+        setStatus(`Error: ${e.message}`)
       }
-    } catch (e: any) {
-      console.error('Publish error:', e)
-      setStatus(`Error: ${e.message}`)
+    }
+
+    const runPromise = runPublish()
+    publishInFlightRef.current = runPromise
+    try {
+      await runPromise
+    } finally {
+      if (publishInFlightRef.current === runPromise) {
+        publishInFlightRef.current = null
+      }
     }
   }
 
@@ -1973,19 +2199,19 @@ export default function WikiEditor() {
     router.push(`/editor/lesson?${params.toString()}`)
   }, [meta.slug, meta.wikiSlug, router])
 
-  const handleDownloadJSON = useCallback(() => {
+  const handleDownloadJSON = useCallback(async () => {
     if (!editorEn || !editorAr) return
+    await flushInlineCaptionEdits()
 
     const docEn = editorEn.getJSON()
     const docAr = editorAr.getJSON()
     const bodyEn = extractBody(docEn, 'en', editorEn)
     const bodyAr = extractBody(docAr, 'ar', editorAr)
-
-    const mergedBody = [] as any[]
-    const maxLen = Math.max(bodyEn.length, bodyAr.length)
-    for (let i = 0; i < maxLen; i++) {
-      mergedBody.push({ ...(bodyEn[i] || {}), ...(bodyAr[i] || {}) })
-    }
+    const mergedBody = composeMergedBlocks(
+      bodyEn,
+      bodyAr,
+      activeEditorTab === 'ar' ? 'ar' : 'en'
+    )
 
     const titleEn = meta.title_en || meta.title_ar || 'Untitled'
     const titleAr = meta.title_ar || meta.title_en || 'عنوان غير متوفر'
@@ -2017,7 +2243,7 @@ export default function WikiEditor() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }, [editorEn, editorAr, meta, documentVersion, developerId])
+  }, [editorEn, editorAr, meta, documentVersion, developerId, activeEditorTab, flushInlineCaptionEdits])
 
   const handleImportJSON = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

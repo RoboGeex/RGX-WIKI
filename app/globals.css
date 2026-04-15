@@ -65,6 +65,7 @@ html {
   font-size: 1.25rem !important; /* Premium 20px scale (Match Wiki) */
   line-height: 1.75rem !important; /* Tighter: 28px for 20px font */
   color: #374151 !important; /* text-gray-700 */
+  margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
 
@@ -184,44 +185,71 @@ html {
 .tiptap ul,
 .tiptap ol,
 .ProseMirror ul,
-.ProseMirror ol {
+.ProseMirror ol,
+.column-layout ul,
+.column-layout ol {
   margin: 0.75rem 0 !important;
   padding-left: 1.5rem !important;
   list-style-position: outside !important;
   color: #374151 !important; /* text-gray-700 */
   font-size: 1.25rem !important; /* Sync with direct text */
-  line-height: 1.75rem !important;
+  line-height: 2rem !important;
 }
 .tiptap ul,
-.ProseMirror ul {
+.ProseMirror ul,
+.column-layout ul {
   list-style-type: disc !important;
 }
 .tiptap ol,
-.ProseMirror ol {
+.ProseMirror ol,
+.column-layout ol {
   list-style-type: decimal !important;
 }
 .tiptap li,
-.ProseMirror li {
+.ProseMirror li,
+.column-layout li {
   margin: 0 !important;
   padding-left: 0.375rem;
   font-size: 1.25rem !important;
-  line-height: 1.75rem !important;
+  line-height: 2rem !important;
   color: #374151 !important;
 }
 .tiptap li::marker,
-.ProseMirror li::marker {
+.ProseMirror li::marker,
+.column-layout li::marker {
   color: #374151 !important; /* text-gray-700 */
 }
 .tiptap li + li,
-.ProseMirror li + li {
-  margin-top: 0.25rem !important;
+.ProseMirror li + li,
+.column-layout li + li {
+  margin-top: 0.4rem !important;
+}
+/* Normalize list paragraph spacing (Tailwind prose adds extra p margins by default) */
+.tiptap li > p,
+.ProseMirror li > p,
+.column-layout li > p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  font-size: 1.25rem !important;
+  line-height: 2rem !important;
+}
+
+/* Keep custom wiki list blocks aligned with editor list spacing */
+.tiptap .wiki-list-item-content p,
+.prose .wiki-list-item-content p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  font-size: 1.25rem !important;
+  line-height: 2rem !important;
 }
 .tiptap ul ul,
-.ProseMirror ul ul {
+.ProseMirror ul ul,
+.column-layout ul ul {
   list-style-type: circle !important;
 }
 .tiptap ul ul ul,
-.ProseMirror ul ul ul {
+.ProseMirror ul ul ul,
+.column-layout ul ul ul {
   list-style-type: square !important;
 }
 .tiptap-rtl ul,

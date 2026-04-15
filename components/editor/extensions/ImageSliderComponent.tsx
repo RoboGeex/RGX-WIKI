@@ -46,7 +46,11 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    setLocalCaption(props.item.caption || '')
+    const incomingCaption = typeof props.item.caption === 'string' && props.item.caption !== '<p></p>' ? props.item.caption : ''
+    setLocalCaption((prev) => {
+      if (!incomingCaption && prev) return prev
+      return prev === incomingCaption ? prev : incomingCaption
+    })
   }, [props.item.caption])
 
   useEffect(() => {
@@ -55,13 +59,19 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
     }
   }, [])
 
-  const handleBlur = () => {
+  const normalizeCaption = (value: unknown) => {
+    return typeof value === 'string' && value !== '<p></p>' ? value : ''
+  }
+
+  const handleBlur = (latestHtml?: string) => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = null
     }
-    if (localCaption !== props.item.caption) {
-      props.onCaptionChange(localCaption)
+    const nextCaption = normalizeCaption(typeof latestHtml === 'string' ? latestHtml : localCaption)
+    setLocalCaption(nextCaption)
+    if (nextCaption !== normalizeCaption(props.item.caption)) {
+      props.onCaptionChange(nextCaption)
     }
   }
 
@@ -141,11 +151,12 @@ const SortableImageItem = memo(function SortableImageItem(props: { id: string; i
         <RichCaptionInput
           initialContent={localCaption}
           onChange={(html) => {
-            setLocalCaption(html)
+            const normalized = normalizeCaption(html)
+            setLocalCaption(normalized)
             if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
             debounceTimerRef.current = setTimeout(() => {
-              props.onCaptionChange(html)
-            }, 1000)
+              props.onCaptionChange(normalized)
+            }, 250)
           }}
           onBlur={handleBlur}
           placeholder="Add caption..."
@@ -167,6 +178,63 @@ export default function ImageSliderComponent(props: any) {
   const [isReordering, setIsReordering] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null) // State for dragging overlay
   const [isUploading, setIsUploading] = useState(false)
+  const isMountedRef = useRef(true)
+  const pendingAttrsRef = useRef<Record<string, any> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  const applyAttrsWithTransaction = (attrs: Record<string, any>) => {
+    try {
+      const getPos = props.getPos
+      const editor = props.editor
+      if (!editor?.view || typeof getPos !== 'function') return false
+      const pos = getPos()
+      if (typeof pos !== 'number') return false
+
+      const state = editor.view.state
+      const targetNode = state.doc.nodeAt(pos)
+      if (!targetNode || targetNode.type.name !== 'imageSlider') return false
+
+      const tr = state.tr.setNodeMarkup(pos, undefined, {
+        ...targetNode.attrs,
+        ...attrs,
+      })
+      editor.view.dispatch(tr)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const safeUpdateAttributes = (attrs: Record<string, any>, retriesLeft = 6) => {
+    if (!isMountedRef.current) return
+    pendingAttrsRef.current = {
+      ...(pendingAttrsRef.current || {}),
+      ...attrs,
+    }
+
+    const payload = pendingAttrsRef.current
+
+    if (applyAttrsWithTransaction(payload)) {
+      pendingAttrsRef.current = null
+      return
+    }
+
+    try {
+      props.updateAttributes(payload)
+      pendingAttrsRef.current = null
+    } catch (error) {
+      if (retriesLeft > 0) {
+        setTimeout(() => safeUpdateAttributes(payload, retriesLeft - 1), 30)
+        return
+      }
+      console.warn('Skipped stale image slider attribute update after retries:', error)
+    }
+  }
 
   // DnD Sensors
   const sensors = useSensors(
@@ -225,7 +293,7 @@ export default function ImageSliderComponent(props: any) {
 
       if (successUrls.length > 0) {
         const newItems = successUrls.map(url => ({ url, caption: '' }))
-        props.updateAttributes({ images: [...images, ...newItems] })
+        safeUpdateAttributes({ images: [...images, ...newItems] })
       }
 
       if (failCount > 0) {
@@ -251,7 +319,7 @@ export default function ImageSliderComponent(props: any) {
 
       if (activeIndex !== -1 && overIndex !== -1) {
         const newImages = arrayMove(images, activeIndex, overIndex)
-        props.updateAttributes({ images: newImages })
+        safeUpdateAttributes({ images: newImages })
 
         // Adjust currentIndex if necessary so the same image stays selected, 
         // or just reset to the dragged image's new position
@@ -274,7 +342,7 @@ export default function ImageSliderComponent(props: any) {
       }
       return
     }
-    props.updateAttributes({ images: newImages })
+    safeUpdateAttributes({ images: newImages })
     if (currentIndex >= newImages.length) {
       setCurrentIndex(newImages.length - 1)
     } else if (currentIndex === indexToRemove) {
@@ -290,6 +358,15 @@ export default function ImageSliderComponent(props: any) {
     removeImage(currentIndex)
   }
 
+  const removeSlider = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (typeof props.deleteNode === 'function') {
+      props.deleteNode()
+      return
+    }
+    props.editor?.chain().focus().deleteSelection().run()
+  }
   return (
     <NodeViewWrapper className="image-slider-wrapper relative group select-none flex flex-col items-center space-y-3 my-6">
       {/* Main View Area */}
@@ -341,12 +418,12 @@ export default function ImageSliderComponent(props: any) {
                     onReplace={(newUrl: string) => {
                       const newImages = [...images]
                       newImages[index] = { ...newImages[index], url: newUrl }
-                      props.updateAttributes({ images: newImages })
+                      safeUpdateAttributes({ images: newImages })
                     }}
                     onCaptionChange={(newCaption) => {
                       const newImages = [...images]
                       newImages[index] = { ...newImages[index], caption: newCaption }
-                      props.updateAttributes({ images: newImages })
+                      safeUpdateAttributes({ images: newImages })
                     }}
                   />
                 ))}
@@ -442,7 +519,7 @@ export default function ImageSliderComponent(props: any) {
 
             {/* Editor Controls */}
             {props.editor?.isEditable && (
-              <div className="absolute top-4 left-4 flex items-center gap-1.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className={`absolute top-4 left-4 flex items-center gap-1.5 z-20 transition-opacity ${props.selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsReordering(true); }}
                   className="px-2.5 py-1.5 bg-black/50 backdrop-blur-sm rounded-lg text-white hover:bg-black/70 transition-colors flex items-center gap-1.5 text-sm font-medium mr-2"
@@ -455,35 +532,35 @@ export default function ImageSliderComponent(props: any) {
 
                 <div className="flex bg-black/50 backdrop-blur-sm rounded-lg p-0.5 ml-2 border border-white/10">
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: 'fit' }); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeUpdateAttributes({ layoutMode: 'fit' }); }}
                     className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${(!props.node.attrs.layoutMode || props.node.attrs.layoutMode === 'fit') ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     Fit
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '1:1' }); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeUpdateAttributes({ layoutMode: '1:1' }); }}
                     className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '1:1' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     1:1
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '3:4' }); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeUpdateAttributes({ layoutMode: '3:4' }); }}
                     className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '3:4' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     3:4
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '2:3' }); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeUpdateAttributes({ layoutMode: '2:3' }); }}
                     className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '2:3' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
                     2:3
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); props.updateAttributes({ layoutMode: '16:9' }); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeUpdateAttributes({ layoutMode: '16:9' }); }}
                     className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${props.node.attrs.layoutMode === '16:9' ? 'bg-white text-black shadow-sm' : 'text-white hover:bg-white/20'}`}
                     type="button"
                   >
@@ -497,6 +574,14 @@ export default function ImageSliderComponent(props: any) {
                   type="button"
                 >
                   <Trash2 size={16} />
+                </button>
+                <button
+                  onClick={removeSlider}
+                  className="px-2 py-1.5 bg-red-600/85 backdrop-blur-sm rounded text-white hover:bg-red-600 transition-colors ml-1 text-xs font-semibold"
+                  title="Remove slider"
+                  type="button"
+                >
+                  Remove
                 </button>
               </div>
             )}

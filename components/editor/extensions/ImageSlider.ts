@@ -1,6 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import ImageSliderComponent from './ImageSliderComponent'
+import { NodeSelection } from '@tiptap/pm/state'
 
 export interface ImageSliderOptions {
   HTMLAttributes: Record<string, any>
@@ -108,6 +109,26 @@ const ImageSlider = Node.create<ImageSliderOptions>({
       ),
       ['div', { class: 'tiptap-image-slider-track' }, ...slides],
     ]
+  },
+
+  addKeyboardShortcuts() {
+    const removeIfSelected = () =>
+      this.editor.commands.command(({ state, tr, dispatch }) => {
+        const { selection } = state
+        if (!(selection instanceof NodeSelection)) return false
+        if (selection.node.type.name !== this.name) return false
+
+        if (dispatch) {
+          dispatch(tr.deleteSelection().scrollIntoView())
+        }
+
+        return true
+      })
+
+    return {
+      Backspace: removeIfSelected,
+      Delete: removeIfSelected,
+    }
   },
 
   addNodeView() {

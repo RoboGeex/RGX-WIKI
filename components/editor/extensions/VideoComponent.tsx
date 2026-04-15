@@ -32,27 +32,92 @@ export default function VideoComponent(props: any) {
   const [isReplacing, setIsReplacing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isMountedRef = useRef(true)
+  const pendingAttrsRef = useRef<Record<string, any> | null>(null)
 
   useEffect(() => {
-    setCaption(node.attrs.title || '')
     setWidth(node.attrs.width || '100%')
     setTextAlign(node.attrs.textAlign || 'center')
     setLayoutMode(node.attrs.layoutMode || 'fit')
-  }, [node.attrs.title, node.attrs.width, node.attrs.textAlign, node.attrs.layoutMode])
+  }, [node.attrs.width, node.attrs.textAlign, node.attrs.layoutMode])
+
+  useEffect(() => {
+    const incomingCaption = typeof node.attrs.title === 'string' && node.attrs.title !== '<p></p>' ? node.attrs.title : ''
+    setCaption((prev: string) => {
+      // Ignore transient empty attrs so recent local caption edits do not get wiped.
+      if (!incomingCaption && prev) return prev
+      return prev === incomingCaption ? prev : incomingCaption
+    })
+  }, [node.attrs.title])
 
   useEffect(() => {
     return () => {
+      isMountedRef.current = false
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
   }, [])
 
-  const handleBlur = () => {
+  const applyAttrsWithTransaction = (attrs: Record<string, any>) => {
+    try {
+      const getPos = props.getPos
+      if (!editor?.view || typeof getPos !== 'function') return false
+      const pos = getPos()
+      if (typeof pos !== 'number') return false
+
+      const state = editor.view.state
+      const targetNode = state.doc.nodeAt(pos)
+      if (!targetNode || targetNode.type.name !== 'video') return false
+
+      const tr = state.tr.setNodeMarkup(pos, undefined, {
+        ...targetNode.attrs,
+        ...attrs,
+      })
+      editor.view.dispatch(tr)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const safeUpdateAttributes = (attrs: Record<string, any>, retriesLeft = 6) => {
+    if (!isMountedRef.current) return
+    pendingAttrsRef.current = {
+      ...(pendingAttrsRef.current || {}),
+      ...attrs,
+    }
+
+    const payload = pendingAttrsRef.current
+
+    if (applyAttrsWithTransaction(payload)) {
+      pendingAttrsRef.current = null
+      return
+    }
+
+    try {
+      updateAttributes(payload)
+      pendingAttrsRef.current = null
+    } catch (error) {
+      if (retriesLeft > 0) {
+        setTimeout(() => safeUpdateAttributes(payload, retriesLeft - 1), 30)
+        return
+      }
+      console.warn('Skipped stale video attribute update after retries:', error)
+    }
+  }
+
+  const normalizeCaption = (value: unknown) => {
+    return typeof value === 'string' && value !== '<p></p>' ? value : ''
+  }
+
+  const handleBlur = (latestHtml?: string) => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = null
     }
-    if (caption !== node.attrs.title) {
-      updateAttributes({ title: caption })
+    const nextCaption = normalizeCaption(typeof latestHtml === 'string' ? latestHtml : caption)
+    setCaption(nextCaption)
+    if (nextCaption !== normalizeCaption(node.attrs.title)) {
+      safeUpdateAttributes({ title: nextCaption })
     }
   }
 
@@ -71,7 +136,7 @@ export default function VideoComponent(props: any) {
       const isVimeoNew = url.includes('vimeo.com')
       const isYoutubeNew = url.includes('youtube.com') || url.includes('youtu.be')
       const newProvider = isVimeoNew ? 'vimeo' : isYoutubeNew ? 'youtube' : null
-      updateAttributes({ src: url, provider: newProvider })
+      safeUpdateAttributes({ src: url, provider: newProvider })
       setReplaceUrlValue('')
       setShowReplaceUrl(false)
     } else if (e.key === 'Escape') {
@@ -131,7 +196,7 @@ export default function VideoComponent(props: any) {
         videoProvider = data.provider || null
       }
 
-      updateAttributes({ src: videoUrl, provider: videoProvider })
+      safeUpdateAttributes({ src: videoUrl, provider: videoProvider })
 
       if (videoProvider === 'vimeo') {
         alert('Video replaced. It may take a moment for Vimeo to finish processing before playback works.')
@@ -145,17 +210,17 @@ export default function VideoComponent(props: any) {
   }
 
   const setSize = (w: string) => {
-    updateAttributes({ width: w })
+    safeUpdateAttributes({ width: w })
     setWidth(w)
   }
 
   const setAlignment = (a: string) => {
-    updateAttributes({ textAlign: a })
+    safeUpdateAttributes({ textAlign: a })
     setTextAlign(a)
   }
 
   const setLayout = (m: string) => {
-    updateAttributes({ layoutMode: m })
+    safeUpdateAttributes({ layoutMode: m })
     setLayoutMode(m)
   }
 
@@ -179,7 +244,7 @@ export default function VideoComponent(props: any) {
 
     const onMouseUp = () => {
       if (hasDragged) {
-        updateAttributes({ width: latestWidthStr })
+        safeUpdateAttributes({ width: latestWidthStr })
       }
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
@@ -336,6 +401,16 @@ export default function VideoComponent(props: any) {
               </label>
             )}
 
+            <button
+              onClick={removeVideo}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded hover:bg-red-50 text-red-600 border-l border-gray-200 ml-1 pl-2"
+              title="Remove video"
+              type="button"
+            >
+              <Trash2 size={14} />
+              <span>Remove</span>
+            </button>
+
           </div>
         )}
 
@@ -345,11 +420,12 @@ export default function VideoComponent(props: any) {
             <RichCaptionInput
               initialContent={caption}
               onChange={(html) => {
-                setCaption(html)
+                const normalized = normalizeCaption(html)
+                setCaption(normalized)
                 if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
                 debounceTimerRef.current = setTimeout(() => {
-                  updateAttributes({ title: html })
-                }, 1000)
+                  safeUpdateAttributes({ title: normalized })
+                }, 250)
               }}
               onBlur={handleBlur}
               placeholder="Add a caption..."

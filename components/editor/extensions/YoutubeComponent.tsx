@@ -9,11 +9,27 @@ export default function YoutubeComponent(props: any) {
   const [width, setWidth] = useState(node.attrs.width || '100%')
   const [textAlign, setTextAlign] = useState(node.attrs.textAlign || 'center') // left | center | right
   const containerRef = useRef<HTMLDivElement>(null)
+  const isMountedRef = useRef(true)
 
   useEffect(() => {
     setWidth(node.attrs.width || '100%')
     setTextAlign(node.attrs.textAlign || 'center')
   }, [node.attrs.width, node.attrs.textAlign])
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  const safeUpdateAttributes = (attrs: Record<string, any>) => {
+    if (!isMountedRef.current) return
+    try {
+      updateAttributes(attrs)
+    } catch (error) {
+      console.warn('Skipped stale youtube attribute update:', error)
+    }
+  }
 
   const removeVideo = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -24,12 +40,12 @@ export default function YoutubeComponent(props: any) {
   }
 
   const setSize = (w: string) => {
-    updateAttributes({ width: w })
+    safeUpdateAttributes({ width: w })
     setWidth(w)
   }
 
   const setAlignment = (a: string) => {
-    updateAttributes({ textAlign: a })
+    safeUpdateAttributes({ textAlign: a })
     setTextAlign(a)
   }
 
@@ -51,7 +67,7 @@ export default function YoutubeComponent(props: any) {
     }
 
     const onMouseUp = () => {
-      updateAttributes({ width: latestWidthStr })
+      safeUpdateAttributes({ width: latestWidthStr })
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
     }

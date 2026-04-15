@@ -18,7 +18,7 @@ const highlightColors = ['transparent', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5f
 interface Props {
     initialContent: string
     onChange: (html: string) => void
-    onBlur?: () => void
+    onBlur?: (html: string) => void
     onFocus?: () => void
     placeholder?: string
     className?: string
@@ -65,9 +65,17 @@ export function RichCaptionInput({ initialContent, onChange, onBlur, onFocus, pl
             setIsFocused(true)
             if (onFocus) onFocus()
         },
-        onBlur: () => {
+        onBlur: ({ editor }) => {
             setIsFocused(false)
-            if (onBlur) onBlur()
+            if (onBlur) {
+                try {
+                    const html = editor.getHTML()
+                    onBlur(html === '<p></p>' ? '' : html)
+                } catch (error) {
+                    // Parent node view may already be detached while blur propagates.
+                    console.warn('Skipped stale caption blur callback:', error)
+                }
+            }
         },
     })
 
@@ -96,8 +104,13 @@ export function RichCaptionInput({ initialContent, onChange, onBlur, onFocus, pl
         const normalizedInitial = (initialContent === '<p></p>' || !initialContent) ? '' : initialContent
         const normalizedCurrent = currentHtml === '<p></p>' ? '' : currentHtml
 
+        // Ignore transient empty prop updates while the editor still has content.
+        if (!normalizedInitial && normalizedCurrent) {
+            return
+        }
+
         if (normalizedInitial !== normalizedCurrent) {
-            editor.commands.setContent(initialContent || '')
+            editor.commands.setContent(normalizedInitial)
         }
     }, [initialContent, editor])
 

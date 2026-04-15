@@ -1,6 +1,7 @@
 ﻿import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import VideoComponent from './VideoComponent'
+import { NodeSelection } from '@tiptap/pm/state'
 
 export interface VideoOptions {
   HTMLAttributes: Record<string, any>
@@ -132,6 +133,26 @@ const Video = Node.create<VideoOptions>({
     }
     const { provider: _provider, ...videoAttrs } = HTMLAttributes
     return ['video', mergeAttributes(this.options.HTMLAttributes, videoAttrs)]
+  },
+
+  addKeyboardShortcuts() {
+    const removeIfSelected = () =>
+      this.editor.commands.command(({ state, tr, dispatch }) => {
+        const { selection } = state
+        if (!(selection instanceof NodeSelection)) return false
+        if (selection.node.type.name !== this.name) return false
+
+        if (dispatch) {
+          dispatch(tr.deleteSelection().scrollIntoView())
+        }
+
+        return true
+      })
+
+    return {
+      Backspace: removeIfSelected,
+      Delete: removeIfSelected,
+    }
   },
 
   addNodeView() {

@@ -87,7 +87,7 @@ async function createLessonFilesForWiki(wiki: any): Promise<void> {
     order: 0,
     slug: 'getting-started',
     title_en: 'Getting Started',
-    title_ar: 'البداية',
+    title_ar: 'البدء',
     duration_min: 30,
     difficulty: 'Beginner',
     prerequisites_en: [],

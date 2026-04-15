@@ -2,9 +2,10 @@
 import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import Image from '@tiptap/extension-image'
 import React, { useEffect, useState, useRef } from 'react'
-import { AlignLeft, AlignCenter, AlignRight, Maximize, RefreshCw, Loader2 } from 'lucide-react'
+import { AlignLeft, AlignCenter, AlignRight, Maximize, RefreshCw, Loader2, Trash2 } from 'lucide-react'
 import { RichCaptionInput } from './RichCaptionInput'
 import { NodeViewErrorBoundary } from './NodeViewErrorBoundary'
+import { NodeSelection } from '@tiptap/pm/state'
 
 const ResizableImageComponent = (props: any) => {
   const { node, updateAttributes, selected } = props
@@ -16,44 +17,118 @@ const ResizableImageComponent = (props: any) => {
   const imageRef = useRef<HTMLImageElement>(null)
   const replaceInputRef = useRef<HTMLInputElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isMountedRef = useRef(true)
+  const pendingAttrsRef = useRef<Record<string, any> | null>(null)
+  const lastKnownCaptionRef = useRef(typeof node.attrs.title === 'string' && node.attrs.title !== '<p></p>' ? node.attrs.title : '')
 
   useEffect(() => {
     setWidth(node.attrs.width || '100%')
     setTextAlign(node.attrs.textAlign || 'center')
-    setCaption(node.attrs.title || '')
     setLayoutMode(node.attrs.layoutMode || 'fit')
-  }, [node.attrs.width, node.attrs.textAlign, node.attrs.title, node.attrs.layoutMode])
+  }, [node.attrs.width, node.attrs.textAlign, node.attrs.layoutMode])
+
+  useEffect(() => {
+    const incomingCaption = typeof node.attrs.title === 'string' && node.attrs.title !== '<p></p>' ? node.attrs.title : ''
+    setCaption((prev: string) => {
+      // Some editor transactions briefly expose empty attrs; keep the latest known caption.
+      if (!incomingCaption) {
+        const fallback = lastKnownCaptionRef.current || prev
+        return fallback ? (prev === fallback ? prev : fallback) : ''
+      }
+      lastKnownCaptionRef.current = incomingCaption
+      return prev === incomingCaption ? prev : incomingCaption
+    })
+  }, [node.attrs.title])
 
   useEffect(() => {
     return () => {
+      isMountedRef.current = false
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
   }, [])
 
-  const handleBlur = () => {
+  const applyAttrsWithTransaction = (attrs: Record<string, any>) => {
+    try {
+      const editor = props.editor
+      const getPos = props.getPos
+      if (!editor?.view || typeof getPos !== 'function') return false
+      const pos = getPos()
+      if (typeof pos !== 'number') return false
+
+      const state = editor.view.state
+      const targetNode = state.doc.nodeAt(pos)
+      if (!targetNode || targetNode.type.name !== 'image') return false
+
+      const tr = state.tr.setNodeMarkup(pos, undefined, {
+        ...targetNode.attrs,
+        ...attrs,
+      })
+      editor.view.dispatch(tr)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const safeUpdateAttributes = (attrs: Record<string, any>, retriesLeft = 30) => {
+    if (!isMountedRef.current) return
+    pendingAttrsRef.current = {
+      ...(pendingAttrsRef.current || {}),
+      ...attrs,
+    }
+
+    const payload = pendingAttrsRef.current
+
+    if (applyAttrsWithTransaction(payload)) {
+      pendingAttrsRef.current = null
+      return
+    }
+
+    try {
+      updateAttributes(payload)
+      pendingAttrsRef.current = null
+    } catch (error) {
+      if (retriesLeft > 0) {
+        setTimeout(() => safeUpdateAttributes(payload, retriesLeft - 1), 40)
+        return
+      }
+      // Last-chance reschedule to avoid dropping caption updates during transient node-view churn.
+      setTimeout(() => safeUpdateAttributes(payload, 30), 120)
+      console.warn('Delayed image attribute update after transient stale state:', error)
+    }
+  }
+
+  const normalizeCaption = (value: unknown) => {
+    return typeof value === 'string' && value !== '<p></p>' ? value : ''
+  }
+
+  const handleBlur = (latestHtml?: string) => {
     // Clear any pending debounce
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = null
     }
+    const nextCaption = normalizeCaption(typeof latestHtml === 'string' ? latestHtml : caption)
+    lastKnownCaptionRef.current = nextCaption
+    setCaption(nextCaption)
     // Final sync
-    if (caption !== node.attrs.title) {
-      updateAttributes({ title: caption })
+    if (nextCaption !== normalizeCaption(node.attrs.title)) {
+      safeUpdateAttributes({ title: nextCaption })
     }
   }
 
   const setSize = (w: string) => {
-    updateAttributes({ width: w })
+    safeUpdateAttributes({ width: w })
     setWidth(w)
   }
 
   const setAlignment = (a: string) => {
-    updateAttributes({ textAlign: a })
+    safeUpdateAttributes({ textAlign: a })
     setTextAlign(a)
   }
 
   const setLayout = (m: string) => {
-    updateAttributes({ layoutMode: m })
+    safeUpdateAttributes({ layoutMode: m })
     setLayoutMode(m)
   }
 
@@ -71,7 +146,7 @@ const ResizableImageComponent = (props: any) => {
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       if (!res.ok) throw new Error('Upload failed')
       const data = await res.json()
-      updateAttributes({ src: data.url })
+      safeUpdateAttributes({ src: data.url })
     } catch (err) {
       alert('Failed to replace image')
     } finally {
@@ -80,6 +155,13 @@ const ResizableImageComponent = (props: any) => {
     }
   }
 
+  const removeImageNode = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (typeof props.deleteNode === 'function') {
+      props.deleteNode()
+    }
+  }
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -100,7 +182,7 @@ const ResizableImageComponent = (props: any) => {
 
     const onMouseUp = () => {
       if (hasDragged) {
-        updateAttributes({ width: latestWidthStr })
+        safeUpdateAttributes({ width: latestWidthStr })
       }
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
@@ -146,12 +228,11 @@ const ResizableImageComponent = (props: any) => {
             <RichCaptionInput
               initialContent={caption}
               onChange={(html) => {
-                setCaption(html)
-                // Debounce parent attribute update to avoid focus-stealing re-renders
-                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-                debounceTimerRef.current = setTimeout(() => {
-                  updateAttributes({ title: html })
-                }, 1000)
+                const normalized = normalizeCaption(html)
+                lastKnownCaptionRef.current = normalized
+                setCaption(normalized)
+                // Persist immediately so node remounts/selection changes cannot drop captions.
+                safeUpdateAttributes({ title: normalized })
               }}
               onBlur={handleBlur}
               placeholder="Add a caption..."
@@ -200,6 +281,16 @@ const ResizableImageComponent = (props: any) => {
               <input ref={replaceInputRef} type="file" accept="image/*" className="hidden" onChange={handleReplace} disabled={isReplacing} />
             </label>
 
+            <button
+              onClick={removeImageNode}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded hover:bg-red-50 text-red-600"
+              title="Remove image"
+              type="button"
+            >
+              <Trash2 size={14} />
+              <span>Remove</span>
+            </button>
+
           </div>
         )}
       </div>
@@ -237,6 +328,26 @@ export default Image.extend({
           'data-layout-mode': attributes.layoutMode,
         }),
       }
+    }
+  },
+
+  addKeyboardShortcuts() {
+    const removeIfSelected = () =>
+      this.editor.commands.command(({ state, tr, dispatch }) => {
+        const { selection } = state
+        if (!(selection instanceof NodeSelection)) return false
+        if (selection.node.type.name !== this.name) return false
+
+        if (dispatch) {
+          dispatch(tr.deleteSelection().scrollIntoView())
+        }
+
+        return true
+      })
+
+    return {
+      Backspace: removeIfSelected,
+      Delete: removeIfSelected,
     }
   },
 

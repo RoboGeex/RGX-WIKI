@@ -60,6 +60,25 @@ const LessonPage = () => {
         return <div>Lesson not found.</div>;
     }
 
+    const toPlainText = (value: unknown): string => {
+        if (typeof value !== 'string') return '';
+        return value
+            .replace(/<br\s*\/?>/gi, ' ')
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
+    const hasMeaningfulHtml = (value: unknown): value is string => toPlainText(value).length > 0;
+
+    const pickCaption = (...values: unknown[]): string => {
+        for (const value of values) {
+            if (hasMeaningfulHtml(value)) return value;
+        }
+        return '';
+    };
+
 
     // Render lesson.body as HTML and add IDs to headings
     const renderBody = () => {
@@ -87,7 +106,14 @@ const LessonPage = () => {
             }
             if (item.type === 'imageSlider') {
                 const images = Array.isArray(item.images) ? item.images : []
-                const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || ''
+                const caption = pickCaption(
+                    item.caption_en,
+                    item.caption_ar,
+                    item?.json_en?.attrs?.title,
+                    item?.json_ar?.attrs?.title,
+                    item.title_en,
+                    item.title_ar,
+                )
                 if (!images.length) return null
                 const layoutMode = item.layoutMode || 'fit'
                 
@@ -108,7 +134,7 @@ const LessonPage = () => {
                 if (!Array.isArray(items) || items.length === 0) return null;
 
                 return (
-                    <div key={blockIdx} className="pl-2 mb-4 space-y-2 text-gray-700">
+                    <div key={blockIdx} className="wiki-list-block pl-2 mb-4 space-y-[0.4rem] text-xl leading-8 text-gray-700">
                         {items.map((li: any, liIdx: number) => {
                             const text = typeof li === 'object' ? li.text : li;
                             const indent = typeof li === 'object' ? (li.indent || 0) : 0;
@@ -120,11 +146,11 @@ const LessonPage = () => {
                                     className="flex items-start gap-3"
                                     style={{ paddingLeft: `${indent * 2}rem` }}
                                 >
-                                    <span className={`shrink-0 font-medium ${item.ordered ? 'min-w-[1.5rem]' : 'w-4 text-center'} text-gray-500`}>
+                                    <span className={`shrink-0 font-medium leading-8 ${item.ordered ? 'min-w-[1.5rem]' : 'w-4 text-center'} text-gray-500`}>
                                         {marker}
                                     </span>
                                     <div
-                                        className="flex-1"
+                                        className="wiki-list-item-content flex-1"
                                         dangerouslySetInnerHTML={{ __html: text }}
                                     />
                                 </div>
@@ -135,7 +161,15 @@ const LessonPage = () => {
             }
 
             if (item.type === 'image' && item.image) {
-                const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || '';
+                const caption = pickCaption(
+                    item.caption_en,
+                    item.caption_ar,
+                    item?.json_en?.attrs?.title,
+                    item?.json_ar?.attrs?.title,
+                    item.title_en,
+                    item.title_ar,
+                );
+                const altText = hasMeaningfulHtml(item.alt) ? toPlainText(item.alt) : toPlainText(caption);
                 const width = item.width || '100%';
                 const align = item.align || 'center';
                 const layoutMode = item.layoutMode || 'fit';
@@ -160,7 +194,7 @@ const LessonPage = () => {
                                 <ZoomableImage className="w-full h-full">
                                     <img
                                         src={item.image}
-                                        alt={caption}
+                                        alt={altText}
                                         className={`w-full block !m-0 !p-0 ${
                                           (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
                                         }`}
@@ -213,7 +247,14 @@ const LessonPage = () => {
             }
 
             if (item.type === 'video' && item.url) {
-                const caption = item.caption_en || item.caption_ar || item.title_en || item.title_ar || ''
+                const caption = pickCaption(
+                    item.caption_en,
+                    item.caption_ar,
+                    item?.json_en?.attrs?.title,
+                    item?.json_ar?.attrs?.title,
+                    item.title_en,
+                    item.title_ar,
+                )
                 const width = item.width || '100%'
                 const align = item.align || 'center'
                 const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'

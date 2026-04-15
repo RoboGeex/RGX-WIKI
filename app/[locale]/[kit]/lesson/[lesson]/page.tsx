@@ -40,7 +40,8 @@ export default async function LessonPage(
     notFound()
   }
 
-  const lessonDisplayTitle = locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')
+  const localizedLessonTitle = locale === 'ar' ? (lesson.title_ar || '') : (lesson.title_en || '')
+  const lessonDisplayTitle = localizedLessonTitle || lesson.slug || ''
   const headingCounts = new Map<string, number>()
   const slugify = (value: string) =>
     value
@@ -95,8 +96,190 @@ export default async function LessonPage(
     }
   }
 
-  const renderBlock = (block: any, index: number) => {
+  const toPlainText = (value: unknown): string => {
+    if (typeof value !== 'string') return ''
+    return value
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  const hasMeaningfulHtml = (value: unknown): value is string => toPlainText(value).length > 0
+
+  const pickLocalizedCaption = (
+    block: any,
+    allowCrossLocaleFallback: boolean,
+    localeJsonNode?: any,
+    crossLocaleJsonNode?: any,
+  ): string => {
+    const primaryCaption = locale === 'ar' ? block?.caption_ar : block?.caption_en
+    const primaryTitle = locale === 'ar' ? block?.title_ar : block?.title_en
+    if (hasMeaningfulHtml(primaryCaption)) return primaryCaption
+    const localeJsonTitle = localeJsonNode?.attrs?.title
+    if (hasMeaningfulHtml(localeJsonTitle)) return localeJsonTitle
+    if (hasMeaningfulHtml(primaryTitle)) return primaryTitle
+
+    if (!allowCrossLocaleFallback) return ''
+
+    const fallbackCaption = locale === 'ar' ? block?.caption_en : block?.caption_ar
+    const fallbackTitle = locale === 'ar' ? block?.title_en : block?.title_ar
+    if (hasMeaningfulHtml(fallbackCaption)) return fallbackCaption
+    const crossLocaleJsonTitle = crossLocaleJsonNode?.attrs?.title
+    if (hasMeaningfulHtml(crossLocaleJsonTitle)) return crossLocaleJsonTitle
+    if (hasMeaningfulHtml(fallbackTitle)) return fallbackTitle
+    return ''
+  }
+
+  const mapJsonTypeToBlockType = (jsonType?: string): string | undefined => {
+    if (!jsonType) return undefined
+    if (jsonType === 'orderedList' || jsonType === 'bulletList') return 'list'
+    if (jsonType === 'codeBlock') return 'code'
+    if (jsonType === 'blockquote') return 'callout'
+    return jsonType
+  }
+
+  const getLocaleJsonNode = (block: any) => {
+    const node = locale === 'ar' ? block?.json_ar : block?.json_en
+    return node && typeof node === 'object' ? node : undefined
+  }
+
+  const getCrossLocaleJsonNode = (block: any) => {
+    const node = locale === 'ar' ? block?.json_en : block?.json_ar
+    return node && typeof node === 'object' ? node : undefined
+  }
+
+  const normalizeBlockForLocale = (source: any): any => {
+    if (!source || typeof source !== 'object') return source
+
+    const block: any = { ...source }
+    const localeJson = getLocaleJsonNode(block)
+    const mappedType = mapJsonTypeToBlockType(typeof localeJson?.type === 'string' ? localeJson.type : undefined)
+
+    if (mappedType) {
+      block.type = mappedType
+    }
+
+    if (localeJson?.type === 'orderedList') {
+      block.ordered = true
+    } else if (localeJson?.type === 'bulletList') {
+      block.ordered = false
+    }
+
+    const levelFromJson = Number(localeJson?.attrs?.level)
+    if (
+      block.type === 'heading' &&
+      (!block.level || block.level < 1 || block.level > 6) &&
+      Number.isFinite(levelFromJson) &&
+      levelFromJson >= 1 &&
+      levelFromJson <= 6
+    ) {
+      block.level = levelFromJson
+    }
+
+    const alignFromJson = localeJson?.attrs?.textAlign || localeJson?.attrs?.align
+    if (typeof alignFromJson === 'string') {
+      block.align = alignFromJson
+    }
+    if (typeof localeJson?.attrs?.layoutMode === 'string') {
+      block.layoutMode = localeJson.attrs.layoutMode
+    }
+    if (localeJson?.attrs?.width !== undefined && localeJson?.attrs?.width !== null && localeJson?.attrs?.width !== '') {
+      block.width = localeJson.attrs.width
+    }
+
+    if (block.type === 'image') {
+      if (typeof localeJson?.attrs?.src === 'string' && localeJson.attrs.src.trim()) {
+        block.image = localeJson.attrs.src
+      }
+      const imageTitle = typeof localeJson?.attrs?.title === 'string' ? localeJson.attrs.title : ''
+      const imageAlt = typeof localeJson?.attrs?.alt === 'string' ? localeJson.attrs.alt : ''
+      const localizedTitleKey = locale === 'ar' ? 'title_ar' : 'title_en'
+      const localizedCaptionKey = locale === 'ar' ? 'caption_ar' : 'caption_en'
+      if (imageTitle) {
+        block[localizedTitleKey] = imageTitle
+      }
+      if (imageAlt) {
+        block.alt = imageAlt
+      }
+      if (!hasMeaningfulHtml(block[localizedCaptionKey]) && hasMeaningfulHtml(block[localizedTitleKey])) {
+        block[localizedCaptionKey] = block[localizedTitleKey]
+      }
+    }
+
+    if (block.type === 'imageSlider') {
+      if (Array.isArray(localeJson?.attrs?.images)) {
+        block.images = localeJson.attrs.images
+      }
+      const sliderTitle = typeof localeJson?.attrs?.title === 'string' ? localeJson.attrs.title : ''
+      const localizedTitleKey = locale === 'ar' ? 'title_ar' : 'title_en'
+      const localizedCaptionKey = locale === 'ar' ? 'caption_ar' : 'caption_en'
+      if (sliderTitle) {
+        block[localizedTitleKey] = sliderTitle
+      }
+      if (!hasMeaningfulHtml(block[localizedCaptionKey]) && hasMeaningfulHtml(block[localizedTitleKey])) {
+        block[localizedCaptionKey] = block[localizedTitleKey]
+      }
+    }
+
+    if (block.type === 'youtube' || block.type === 'video') {
+      if (typeof localeJson?.attrs?.src === 'string' && localeJson.attrs.src.trim()) {
+        block.url = localeJson.attrs.src
+      }
+      if (typeof localeJson?.attrs?.poster === 'string') {
+        block.poster = localeJson.attrs.poster
+      }
+      if (typeof localeJson?.attrs?.provider === 'string') {
+        block.provider = localeJson.attrs.provider
+      }
+      const mediaTitle = typeof localeJson?.attrs?.title === 'string' ? localeJson.attrs.title : ''
+      const localizedTitleKey = locale === 'ar' ? 'title_ar' : 'title_en'
+      const localizedCaptionKey = locale === 'ar' ? 'caption_ar' : 'caption_en'
+      if (mediaTitle) {
+        block[localizedTitleKey] = mediaTitle
+      }
+      if (!hasMeaningfulHtml(block[localizedCaptionKey]) && hasMeaningfulHtml(block[localizedTitleKey])) {
+        block[localizedCaptionKey] = block[localizedTitleKey]
+      }
+    }
+
+    if (block.type === 'code' && !block.language && typeof localeJson?.attrs?.language === 'string') {
+      block.language = localeJson.attrs.language
+    }
+
+    if (Array.isArray(block.content)) {
+      block.content = block.content.map((child: any) => normalizeBlockForLocale(child)).filter(Boolean)
+    }
+
+    return block
+  }
+
+  const lessonUsesLocaleJson = Array.isArray(lesson.body)
+    ? lesson.body.some((block: any) =>
+        Boolean(
+          block &&
+          typeof block === 'object' &&
+          (
+            (block.json_en && typeof block.json_en === 'object') ||
+            (block.json_ar && typeof block.json_ar === 'object')
+          )
+        )
+      )
+    : false
+
+  const renderBlock = (rawBlock: any, index: number) => {
+    if (!rawBlock || typeof rawBlock !== 'object') return null
+    const localeJsonNode = getLocaleJsonNode(rawBlock)
+    const crossLocaleJsonNode = getCrossLocaleJsonNode(rawBlock)
+    if (lessonUsesLocaleJson && !localeJsonNode) {
+      // For JSON-based lessons, each locale should render only blocks present in that locale's editor structure.
+      // This prevents EN-only/AR-only tail blocks from leaking into the other locale in wiki view.
+      return null
+    }
+    const block = normalizeBlockForLocale(rawBlock)
     if (!block || !block.type) return null
+    const hasLocaleJson = Boolean(localeJsonNode)
 
     if (block.type === 'paragraph') {
       const html = locale === 'ar' ? block.html_ar : block.html_en
@@ -128,7 +311,7 @@ export default async function LessonPage(
         <div
           key={index}
           dir={locale === 'ar' ? 'rtl' : 'ltr'}
-          className={`text-xl leading-7 text-gray-700 ${paddingClass} space-y-1 my-3`}
+          className={`wiki-list-block text-xl leading-8 text-gray-700 ${paddingClass} space-y-[0.4rem] my-3`}
         >
           {items.map((item: any, itemIndex: number) => {
             const text = typeof item === 'object' ? item.text : item
@@ -143,11 +326,11 @@ export default async function LessonPage(
                   [locale === 'ar' ? 'paddingRight' : 'paddingLeft']: `${indent * 2}rem`
                 }}
               >
-                <span className={`shrink-0 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-gray-700`}>
+                <span className={`shrink-0 leading-8 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-gray-700`}>
                   {marker}
                 </span>
                 <div
-                  className="flex-1 [&_p]:m-0"
+                  className="wiki-list-item-content flex-1"
                   dangerouslySetInnerHTML={{ __html: text }}
                 />
               </div>
@@ -204,7 +387,10 @@ export default async function LessonPage(
     }
 
     if (block.type === 'table') {
-      const html = locale === 'ar' ? (block.html_ar || block.html_en || '') : (block.html_en || block.html_ar || '')
+      let html = locale === 'ar' ? (block.html_ar || '') : (block.html_en || '')
+      if (!html && !hasLocaleJson) {
+        html = locale === 'ar' ? (block.html_en || '') : (block.html_ar || '')
+      }
       if (!html) return null
       return (
         <div key={index} className="overflow-x-auto my-6">
@@ -219,7 +405,7 @@ export default async function LessonPage(
     if (block.type === 'imageSlider') {
       const images = Array.isArray(block.images) ? block.images.filter(Boolean) : []
       if (!images.length) return null
-      const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
+      const caption = pickLocalizedCaption(block, !hasLocaleJson, localeJsonNode, crossLocaleJsonNode)
       return (
         <figure key={index} className="mt-2 mb-8 flex flex-col items-center w-full">
           <LessonImageSlider images={images} layoutMode={block.layoutMode} />
@@ -238,7 +424,8 @@ export default async function LessonPage(
     }
 
     if (block.type === 'image' && block.image) {
-      const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
+      const caption = pickLocalizedCaption(block, !hasLocaleJson, localeJsonNode, crossLocaleJsonNode)
+      const altText = hasMeaningfulHtml(block.alt) ? toPlainText(block.alt) : toPlainText(caption)
       // Use Arabic image if available in Arabic locale, otherwise use English image
       const imageUrl = locale === 'ar' && block.image_ar ? block.image_ar : block.image
       const width = block.width || '100%'
@@ -269,7 +456,7 @@ export default async function LessonPage(
               <ZoomableImage className="w-full h-full">
                 <img
                   src={imageUrl}
-                  alt={caption || ''}
+                  alt={altText || ''}
                   className={`block w-full !m-0 !p-0 ${
                     (layoutMode === '1:1' || layoutMode === '3:4' || layoutMode === '2:3' || layoutMode === '16:9') ? 'object-cover h-full' : 'h-auto object-cover'
                   }`}
@@ -291,10 +478,13 @@ export default async function LessonPage(
     if (block.type === 'youtube' && block.url) {
       const embedUrl = toYoutubeEmbed(block.url)
       if (!embedUrl) return null
-      const title =
-        locale === 'ar'
-          ? block.title_ar || block.title_en || 'YouTube video'
-          : block.title_en || block.title_ar || 'YouTube video'
+      let title = locale === 'ar' ? (block.title_ar || '') : (block.title_en || '')
+      if (!title && !hasLocaleJson) {
+        title = locale === 'ar' ? (block.title_en || '') : (block.title_ar || '')
+      }
+      if (!title) {
+        title = 'YouTube video'
+      }
       const width = block.width || '100%'
       const align = block.align || 'center'
       const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
@@ -324,10 +514,7 @@ export default async function LessonPage(
     }
 
     if (block.type === 'video' && block.url) {
-      const caption =
-        locale === 'ar'
-          ? block.caption_ar || block.title_ar || ''
-          : block.caption_en || block.title_en || ''
+      const caption = pickLocalizedCaption(block, !hasLocaleJson, localeJsonNode, crossLocaleJsonNode)
       const isVimeo = typeof block.url === 'string' && block.url.includes('vimeo.com')
       const isYoutube = typeof block.url === 'string' && (block.url.includes('youtube.com') || block.url.includes('youtu.be'))
       const provider = block.provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)
@@ -431,7 +618,10 @@ export default async function LessonPage(
     }
 
     if (block.type === 'code') {
-      const code = locale === 'ar' ? (block.ar || block.en || '') : (block.en || '')
+      let code = locale === 'ar' ? (block.ar || '') : (block.en || '')
+      if (!code && !hasLocaleJson) {
+        code = locale === 'ar' ? (block.en || '') : (block.ar || '')
+      }
       if (!code) return null
       return <CodeBlock key={index} code={code} language={block.language} locale={locale} />
     }
@@ -488,7 +678,7 @@ export default async function LessonPage(
                   <span className="text-sm font-semibold text-gray-700">{kitData.title_en}</span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
-                  {locale === 'ar' ? (lesson.title_ar || lesson.title_en || '') : (lesson.title_en || lesson.title_ar || '')}
+                  {lessonDisplayTitle}
                 </h1>
               </header>
 

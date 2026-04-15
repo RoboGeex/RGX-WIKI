@@ -14,14 +14,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { wikiSlug, lessonId, forceTakeover } = body
+    const { wikiSlug, lessonId } = body
 
     if (!wikiSlug || !lessonId) {
       return NextResponse.json({ error: 'Missing wikiSlug or lessonId' }, { status: 400 })
     }
 
     const developer = await findDeveloperById(actorId)
-    
+
     const prisma = getPrisma(wikiSlug)
 
     // Find the lesson first
@@ -34,33 +34,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
     }
 
-    if (!canEditLesson(developer, wikiSlug, lesson.ownerId)) {
-      return NextResponse.json({ error: 'Forbidden: You do not have permission to edit (or lock) this lesson' }, { status: 403 })
-    }
-
     const now = new Date()
     const lockDuration = 2 * 60 * 1000 // 2 minutes
 
     // Determine if we can acquire or renew the lock
-    const isLockedBySomeoneElse = 
-      lesson.activeEditorId && 
-      lesson.activeEditorId !== actorId && 
-      lesson.lockedUntil && 
+    const isLockedBySomeoneElse =
+      lesson.activeEditorId &&
+      lesson.activeEditorId !== actorId &&
+      lesson.lockedUntil &&
       lesson.lockedUntil > now
 
-    if (isLockedBySomeoneElse && !forceTakeover) {
-      const editorIdParsed = lesson.activeEditorId ? parseInt(lesson.activeEditorId) : NaN
-      const defaultPrisma = getPrisma()
-      const editor = !isNaN(editorIdParsed) ? await defaultPrisma.developer.findUnique({
-        where: { id: editorIdParsed }
-      }) : null
-      
+    if (isLockedBySomeoneElse) {
+      const editor = await findDeveloperById(lesson.activeEditorId || '')
+
       return NextResponse.json({
         locked: true,
         lockedBy: editor?.name || editor?.email || 'Another developer',
         lockedUntil: lesson.lockedUntil,
         version: lesson.version
       })
+    }
+
+    // Now that we know it's not locked by someone else, check if the user is ALLOWED to lock it
+    if (!canEditLesson(developer, wikiSlug, lesson.ownerId)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to edit (or lock) this lesson' }, { status: 403 })
     }
 
     // Acquire or renew lock

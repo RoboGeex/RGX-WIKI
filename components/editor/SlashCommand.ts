@@ -293,32 +293,90 @@ const items: SlashItem[] = [
       input.onchange = async () => {
         const file = input.files?.[0]
         if (!file) return
-        const fd = new FormData()
-        fd.append('file', file)
+
+        // Visual indicator that upload is starting
+        const originalCursor = document.body.style.cursor
+        document.body.style.cursor = 'wait'
         const context = getUploadContext(editor)
-        if (context.wikiSlug) fd.append('wikiSlug', context.wikiSlug)
-        fd.append('mediaType', 'video')
+        const wikiSlug = context.wikiSlug
+
+        let videoUrl: string | undefined
+        let videoProvider: string | undefined
+
         try {
-          const res = await fetch('/api/upload', { method: 'POST', body: fd })
-          const data = await res.json()
-          if (!res.ok) throw new Error(data.error || 'Upload failed')
-          const url = data.url as string | undefined
-          if (!url) throw new Error('Upload failed')
-          const provider = (data.provider as string | undefined) || (url.includes('vimeo.com') ? 'vimeo' : undefined)
+          // 1. Request Secure Upload Link from Backend (Bypasses Vercal & Memory limits)
+          const createRes = await fetch('/api/vimeo/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fileName: file.name,
+              size: file.size,
+              wikiSlug,
+            })
+          }).catch(() => null)
+
+          if (createRes && createRes.ok) {
+            const { uploadLink, playbackUrl } = await createRes.json()
+            if (uploadLink && playbackUrl) {
+
+              // 2. Perform direct-to-Vimeo resumable TUS upload
+              const tus = await import('tus-js-client')
+
+              await new Promise<void>((resolve, reject) => {
+                const upload = new tus.Upload(file, {
+                  uploadUrl: uploadLink,
+                  retryDelays: [0, 3000, 5000, 10000, 20000],
+                  onError: (err) => reject(err),
+                  onProgress: (bytesUploaded, bytesTotal) => {
+                    const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
+                    console.log(`Video upload progress: ${percentage}%`)
+                  },
+                  onSuccess: () => resolve(),
+                })
+                upload.start()
+              })
+
+              videoUrl = playbackUrl
+              videoProvider = 'vimeo'
+            }
+          }
+
+          // 3. Fallback to standard server-side upload if direct Vimeo failed (or not configured)
+          if (!videoUrl) {
+            const fd = new FormData()
+            fd.append('file', file)
+            if (wikiSlug) fd.append('wikiSlug', wikiSlug)
+            fd.append('mediaType', 'video')
+
+            const res = await fetch('/api/upload', { method: 'POST', body: fd })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Upload failed')
+            if (!data.url) throw new Error('Upload failed')
+
+            videoUrl = data.url
+            videoProvider = data.provider || (data.url.includes('vimeo.com') ? 'vimeo' : undefined)
+          }
+
+          // 4. Insert video block into editor
           editor
             .chain()
             .focus()
             .insertVideo({
-              src: url,
-              provider,
-              controls: provider === 'vimeo' ? false : true,
+              src: videoUrl,
+              provider: videoProvider,
+              controls: videoProvider === 'vimeo' ? false : true,
             })
             .run()
-          if (provider === 'vimeo') {
-            alert('Uploaded to Vimeo. It may take a moment before the video becomes playable.')
+
+          if (videoProvider === 'vimeo') {
+            alert('Video uploaded successfully. It may take a moment for processing to catch up before playback works.')
           }
+
         } catch (e: any) {
+          console.error('Video upload failed:', e)
           alert('Upload error: ' + (e?.message || 'unknown'))
+        } finally {
+          document.body.style.cursor = originalCursor
         }
       }
       input.click()
@@ -360,10 +418,25 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
           const updateSelection = (container: HTMLDivElement, index: number) => {
             const buttons = container.querySelectorAll('[data-slash-item]')
             buttons.forEach((btn, i) => {
+              const el = btn as HTMLElement
               if (i === index) {
-                btn.classList.add('slash-item-active')
+                el.classList.add('slash-item-active')
+                
+                // Fast and reliable manual scroll
+                const elTop = el.offsetTop
+                const elBottom = elTop + el.offsetHeight
+                const containerScrollTop = container.scrollTop
+                const containerHeight = container.clientHeight
+                
+                if (elTop < containerScrollTop) {
+                  // Scrolling up: put item at top
+                  container.scrollTop = elTop - 8
+                } else if (elBottom > containerScrollTop + containerHeight) {
+                  // Scrolling down: put item at bottom
+                  container.scrollTop = elBottom - containerHeight + 8
+                }
               } else {
-                btn.classList.remove('slash-item-active')
+                el.classList.remove('slash-item-active')
               }
             })
           }

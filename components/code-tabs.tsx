@@ -25,7 +25,7 @@ export default function CodeTabs({ codeItem, locale: _locale }: Props) {
   const tabs = defs.filter(t => t.enabled)
 
   return (
-    <div className="rounded-xl border overflow-hidden">
+    <div className="rounded-3xl border overflow-hidden shadow-md">
       <div className="flex">
         {tabs.map(t => (
           <button

@@ -16,7 +16,7 @@ declare module '@tiptap/core' {
         controls?: boolean
         provider?: string | null
         width?: string | null
-        align?: string | null
+        textAlign?: string | null
       }) => ReturnType
     }
   }
@@ -61,11 +61,17 @@ const Video = Node.create<VideoOptions>({
           style: `width: ${attributes.width}`
         }),
       },
-      align: {
+      textAlign: {
         default: 'center',
         renderHTML: (attributes: Record<string, any>) => ({
-          'data-align': attributes.align,
-          style: `text-align: ${attributes.align}`
+          'data-align': attributes.textAlign,
+          style: `text-align: ${attributes.textAlign}`
+        }),
+      },
+      layoutMode: {
+        default: 'fit',
+        renderHTML: (attributes: Record<string, any>) => ({
+          'data-layout-mode': attributes.layoutMode,
         }),
       },
     }

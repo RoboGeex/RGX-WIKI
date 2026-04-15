@@ -7,13 +7,13 @@ export default function YoutubeComponent(props: any) {
   const provider = 'youtube'
 
   const [width, setWidth] = useState(node.attrs.width || '100%')
-  const [align, setAlign] = useState(node.attrs.align || 'center') // left | center | right
+  const [textAlign, setTextAlign] = useState(node.attrs.textAlign || 'center') // left | center | right
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setWidth(node.attrs.width || '100%')
-    setAlign(node.attrs.align || 'center')
-  }, [node.attrs.width, node.attrs.align])
+    setTextAlign(node.attrs.textAlign || 'center')
+  }, [node.attrs.width, node.attrs.textAlign])
 
   const removeVideo = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -29,8 +29,8 @@ export default function YoutubeComponent(props: any) {
   }
 
   const setAlignment = (a: string) => {
-    updateAttributes({ align: a })
-    setAlign(a)
+    updateAttributes({ textAlign: a })
+    setTextAlign(a)
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -61,7 +61,7 @@ export default function YoutubeComponent(props: any) {
   }
 
   return (
-    <NodeViewWrapper className={`mt-2 mb-6 flex flex-col items-${align === 'left' ? 'start' : align === 'right' ? 'end' : 'center'} w-full relative group`} style={{ textAlign: align as any }}>
+    <NodeViewWrapper className={`mt-2 mb-6 flex flex-col items-${textAlign === 'left' ? 'start' : textAlign === 'right' ? 'end' : 'center'} w-full relative group`} style={{ textAlign: textAlign as any }}>
       <div className="relative inline-block group w-full" style={{ width: width, maxWidth: '100%' }}>
         <div ref={containerRef} className={`relative w-full aspect-video overflow-hidden rounded-2xl border border-gray-200 bg-black shadow-sm flex items-center justify-center ${selected ? 'ring-2 ring-primary' : ''}`}>
           <iframe
@@ -103,13 +103,13 @@ export default function YoutubeComponent(props: any) {
 
             {/* Alignment */}
             <div className="flex gap-0.5 border-r border-gray-200 pr-1 mr-1">
-              <button onClick={() => setAlignment('left')} className={`p-1 rounded hover:bg-gray-100 ${align === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+              <button onClick={() => setAlignment('left')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
                 <AlignLeft size={16} />
               </button>
-              <button onClick={() => setAlignment('center')} className={`p-1 rounded hover:bg-gray-100 ${align === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+              <button onClick={() => setAlignment('center')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
                 <AlignCenter size={16} />
               </button>
-              <button onClick={() => setAlignment('right')} className={`p-1 rounded hover:bg-gray-100 ${align === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+              <button onClick={() => setAlignment('right')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
                 <AlignRight size={16} />
               </button>
             </div>

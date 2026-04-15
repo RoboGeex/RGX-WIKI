@@ -159,7 +159,7 @@ export default function Navbar({
             dir={safeLocale === 'ar' ? 'rtl' : 'ltr'}
           >
             <Globe size={14} />
-            <span>{safeLocale.toUpperCase()}</span>
+            <span>{safeLocale === 'en' ? 'AR' : 'EN'}</span>
           </button>
         </div>
       </div>
@@ -191,3 +191,4 @@ export default function Navbar({
     </nav>
   )
 }
+

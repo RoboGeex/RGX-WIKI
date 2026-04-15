@@ -1,4 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import { HUB_DOMAIN } from '@/lib/domains'
 import {
   getFirstLesson,
   getKit,
@@ -22,7 +24,12 @@ export default async function KitPage(
     notFound()
   }
 
-  // Redirect to the first lesson's page.
-  // The URL will be like /en/getting-started on the wiki's domain.
-  redirect(`/${locale}/${firstLesson.slug}`)
+  const hostHeader = headers().get('host')
+  const isHub = hostHeader && (hostHeader.includes(HUB_DOMAIN) || hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1'))
+  
+  if (isHub) {
+    redirect(`/${kit}/${locale}/${firstLesson.slug}`)
+  } else {
+    redirect(`/${locale}/${firstLesson.slug}`)
+  }
 }

@@ -226,6 +226,8 @@ const ResizableImageComponent = (props: any) => {
 
 export default Image.extend({
   name: 'image',
+  inline: false,
+  group: 'block',
 
   addAttributes() {
     return {

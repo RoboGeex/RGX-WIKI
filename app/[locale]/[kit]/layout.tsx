@@ -20,19 +20,25 @@ export default async function KitLayout(
 
   // Access check
   if (process.env.USE_DB === 'true' && wiki) {
-    const db = getPrisma(wiki.slug)
-    const codesCount = await db.accessCode.count({ where: { wikiSlug: wiki.slug } })
-    if (codesCount > 0) {
-      const accessCookieValue = cookies().get(`wiki-${wiki.slug}-access`)?.value
-      const isValid = accessCookieValue 
-        ? await db.accessCode.findFirst({ where: { code: accessCookieValue, wikiSlug: wiki.slug } })
-        : null
-      
-      if (!isValid) {
-        // Find current full path if possible for redirect, or just use kit root
-        const fallbackPath = `/${locale}/${kit}`
-        redirect(`/${locale}/unlock?kit=${kit}&redirect=${encodeURIComponent(fallbackPath)}`)
+    try {
+      const db = getPrisma(wiki.slug)
+      const codesCount = await db.accessCode.count({ where: { wikiSlug: wiki.slug } })
+      if (codesCount > 0) {
+        const accessCookieValue = cookies().get(`wiki-${wiki.slug}-access`)?.value
+        const isValid = accessCookieValue 
+          ? await db.accessCode.findFirst({ where: { code: accessCookieValue, wikiSlug: wiki.slug } })
+          : null
+        
+        if (!isValid) {
+          // Find current full path if possible for redirect, or just use kit root
+          const currentPath = headers().get('x-current-path') || `/${locale}/${kit}`
+          redirect(`/${locale}/unlock?kit=${kit}&redirect=${encodeURIComponent(currentPath)}`)
+        }
       }
+    } catch (e) {
+      console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
+      // We continue to allow the page to load instead of crashing.
+      // If access control is strictly required, you can decide to redirect or show an error here.
     }
   }
 
@@ -41,7 +47,7 @@ export default async function KitLayout(
   const isHubDomain = normalizeHost(hostHeader) === HUB_DOMAIN
 
   return (
-    <div className="min-h-screen bg-[#eef2f1]">
+    <div className="min-h-screen bg-white sm:bg-[#eef2f1]">
       <KitNavbar
         locale={locale}
         kitSlug={kit}
@@ -50,7 +56,7 @@ export default async function KitLayout(
         resourcesUrl={wiki?.resourcesUrl}
         isHubDomain={isHubDomain}
       />
-      <div className="mx-auto w-full max-w-[1920px] px-6 sm:px-10 lg:px-16 pt-16 pb-12 lg:pt-20">
+      <div className="mx-auto w-full max-w-[1920px] px-0 sm:px-10 lg:px-16 pt-[120px] sm:pt-16 pb-12 lg:pt-20">
         {children}
       </div>
     </div>

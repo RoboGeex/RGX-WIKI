@@ -19,7 +19,6 @@ const ResizableImageComponent = (props: any) => {
   const [isInsideListByDom, setIsInsideListByDom] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
   const replaceInputRef = useRef<HTMLInputElement>(null)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const isInsideListByDoc = (() => {
     if (!editor?.state?.doc || typeof getPos !== 'function') return false
@@ -95,19 +94,8 @@ const ResizableImageComponent = (props: any) => {
     return () => cancelAnimationFrame(raf)
   }, [getPos, node.attrs.textAlign, node.attrs.width])
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    }
-  }, [])
-
   const handleBlur = () => {
-    // Clear any pending debounce
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = null
-    }
-    // Always flush latest caption on blur (even if debounce hasn't fired)
+    // Persist caption once editing ends to avoid focus-stealing node refreshes while typing.
     try {
       if (caption !== node.attrs.title) {
         updateAttributes({ title: caption })
@@ -229,11 +217,6 @@ const ResizableImageComponent = (props: any) => {
               initialContent={caption}
               onChange={(html) => {
                 setCaption(html)
-                // Debounce parent attribute update to avoid focus-stealing re-renders
-                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-                debounceTimerRef.current = setTimeout(() => {
-                  updateAttributes({ title: html })
-                }, 300)
               }}
               onBlur={handleBlur}
               placeholder="Add a caption..."

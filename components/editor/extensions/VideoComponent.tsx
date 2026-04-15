@@ -35,7 +35,6 @@ export default function VideoComponent(props: any) {
   const [isReplacing, setIsReplacing] = useState(false)
   const [isInsideListByDom, setIsInsideListByDom] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const isInsideListByDoc = (() => {
     if (!editor?.state?.doc || typeof getPos !== 'function') return false
@@ -105,18 +104,8 @@ export default function VideoComponent(props: any) {
     return () => cancelAnimationFrame(raf)
   }, [getPos, node.attrs.textAlign, node.attrs.width, node.attrs.layoutMode])
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    }
-  }, [])
-
   const handleBlur = () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = null
-    }
-    // Always flush latest caption on blur
+    // Persist caption once editing ends to avoid focus-stealing node refreshes while typing.
     try {
       if (caption !== node.attrs.title) {
         updateAttributes({ title: caption })
@@ -457,10 +446,6 @@ export default function VideoComponent(props: any) {
               initialContent={caption}
               onChange={(html) => {
                 setCaption(html)
-                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-                debounceTimerRef.current = setTimeout(() => {
-                  updateAttributes({ title: html })
-                }, 300)
               }}
               onBlur={handleBlur}
               placeholder="Add a caption..."

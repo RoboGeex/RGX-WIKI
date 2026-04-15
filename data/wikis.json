@@ -121,7 +121,7 @@
     "defaultLessonSlug": "getting-started",
     "resourcesUrl": "/resources",
     "createdAt": "2025-03-14T00:00:00.000Z",
-    "isPublished": false
+    "isPublished": true
   },
   {
     "slug": "3d-design-using-pictoblox",

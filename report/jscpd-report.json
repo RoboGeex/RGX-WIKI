@@ -1,0 +1,3289 @@
+{
+  "statistics": {
+    "detectionDate": "2026-04-11T09:10:58.819Z",
+    "formats": {
+      "typescript": {
+        "sources": {
+          "lib/wikiPaths.ts": {
+            "lines": 55,
+            "tokens": 485,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/wiki.ts": {
+            "lines": 21,
+            "tokens": 245,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/unlock.ts": {
+            "lines": 119,
+            "tokens": 1076,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/types.ts": {
+            "lines": 102,
+            "tokens": 828,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/session-storage.ts": {
+            "lines": 23,
+            "tokens": 192,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/server-data.ts": {
+            "lines": 311,
+            "tokens": 3015,
+            "sources": 1,
+            "clones": 8,
+            "duplicatedLines": 164,
+            "duplicatedTokens": 1579,
+            "percentage": 52.73,
+            "percentageTokens": 52.37,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/segment-types.ts": {
+            "lines": 354,
+            "tokens": 3908,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/prisma.ts": {
+            "lines": 15,
+            "tokens": 111,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/prisma-url.ts": {
+            "lines": 18,
+            "tokens": 198,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/prisma-multi.ts": {
+            "lines": 148,
+            "tokens": 1268,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/prisma-developers.ts": {
+            "lines": 48,
+            "tokens": 352,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/lesson-versions.ts": {
+            "lines": 175,
+            "tokens": 2306,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/lesson-sections.ts": {
+            "lines": 177,
+            "tokens": 1612,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/lesson-loader.ts": {
+            "lines": 141,
+            "tokens": 1618,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 12,
+            "duplicatedTokens": 141,
+            "percentage": 8.51,
+            "percentageTokens": 8.71,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/i18n.ts": {
+            "lines": 148,
+            "tokens": 1145,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/developers.ts": {
+            "lines": 58,
+            "tokens": 668,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/data.ts": {
+            "lines": 336,
+            "tokens": 3724,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 77,
+            "duplicatedTokens": 830,
+            "percentage": 22.92,
+            "percentageTokens": 22.29,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/assignments.ts": {
+            "lines": 84,
+            "tokens": 765,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 10,
+            "duplicatedTokens": 136,
+            "percentage": 11.9,
+            "percentageTokens": 17.78,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/api-auth.ts": {
+            "lines": 9,
+            "tokens": 134,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/Video.ts": {
+            "lines": 166,
+            "tokens": 1296,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/TagBlock.ts": {
+            "lines": 103,
+            "tokens": 911,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/TableCellWithBackground.ts": {
+            "lines": 20,
+            "tokens": 205,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/SafeBubbleMenu.ts": {
+            "lines": 84,
+            "tokens": 758,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/ImageSlider.ts": {
+            "lines": 146,
+            "tokens": 1243,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/Columns.ts": {
+            "lines": 43,
+            "tokens": 405,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/SlashCommand.ts": {
+            "lines": 700,
+            "tokens": 7257,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/dev-identity.ts": {
+            "lines": 44,
+            "tokens": 443,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/wikis/[slug]/route.ts": {
+            "lines": 146,
+            "tokens": 1241,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/vimeo/create/route.ts": {
+            "lines": 71,
+            "tokens": 785,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 17,
+            "duplicatedTokens": 152,
+            "percentage": 23.94,
+            "percentageTokens": 19.36,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/upload/[id]/route.ts": {
+            "lines": 82,
+            "tokens": 924,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/lessons/[id]/route.ts": {
+            "lines": 328,
+            "tokens": 3906,
+            "sources": 1,
+            "clones": 6,
+            "duplicatedLines": 92,
+            "duplicatedTokens": 1056,
+            "percentage": 28.05,
+            "percentageTokens": 27.04,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/lessons/reorder/route.ts": {
+            "lines": 94,
+            "tokens": 1214,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 11,
+            "duplicatedTokens": 132,
+            "percentage": 11.7,
+            "percentageTokens": 10.87,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/lessons/lock/route.ts": {
+            "lines": 299,
+            "tokens": 3196,
+            "sources": 1,
+            "clones": 5,
+            "duplicatedLines": 84,
+            "duplicatedTokens": 884,
+            "percentage": 28.09,
+            "percentageTokens": 27.66,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/developers/me/route.ts": {
+            "lines": 43,
+            "tokens": 431,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 11,
+            "duplicatedTokens": 132,
+            "percentage": 25.58,
+            "percentageTokens": 30.63,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/developers/login/route.ts": {
+            "lines": 31,
+            "tokens": 374,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/wikis/route.ts": {
+            "lines": 421,
+            "tokens": 3601,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 11,
+            "duplicatedTokens": 148,
+            "percentage": 2.61,
+            "percentageTokens": 4.11,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/upload/route.ts": {
+            "lines": 229,
+            "tokens": 2426,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 17,
+            "duplicatedTokens": 152,
+            "percentage": 7.42,
+            "percentageTokens": 6.27,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/unlock/route.ts": {
+            "lines": 73,
+            "tokens": 761,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/search/route.ts": {
+            "lines": 46,
+            "tokens": 558,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/modules/route.ts": {
+            "lines": 15,
+            "tokens": 193,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/debug-env/route.ts": {
+            "lines": 11,
+            "tokens": 99,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/api/db-test/route.ts": {
+            "lines": 36,
+            "tokens": 251,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 5573,
+          "tokens": 56128,
+          "sources": 42,
+          "clones": 15,
+          "duplicatedLines": 253,
+          "duplicatedTokens": 2671,
+          "percentage": 4.54,
+          "percentageTokens": 4.76,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "javascript": {
+        "sources": {
+          "components/editor/extensions/YoutubeComponent.tsx": {
+            "lines": 83,
+            "tokens": 915,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 98,
+            "duplicatedTokens": 1494,
+            "percentage": 118.07,
+            "percentageTokens": 163.28,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/VideoComponent.tsx": {
+            "lines": 194,
+            "tokens": 2151,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 65,
+            "duplicatedTokens": 714,
+            "percentage": 33.51,
+            "percentageTokens": 33.19,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/TagBlockComponent.tsx": {
+            "lines": 44,
+            "tokens": 317,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/RichCaptionInput.tsx": {
+            "lines": 27,
+            "tokens": 530,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/ResizableImage.tsx": {
+            "lines": 89,
+            "tokens": 1327,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 33,
+            "duplicatedTokens": 780,
+            "percentage": 37.08,
+            "percentageTokens": 58.78,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/NodeViewErrorBoundary.tsx": {
+            "lines": 0,
+            "tokens": 9,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/ImageSliderComponent.tsx": {
+            "lines": 500,
+            "tokens": 5188,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson/LessonMedia.tsx": {
+            "lines": 122,
+            "tokens": 1013,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson/InteractiveHtml.tsx": {
+            "lines": 19,
+            "tokens": 159,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson/ImageSlider.tsx": {
+            "lines": 88,
+            "tokens": 805,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/WikiPublishToggle.tsx": {
+            "lines": 11,
+            "tokens": 63,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/SegmentTiptapEditor.tsx": {
+            "lines": 145,
+            "tokens": 1625,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/PropertiesForm.tsx": {
+            "lines": 154,
+            "tokens": 1496,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/LessonsReorderList.tsx": {
+            "lines": 225,
+            "tokens": 2351,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/EditorAuthGate.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/DeveloperLogin.tsx": {
+            "lines": 24,
+            "tokens": 202,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/CodeBlockView.tsx": {
+            "lines": 58,
+            "tokens": 500,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/zoomable-image.tsx": {
+            "lines": 18,
+            "tokens": 160,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/wiki-card.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/step.tsx": {
+            "lines": 7,
+            "tokens": 81,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/sidebar.tsx": {
+            "lines": 61,
+            "tokens": 708,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/search-panel.tsx": {
+            "lines": 2,
+            "tokens": 17,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/rich-text-editor.tsx": {
+            "lines": 46,
+            "tokens": 346,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/prev-next-nav.tsx": {
+            "lines": 10,
+            "tokens": 106,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/navbar.tsx": {
+            "lines": 105,
+            "tokens": 1010,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/materials-list.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson-toc.tsx": {
+            "lines": 28,
+            "tokens": 334,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson-meta-card.tsx": {
+            "lines": 27,
+            "tokens": 303,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/kit-navbar.tsx": {
+            "lines": 17,
+            "tokens": 115,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/kit-header.tsx": {
+            "lines": 23,
+            "tokens": 215,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/dashboard-navbar.tsx": {
+            "lines": 118,
+            "tokens": 870,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/dashboard-layout.tsx": {
+            "lines": 10,
+            "tokens": 92,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/create-wiki-modal.tsx": {
+            "lines": 109,
+            "tokens": 867,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/code-tabs.tsx": {
+            "lines": 20,
+            "tokens": 164,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/code-block.tsx": {
+            "lines": 30,
+            "tokens": 316,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/callout.tsx": {
+            "lines": 3,
+            "tokens": 60,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/breadcrumbs.tsx": {
+            "lines": 0,
+            "tokens": 7,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/admin-navbar.tsx": {
+            "lines": 41,
+            "tokens": 241,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/[kit]/lesson/[lesson]/page.tsx": {
+            "lines": 513,
+            "tokens": 5690,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/dashboard/[wiki]/page.tsx": {
+            "lines": 53,
+            "tokens": 522,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/[kit]/layout.tsx": {
+            "lines": 5,
+            "tokens": 39,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/unlock/page.tsx": {
+            "lines": 69,
+            "tokens": 547,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/lessons/[id]/page.tsx": {
+            "lines": 270,
+            "tokens": 3067,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/segment/page.tsx": {
+            "lines": 39,
+            "tokens": 289,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/dashboard/page.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/dashboard/editor-dashboard-client.tsx": {
+            "lines": 36,
+            "tokens": 320,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/dashboard/[wiki]/page.tsx": {
+            "lines": 64,
+            "tokens": 701,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/wikis/page.tsx": {
+            "lines": 394,
+            "tokens": 2718,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/student/page.tsx": {
+            "lines": 67,
+            "tokens": 644,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/lessons/page.tsx": {
+            "lines": 1,
+            "tokens": 11,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/page.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/components/Navbar.tsx": {
+            "lines": 1,
+            "tokens": 9,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/components/LessonCard.tsx": {
+            "lines": 0,
+            "tokens": 7,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/components/KitShell.tsx": {
+            "lines": 16,
+            "tokens": 115,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/not-found.tsx": {
+            "lines": 3,
+            "tokens": 21,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/layout.tsx": {
+            "lines": 0,
+            "tokens": 5,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/global-error.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/error.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 3989,
+          "tokens": 39389,
+          "sources": 58,
+          "clones": 3,
+          "duplicatedLines": 98,
+          "duplicatedTokens": 1494,
+          "percentage": 2.46,
+          "percentageTokens": 3.79,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "tsx": {
+        "sources": {
+          "components/editor/extensions/YoutubeComponent.tsx": {
+            "lines": 220,
+            "tokens": 2394,
+            "sources": 1,
+            "clones": 6,
+            "duplicatedLines": 149,
+            "duplicatedTokens": 1729,
+            "percentage": 67.73,
+            "percentageTokens": 72.22,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/VideoComponent.tsx": {
+            "lines": 457,
+            "tokens": 5266,
+            "sources": 1,
+            "clones": 7,
+            "duplicatedLines": 176,
+            "duplicatedTokens": 2414,
+            "percentage": 38.51,
+            "percentageTokens": 45.84,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/TagBlockComponent.tsx": {
+            "lines": 121,
+            "tokens": 1119,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/RichCaptionInput.tsx": {
+            "lines": 150,
+            "tokens": 1721,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/ResizableImage.tsx": {
+            "lines": 321,
+            "tokens": 3780,
+            "sources": 1,
+            "clones": 5,
+            "duplicatedLines": 129,
+            "duplicatedTokens": 1866,
+            "percentage": 40.19,
+            "percentageTokens": 49.37,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/NodeViewErrorBoundary.tsx": {
+            "lines": 37,
+            "tokens": 266,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/extensions/ImageSliderComponent.tsx": {
+            "lines": 600,
+            "tokens": 6164,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 66,
+            "duplicatedTokens": 811,
+            "percentage": 11,
+            "percentageTokens": 13.16,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson/LessonMedia.tsx": {
+            "lines": 166,
+            "tokens": 1318,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson/InteractiveHtml.tsx": {
+            "lines": 198,
+            "tokens": 2132,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson/ImageSlider.tsx": {
+            "lines": 120,
+            "tokens": 1151,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/WikiPublishToggle.tsx": {
+            "lines": 59,
+            "tokens": 540,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/SegmentTiptapEditor.tsx": {
+            "lines": 403,
+            "tokens": 4192,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/PropertiesForm.tsx": {
+            "lines": 498,
+            "tokens": 5409,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/LessonsReorderList.tsx": {
+            "lines": 610,
+            "tokens": 6629,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/EditorAuthGate.tsx": {
+            "lines": 31,
+            "tokens": 246,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/DeveloperLogin.tsx": {
+            "lines": 80,
+            "tokens": 777,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/editor/CodeBlockView.tsx": {
+            "lines": 100,
+            "tokens": 965,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/zoomable-image.tsx": {
+            "lines": 54,
+            "tokens": 430,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/wiki-card.tsx": {
+            "lines": 47,
+            "tokens": 327,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/step.tsx": {
+            "lines": 39,
+            "tokens": 392,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/sidebar.tsx": {
+            "lines": 272,
+            "tokens": 2795,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/search-panel.tsx": {
+            "lines": 71,
+            "tokens": 743,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/rich-text-editor.tsx": {
+            "lines": 113,
+            "tokens": 960,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/prev-next-nav.tsx": {
+            "lines": 46,
+            "tokens": 403,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/navbar.tsx": {
+            "lines": 216,
+            "tokens": 2231,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/materials-list.tsx": {
+            "lines": 20,
+            "tokens": 255,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson-toc.tsx": {
+            "lines": 150,
+            "tokens": 1517,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/lesson-meta-card.tsx": {
+            "lines": 51,
+            "tokens": 572,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/kit-navbar.tsx": {
+            "lines": 87,
+            "tokens": 750,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 16,
+            "duplicatedTokens": 145,
+            "percentage": 18.39,
+            "percentageTokens": 19.33,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/kit-header.tsx": {
+            "lines": 44,
+            "tokens": 442,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/dashboard-navbar.tsx": {
+            "lines": 270,
+            "tokens": 2182,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/dashboard-layout.tsx": {
+            "lines": 44,
+            "tokens": 396,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/create-wiki-modal.tsx": {
+            "lines": 204,
+            "tokens": 1829,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/code-tabs.tsx": {
+            "lines": 62,
+            "tokens": 578,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/code-block.tsx": {
+            "lines": 74,
+            "tokens": 695,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/callout.tsx": {
+            "lines": 25,
+            "tokens": 373,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/breadcrumbs.tsx": {
+            "lines": 28,
+            "tokens": 306,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "components/admin-navbar.tsx": {
+            "lines": 86,
+            "tokens": 607,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/[kit]/lesson/[lesson]/page.tsx": {
+            "lines": 822,
+            "tokens": 9304,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 15,
+            "duplicatedTokens": 216,
+            "percentage": 1.82,
+            "percentageTokens": 2.32,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/dashboard/[wiki]/page.tsx": {
+            "lines": 119,
+            "tokens": 1233,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/[kit]/page.tsx": {
+            "lines": 34,
+            "tokens": 353,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/[kit]/layout.tsx": {
+            "lines": 86,
+            "tokens": 928,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/unlock/page.tsx": {
+            "lines": 188,
+            "tokens": 1730,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/lessons/[id]/page.tsx": {
+            "lines": 364,
+            "tokens": 4226,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 15,
+            "duplicatedTokens": 214,
+            "percentage": 4.12,
+            "percentageTokens": 5.06,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/segment/page.tsx": {
+            "lines": 269,
+            "tokens": 2631,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 30,
+            "duplicatedTokens": 326,
+            "percentage": 11.15,
+            "percentageTokens": 12.39,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/lesson/page.tsx": {
+            "lines": 14,
+            "tokens": 107,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/dashboard/page.tsx": {
+            "lines": 51,
+            "tokens": 573,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 53,
+            "duplicatedTokens": 608,
+            "percentage": 103.92,
+            "percentageTokens": 106.11,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/dashboard/editor-dashboard-client.tsx": {
+            "lines": 135,
+            "tokens": 1231,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/dashboard/[wiki]/page.tsx": {
+            "lines": 136,
+            "tokens": 1589,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/[locale]/layout.tsx": {
+            "lines": 14,
+            "tokens": 168,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/wikis/page.tsx": {
+            "lines": 635,
+            "tokens": 4889,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 11,
+            "duplicatedTokens": 136,
+            "percentage": 1.73,
+            "percentageTokens": 2.78,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/student/page.tsx": {
+            "lines": 133,
+            "tokens": 1246,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/lessons/page.tsx": {
+            "lines": 63,
+            "tokens": 499,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/editor/page.tsx": {
+            "lines": 51,
+            "tokens": 556,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 42,
+            "duplicatedTokens": 472,
+            "percentage": 82.35,
+            "percentageTokens": 84.89,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/dashboard/page.tsx": {
+            "lines": 26,
+            "tokens": 229,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/components/Navbar.tsx": {
+            "lines": 30,
+            "tokens": 239,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/components/LessonCard.tsx": {
+            "lines": 21,
+            "tokens": 201,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/components/KitShell.tsx": {
+            "lines": 80,
+            "tokens": 748,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 16,
+            "duplicatedTokens": 145,
+            "percentage": 20,
+            "percentageTokens": 19.39,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/components/ArduinoStyleHeader.tsx": {
+            "lines": 10,
+            "tokens": 104,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/page.tsx": {
+            "lines": 53,
+            "tokens": 228,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/not-found.tsx": {
+            "lines": 79,
+            "tokens": 659,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/layout.tsx": {
+            "lines": 25,
+            "tokens": 243,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/global-error.tsx": {
+            "lines": 32,
+            "tokens": 223,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/error.tsx": {
+            "lines": 34,
+            "tokens": 256,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 9678,
+          "tokens": 97245,
+          "sources": 64,
+          "clones": 16,
+          "duplicatedLines": 359,
+          "duplicatedTokens": 4541,
+          "percentage": 3.71,
+          "percentageTokens": 4.67,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "css": {
+        "sources": {
+          "app/[locale]/unlock/page.tsx": {
+            "lines": 11,
+            "tokens": 49,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 11,
+          "tokens": 49,
+          "sources": 1,
+          "clones": 0,
+          "duplicatedLines": 0,
+          "duplicatedTokens": 0,
+          "percentage": 0,
+          "percentageTokens": 0,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      }
+    },
+    "total": {
+      "lines": 19251,
+      "tokens": 192811,
+      "sources": 165,
+      "clones": 34,
+      "duplicatedLines": 710,
+      "duplicatedTokens": 8706,
+      "percentage": 3.69,
+      "percentageTokens": 4.52,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    }
+  },
+  "duplicates": [
+    {
+      "format": "typescript",
+      "lines": 28,
+      "fragment": ",\n      orderBy: [{ order: 'asc' }, { version: 'desc' }],\n      select: {\n        id: true,\n        order: true,\n        slug: true,\n        wikiSlug: true,\n        title_en: true,\n        title_ar: true,\n        coverImage: true,\n        ownerId: true,\n        lastModifiedBy: true,\n        status: true,\n        publishedAt: true,\n        duration_min: true,\n        difficulty: true,\n        prerequisites_en: true,\n        prerequisites_ar: true,\n        materials: true,\n        body: true,\n        createdAt: true,\n        updatedAt: true,\n        version: true,\n        activeEditorId: true,\n        lockedUntil: true,\n      },\n    })\n    return",
+      "tokens": 0,
+      "firstFile": {
+        "name": "lib\\server-data.ts",
+        "start": 146,
+        "end": 173,
+        "startLoc": {
+          "line": 146,
+          "column": 10,
+          "position": 1598
+        },
+        "endLoc": {
+          "line": 173,
+          "column": 7,
+          "position": 1795
+        }
+      },
+      "secondFile": {
+        "name": "lib\\server-data.ts",
+        "start": 97,
+        "end": 124,
+        "startLoc": {
+          "line": 97,
+          "column": 2,
+          "position": 1112
+        },
+        "endLoc": {
+          "line": 124,
+          "column": 5,
+          "position": 1309
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": "{\n  if (!value) return ''\n  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : ''\n  if (typeof value === 'string') {\n    const trimmed = value.trim()\n    if (!trimmed) return ''\n    const parsed = new Date(trimmed)\n    return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : trimmed\n  }\n  return ''\n}\n\nexport",
+      "tokens": 0,
+      "firstFile": {
+        "name": "lib\\lesson-loader.ts",
+        "start": 29,
+        "end": 41,
+        "startLoc": {
+          "line": 29,
+          "column": 2,
+          "position": 257
+        },
+        "endLoc": {
+          "line": 41,
+          "column": 7,
+          "position": 398
+        }
+      },
+      "secondFile": {
+        "name": "lib\\server-data.ts",
+        "start": 35,
+        "end": 47,
+        "startLoc": {
+          "line": 35,
+          "column": 2,
+          "position": 433
+        },
+        "endLoc": {
+          "line": 47,
+          "column": 6,
+          "position": 576
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 33,
+      "fragment": ") return collapsed\n\n  const toIsoDate = (value: unknown): string => {\n    if (!value) return ''\n    if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : ''\n    if (typeof value === 'string') {\n      const trimmed = value.trim()\n      if (!trimmed) return ''\n      const parsed = new Date(trimmed)\n      return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : trimmed\n    }\n    return ''\n  }\n\n  const grouped = groupLessonsByKey(rows)\n  return collapsed.map((lesson) => {\n    const versions = grouped.get(lesson.lessonKey || lesson.id) || []\n    const latestDraft = pickLatestDraft(versions)\n    const latestPublished = pickLatestPublished(versions)\n    const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt)\n    return {\n      ...lesson,\n      lastPublishedAt,\n      hasUnpublishedChanges:\n        lesson.status === LESSON_STATUS.DRAFT &&\n        Boolean(latestDraft) &&\n        Boolean(latestPublished) &&\n        hasLessonContentChanges(latestDraft, latestPublished),\n    }\n  })\n}\n\nexport function getWikis",
+      "tokens": 0,
+      "firstFile": {
+        "name": "lib\\data.ts",
+        "start": 153,
+        "end": 185,
+        "startLoc": {
+          "line": 153,
+          "column": 14,
+          "position": 1607
+        },
+        "endLoc": {
+          "line": 185,
+          "column": 9,
+          "position": 1945
+        }
+      },
+      "secondFile": {
+        "name": "lib\\server-data.ts",
+        "start": 33,
+        "end": 65,
+        "startLoc": {
+          "line": 33,
+          "column": 14,
+          "position": 407
+        },
+        "endLoc": {
+          "line": 65,
+          "column": 15,
+          "position": 745
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 11,
+      "fragment": "}\n\nfunction loadJsonFile<T>(file: string, fallback: T): T {\n  const tmpPath = path.join(os.tmpdir(), file)\n  const repoPath = path.join(process.cwd(), 'data', file)\n  for (const p of [tmpPath, repoPath]) {\n    try {\n      const raw = fs.readFileSync(p, 'utf-8')\n      return JSON.parse(raw) as T\n    } catch {\n      // ignore and continue to next path",
+      "tokens": 0,
+      "firstFile": {
+        "name": "lib\\assignments.ts",
+        "start": 15,
+        "end": 25,
+        "startLoc": {
+          "line": 15,
+          "column": 1,
+          "position": 108
+        },
+        "endLoc": {
+          "line": 25,
+          "column": 36,
+          "position": 244
+        }
+      },
+      "secondFile": {
+        "name": "lib\\data.ts",
+        "start": 68,
+        "end": 78,
+        "startLoc": {
+          "line": 68,
+          "column": 1,
+          "position": 719
+        },
+        "endLoc": {
+          "line": 78,
+          "column": 27,
+          "position": 855
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 49,
+      "fragment": "}\r\n            />\r\n            {/* Editor Controls */}\r\n            {editor?.isEditable && (\r\n              <div className=\"absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity\">\r\n                <button\r\n                  onClick={removeVideo}\r\n                  className=\"p-1.5 bg-red-500/80 backdrop-blur-sm rounded text-white hover:bg-red-500 transition-colors shadow-sm\"\r\n                  title=\"Delete video\"\r\n                  type=\"button\"\r\n                >\r\n                  <Trash2 size={16} />\r\n                </button>\r\n              </div>\r\n            )}\r\n          </div>\r\n        )}\r\n\r\n        {/* Resize Handle (Free Drag) */}\r\n        {selected && (\r\n          <div\r\n            className=\"absolute bottom-2 right-2 p-1.5 bg-white/90 shadow-sm border border-gray-200 rounded cursor-ew-resize hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity z-20\"\r\n            onMouseDown={handleMouseDown}\r\n            title=\"Drag to resize\"\r\n          >\r\n            <Maximize size={14} className=\"text-gray-500 rotate-90\" />\r\n          </div>\r\n        )}\r\n\r\n        {/* Toolbar */}\r\n        {selected && (\r\n          <div className=\"absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/95 backdrop-blur shadow-lg rounded-lg border border-gray-200 p-1.5 z-50 whitespace-nowrap min-w-max\">\r\n\r\n            {/* Alignment */}\r\n            <div className=\"flex gap-0.5 border-r border-gray-200 pr-1 mr-1\">\r\n              <button onClick={() => setAlignment('left')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignLeft size={16} />\r\n              </button>\r\n              <button onClick={() => setAlignment('center')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignCenter size={16} />\r\n              </button>\r\n              <button onClick={() => setAlignment('right')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignRight size={16} />\r\n              </button>\r\n            </div>\r\n\r\n            {/* Aspect Ratio */}\r\n            <div className=\"flex gap-1 border-r border-gray-200 pr-1 mr-1\">\r\n              <button type=\"button\" onClick={(e",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 331,
+        "end": 379,
+        "startLoc": {
+          "line": 331,
+          "column": 2,
+          "position": 3766
+        },
+        "endLoc": {
+          "line": 379,
+          "column": 2,
+          "position": 4214
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 149,
+        "end": 200,
+        "startLoc": {
+          "line": 149,
+          "column": 4,
+          "position": 1637
+        },
+        "endLoc": {
+          "line": 200,
+          "column": 2,
+          "position": 2090
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 18,
+      "fragment": "}>16:9</button>\r\n            </div>\r\n\r\n            {/* Presets */}\r\n            <div className=\"flex gap-1 border-r border-gray-200 pr-1 mr-1\">\r\n              <button onClick={() => setSize('25%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>25%</button>\r\n              <button onClick={() => setSize('50%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>50%</button>\r\n              <button onClick={() => setSize('75%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '75%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>75%</button>\r\n              <button onClick={() => setSize('100%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>\r\n            </div>\r\n\r\n            {/* Replace — URL input for embeds, file upload for native videos */}\r\n            {provider ? (\r\n              showReplaceUrl ? (\r\n                <input\r\n                  autoFocus\r\n                  type=\"text\"\r\n                  value={replaceUrlValue",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 383,
+        "end": 400,
+        "startLoc": {
+          "line": 383,
+          "column": 2,
+          "position": 4513
+        },
+        "endLoc": {
+          "line": 400,
+          "column": 16,
+          "position": 4779
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 194,
+        "end": 208,
+        "startLoc": {
+          "line": 194,
+          "column": 3,
+          "position": 2045
+        },
+        "endLoc": {
+          "line": 208,
+          "column": 2,
+          "position": 2287
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 48,
+      "fragment": "const [isInsideListByDom, setIsInsideListByDom] = useState(false)\n  const containerRef = useRef<HTMLDivElement>(null)\n  const wrapperRef = useRef<HTMLDivElement>(null)\n  const isInsideListByDoc = (() => {\n    if (!editor?.state?.doc || typeof getPos !== 'function') return false\n    try {\n      const doc = editor.state.doc\n      const pos = getPos()\n      const $pos = doc.resolve(pos)\n      let hasListAncestor = false\n      for (let depth = $pos.depth; depth >= 0; depth--) {\n        const typeName = $pos.node(depth).type.name\n        if (isListNodeType(typeName)) {\n          hasListAncestor = true\n          break\n        }\n      }\n      if (hasListAncestor) return true\n\n      const nodeSize = typeof node?.nodeSize === 'number' ? node.nodeSize : 0\n      const endPos = Math.min(pos + nodeSize, doc.content.size)\n      const $end = doc.resolve(endPos)\n      const isBetweenSplitLists =\n        isListNodeType($pos.nodeBefore?.type?.name) &&\n        isListNodeType($end.nodeAfter?.type?.name)\n      if (isBetweenSplitLists) return true\n    } catch {\n      return false\n    }\n    return false\n  })()\n  const isInsideList = isInsideListByDoc || isInsideListByDom\n  const effectiveAlign = textAlign\n  const alignItems = effectiveAlign === 'left' ? 'flex-start' : effectiveAlign === 'right' ? 'flex-end' : 'center'\n  const mediaWrapperStyle: React.CSSProperties = {\n    width,\n    maxWidth: '100%',\n    marginInlineStart: effectiveAlign === 'right' ? 'auto' : '0',\n    marginInlineEnd: effectiveAlign === 'left' ? 'auto' : '0',\n  }\n\n  if (effectiveAlign === 'center') {\n    mediaWrapperStyle.marginInlineStart = 'auto'\n    mediaWrapperStyle.marginInlineEnd = 'auto'\n  }\n\r\n  useEffect(() => {\n    setCaption",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 36,
+        "end": 83,
+        "startLoc": {
+          "line": 36,
+          "column": 3,
+          "position": 641
+        },
+        "endLoc": {
+          "line": 83,
+          "column": 11,
+          "position": 1178
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 14,
+        "end": 61,
+        "startLoc": {
+          "line": 14,
+          "column": 3,
+          "position": 210
+        },
+        "endLoc": {
+          "line": 61,
+          "column": 9,
+          "position": 747
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 19,
+      "fragment": "])\n\n  useEffect(() => {\n    const updateListContextFromDom = () => {\n      const el = wrapperRef.current\n      if (!el) return\n      const prevTag = el.previousElementSibling?.tagName\n      const nextTag = el.nextElementSibling?.tagName\n      const isAdjacentToList =\n        (prevTag === 'OL' || prevTag === 'UL') &&\n        (nextTag === 'OL' || nextTag === 'UL')\n      const isNestedInList = Boolean(el.closest('li, ol, ul'))\n      setIsInsideListByDom(isNestedInList || isAdjacentToList)\n    }\n\n    updateListContextFromDom()\n    const raf = requestAnimationFrame(updateListContextFromDom)\n    return () => cancelAnimationFrame(raf)\n  }, [getPos, node.attrs.textAlign, node.attrs.width,",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 87,
+        "end": 105,
+        "startLoc": {
+          "line": 87,
+          "column": 11,
+          "position": 1264
+        },
+        "endLoc": {
+          "line": 105,
+          "column": 2,
+          "position": 1465
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 63,
+        "end": 81,
+        "startLoc": {
+          "line": 63,
+          "column": 10,
+          "position": 791
+        },
+        "endLoc": {
+          "line": 81,
+          "column": 2,
+          "position": 992
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 34,
+      "fragment": "}>\n\n            {/* Alignment */}\n            <div className=\"flex gap-0.5 border-r border-gray-200 pr-1 mr-1\">\n              <button onClick={() => setAlignment('left')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignLeft size={16} />\r\n              </button>\r\n              <button onClick={() => setAlignment('center')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignCenter size={16} />\r\n              </button>\r\n              <button onClick={() => setAlignment('right')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignRight size={16} />\r\n              </button>\r\n            </div>\r\n\r\n            {/* Aspect Ratio */}\r\n            <div className=\"flex gap-1 border-r border-gray-200 pr-1 mr-1\">\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('fit'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === 'fit' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>Fit</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('1:1'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '1:1' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>1:1</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('3:4'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '3:4' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>3:4</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('2:3'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '2:3' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>2:3</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('16:9'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '16:9' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>16:9</button>\r\n            </div>\r\n\r\n            {/* Presets */}\r\n            <div className=\"flex gap-1 border-r border-gray-200 pr-1 mr-1\">\r\n              <button onClick={() => setSize('25%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>25%</button>\r\n              <button onClick={() => setSize('50%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>50%</button>\r\n              <button onClick={() => setSize('75%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '75%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>75%</button>\r\n              <button onClick={() => setSize('100%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>\r\n            </div>\r\n\r\n            {/* Replace */}\r\n            <label className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded cursor-pointer hover:bg-gray-100 text-gray-600 ",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ResizableImage.tsx",
+        "start": 229,
+        "end": 262,
+        "startLoc": {
+          "line": 229,
+          "column": 135,
+          "position": 2432
+        },
+        "endLoc": {
+          "line": 262,
+          "column": 111,
+          "position": 3212
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 177,
+        "end": 208,
+        "startLoc": {
+          "line": 177,
+          "column": 3,
+          "position": 1805
+        },
+        "endLoc": {
+          "line": 208,
+          "column": 2,
+          "position": 2287
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 34,
+      "fragment": ">(null)\n  const wrapperRef = useRef<HTMLDivElement>(null)\n  const isInsideListByDoc = (() => {\n    if (!editor?.state?.doc || typeof getPos !== 'function') return false\n    try {\n      const doc = editor.state.doc\n      const pos = getPos()\n      const $pos = doc.resolve(pos)\n      let hasListAncestor = false\n      for (let depth = $pos.depth; depth >= 0; depth--) {\n        const typeName = $pos.node(depth).type.name\n        if (isListNodeType(typeName)) {\n          hasListAncestor = true\n          break\n        }\n      }\n      if (hasListAncestor) return true\n\n      const nodeSize = typeof node?.nodeSize === 'number' ? node.nodeSize : 0\n      const endPos = Math.min(pos + nodeSize, doc.content.size)\n      const $end = doc.resolve(endPos)\n      const isBetweenSplitLists =\n        isListNodeType($pos.nodeBefore?.type?.name) &&\n        isListNodeType($end.nodeAfter?.type?.name)\n      if (isBetweenSplitLists) return true\n    } catch {\n      return false\n    }\n    return false\n  })()\n  const isInsideList = isInsideListByDoc || isInsideListByDom\n  const effectiveAlign = textAlign\n  const alignItems = effectiveAlign === 'left' ? 'flex-start' : effectiveAlign === 'right' ? 'flex-end' : 'center'\n  const toolbarPositionClass",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ResizableImage.tsx",
+        "start": 21,
+        "end": 54,
+        "startLoc": {
+          "line": 21,
+          "column": 17,
+          "position": 356
+        },
+        "endLoc": {
+          "line": 54,
+          "column": 21,
+          "position": 756
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 15,
+        "end": 48,
+        "startLoc": {
+          "line": 15,
+          "column": 15,
+          "position": 236
+        },
+        "endLoc": {
+          "line": 48,
+          "column": 18,
+          "position": 636
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 21,
+      "fragment": ", node.attrs.layoutMode])\n\n  useEffect(() => {\n    const updateListContextFromDom = () => {\n      const el = wrapperRef.current\n      if (!el) return\n      const prevTag = el.previousElementSibling?.tagName\n      const nextTag = el.nextElementSibling?.tagName\n      const isAdjacentToList =\n        (prevTag === 'OL' || prevTag === 'UL') &&\n        (nextTag === 'OL' || nextTag === 'UL')\n      const isNestedInList = Boolean(el.closest('li, ol, ul'))\n      setIsInsideListByDom(isNestedInList || isAdjacentToList)\n    }\n\n    updateListContextFromDom()\n    const raf = requestAnimationFrame(updateListContextFromDom)\n    return () => cancelAnimationFrame(raf)\n  }, [getPos, node.attrs.textAlign, node.attrs.width])\n\n  const handleBlur",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ResizableImage.tsx",
+        "start": 77,
+        "end": 97,
+        "startLoc": {
+          "line": 77,
+          "column": 6,
+          "position": 984
+        },
+        "endLoc": {
+          "line": 97,
+          "column": 11,
+          "position": 1199
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 87,
+        "end": 83,
+        "startLoc": {
+          "line": 87,
+          "column": 10,
+          "position": 1257
+        },
+        "endLoc": {
+          "line": 83,
+          "column": 12,
+          "position": 999
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 30,
+      "fragment": ".current?.offsetWidth || 0\r\n\r\n    let latestWidthStr = `${startWidth}px`\r\n    let hasDragged = false\r\n\r\n    const onMouseMove = (moveEvent: MouseEvent) => {\r\n      hasDragged = true\r\n      const delta = moveEvent.clientX - startX\r\n      const newW = Math.max(50, startWidth + delta)\r\n      const wStr = `${newW}px`\r\n      latestWidthStr = wStr\r\n      setWidth(wStr)\r\n    }\r\n\r\n    const onMouseUp = () => {\r\n      if (hasDragged) {\r\n        updateAttributes({ width: latestWidthStr })\r\n      }\r\n      window.removeEventListener('mousemove', onMouseMove)\r\n      window.removeEventListener('mouseup', onMouseUp)\r\n    }\r\n\r\n    window.addEventListener('mousemove', onMouseMove)\r\n    window.addEventListener('mouseup', onMouseUp)\r\n  }\r\n\r\n  return (\n    <NodeViewWrapper\n      ref={wrapperRef as any}\n      className=\"media-node-block flex flex-col w-full",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ResizableImage.tsx",
+        "start": 153,
+        "end": 182,
+        "startLoc": {
+          "line": 153,
+          "column": 9,
+          "position": 1804
+        },
+        "endLoc": {
+          "line": 182,
+          "column": 38,
+          "position": 2067
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 228,
+        "end": 257,
+        "startLoc": {
+          "line": 228,
+          "column": 13,
+          "position": 2823
+        },
+        "endLoc": {
+          "line": 257,
+          "column": 47,
+          "position": 3086
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 33,
+      "fragment": ">\n\n            {/* Alignment */}\n            <div className=\"flex gap-0.5 border-r border-gray-200 pr-1 mr-1\">\n              <button onClick={() => setAlignment('left')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignLeft size={16} />\r\n              </button>\r\n              <button onClick={() => setAlignment('center')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignCenter size={16} />\r\n              </button>\r\n              <button onClick={() => setAlignment('right')} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>\r\n                <AlignRight size={16} />\r\n              </button>\r\n            </div>\r\n\r\n            {/* Aspect Ratio */}\r\n            <div className=\"flex gap-1 border-r border-gray-200 pr-1 mr-1\">\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('fit'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === 'fit' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>Fit</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('1:1'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '1:1' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>1:1</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('3:4'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '3:4' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>3:4</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('2:3'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '2:3' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>2:3</button>\r\n              <button type=\"button\" onClick={(e) => { e.preventDefault(); setLayout('16:9'); }} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '16:9' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>16:9</button>\r\n            </div>\r\n\r\n            {/* Presets */}\r\n            <div className=\"flex gap-1 border-r border-gray-200 pr-1 mr-1\">\r\n              <button onClick={() => setSize('25%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>25%</button>\r\n              <button onClick={() => setSize('50%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>50%</button>\r\n              <button onClick={() => setSize('75%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '75%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>75%</button>\r\n              <button onClick={() => setSize('100%')} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>\r\n            </div>\r\n\r\n            {/* Replace */",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ResizableImage.tsx",
+        "start": 229,
+        "end": 261,
+        "startLoc": {
+          "line": 229,
+          "column": 2,
+          "position": 2433
+        },
+        "endLoc": {
+          "line": 261,
+          "column": 14,
+          "position": 3201
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 362,
+        "end": 394,
+        "startLoc": {
+          "line": 362,
+          "column": 2,
+          "position": 3971
+        },
+        "endLoc": {
+          "line": 394,
+          "column": 68,
+          "position": 4743
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 16,
+      "fragment": "}\r\n\r\n  const handleReplace = async (e: React.ChangeEvent<HTMLInputElement>) => {\r\n    const file = e.target.files?.[0]\r\n    if (!file) return\r\n    setIsReplacing(true)\r\n    try {\r\n      const formData = new FormData()\r\n      formData.append('file', file)\r\n      const urlParams = new URLSearchParams(window.location.search)\r\n      const wikiSlug = urlParams.get('wiki')\r\n      if (wikiSlug) formData.append('wikiSlug', wikiSlug)\r\n      const res = await fetch('/api/upload', { method: 'POST', body: formData })\r\n      if (!res.ok) throw new Error('Upload failed')\r\n      const data = await res.json()\r\n      props",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ImageSliderComponent.tsx",
+        "start": 65,
+        "end": 80,
+        "startLoc": {
+          "line": 65,
+          "column": 3,
+          "position": 632
+        },
+        "endLoc": {
+          "line": 80,
+          "column": 6,
+          "position": 852
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\ResizableImage.tsx",
+        "start": 124,
+        "end": 140,
+        "startLoc": {
+          "line": 124,
+          "column": 3,
+          "position": 1454
+        },
+        "endLoc": {
+          "line": 140,
+          "column": 17,
+          "position": 1676
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 11,
+      "fragment": ")\n  const wrapperRef = useRef<HTMLDivElement>(null)\n  const isInsideListByDoc = (() => {\n    if (!editor?.state?.doc || typeof getPos !== 'function') return false\n    try {\n      const doc = editor.state.doc\n      const pos = getPos()\n      const $pos = doc.resolve(pos)\n      let hasListAncestor = false\n      for (let depth = $pos.depth; depth >= 0; depth--) {\n        if",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ImageSliderComponent.tsx",
+        "start": 167,
+        "end": 177,
+        "startLoc": {
+          "line": 167,
+          "column": 6,
+          "position": 1642
+        },
+        "endLoc": {
+          "line": 177,
+          "column": 3,
+          "position": 1783
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 15,
+        "end": 25,
+        "startLoc": {
+          "line": 15,
+          "column": 5,
+          "position": 239
+        },
+        "endLoc": {
+          "line": 25,
+          "column": 6,
+          "position": 380
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 24,
+      "fragment": ")) {\n          hasListAncestor = true\n          break\n        }\n      }\n      if (hasListAncestor) return true\n\n      const nodeSize = typeof node?.nodeSize === 'number' ? node.nodeSize : 0\n      const endPos = Math.min(pos + nodeSize, doc.content.size)\n      const $end = doc.resolve(endPos)\n      const isBetweenSplitLists =\n        isListNodeType($pos.nodeBefore?.type?.name) &&\n        isListNodeType($end.nodeAfter?.type?.name)\n      if (isBetweenSplitLists) return true\n    } catch {\n      return false\n    }\n    return false\n  })()\n  const isInsideList = isInsideListByDoc || isInsideListByDom\n  const effectiveAlign = textAlign\n  const alignItems = effectiveAlign === 'left' ? 'flex-start' : effectiveAlign === 'right' ? 'flex-end' : 'center'\n  const mediaWrapperStyle: React.CSSProperties = {\n    width:",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ImageSliderComponent.tsx",
+        "start": 177,
+        "end": 200,
+        "startLoc": {
+          "line": 177,
+          "column": 5,
+          "position": 1798
+        },
+        "endLoc": {
+          "line": 200,
+          "column": 2,
+          "position": 2043
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 26,
+        "end": 49,
+        "startLoc": {
+          "line": 26,
+          "column": 9,
+          "position": 404
+        },
+        "endLoc": {
+          "line": 49,
+          "column": 2,
+          "position": 649
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 19,
+      "fragment": "node.attrs.textAlign])\n\n  useEffect(() => {\n    const updateListContextFromDom = () => {\n      const el = wrapperRef.current\n      if (!el) return\n      const prevTag = el.previousElementSibling?.tagName\n      const nextTag = el.nextElementSibling?.tagName\n      const isAdjacentToList =\n        (prevTag === 'OL' || prevTag === 'UL') &&\n        (nextTag === 'OL' || nextTag === 'UL')\n      const isNestedInList = Boolean(el.closest('li, ol, ul'))\n      setIsInsideListByDom(isNestedInList || isAdjacentToList)\n    }\n\n    updateListContextFromDom()\n    const raf = requestAnimationFrame(updateListContextFromDom)\n    return () => cancelAnimationFrame(raf)\n  }, [getPos, node.attrs.textAlign, node.attrs.layoutMode",
+      "tokens": 0,
+      "firstFile": {
+        "name": "components\\editor\\extensions\\ImageSliderComponent.tsx",
+        "start": 225,
+        "end": 243,
+        "startLoc": {
+          "line": 225,
+          "column": 2,
+          "position": 2238
+        },
+        "endLoc": {
+          "line": 243,
+          "column": 11,
+          "position": 2443
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\YoutubeComponent.tsx",
+        "start": 63,
+        "end": 81,
+        "startLoc": {
+          "line": 63,
+          "column": 2,
+          "position": 786
+        },
+        "endLoc": {
+          "line": 81,
+          "column": 6,
+          "position": 991
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 16,
+      "fragment": ".provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)\r\n\r\n      const getEmbedUrl = (url: string) => {\r\n        if (!url) return ''\r\n        if (url.includes('vimeo.com') && !url.includes('player.vimeo.com')) {\r\n          const match = url.match(/vimeo\\.com\\/(?:video\\/)*([0-9]+)/)\r\n          return match ? `https://player.vimeo.com/video/${match[1]}` : url\r\n        }\r\n        if ((url.includes('youtube.com') || url.includes('youtu.be')) && !url.includes('youtube.com/embed')) {\r\n          const match = url.match(/(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&?/\\s]+)/)\r\n          return match ? `https://www.youtube.com/embed/${match[1]}` : url\r\n        }\r\n        return url\r\n      }\r\n\r\n      const width",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\[locale]\\[kit]\\lesson\\[lesson]\\page.tsx",
+        "start": 549,
+        "end": 564,
+        "startLoc": {
+          "line": 549,
+          "column": 6,
+          "position": 6370
+        },
+        "endLoc": {
+          "line": 564,
+          "column": 6,
+          "position": 6586
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 14,
+        "end": 29,
+        "startLoc": {
+          "line": 14,
+          "column": 6,
+          "position": 269
+        },
+        "endLoc": {
+          "line": 29,
+          "column": 2,
+          "position": 485
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": "function isLessonKeyUnsupportedError(error: any): boolean {\n  const message = typeof error?.message === 'string' ? error.message : ''\n  const lowerMessage = message.toLowerCase()\n  const missingColumn =\n    lowerMessage.includes('lessonkey') &&\n    (lowerMessage.includes('does not exist') || lowerMessage.includes('unknown field') || lowerMessage.includes('unknown argument'))\n  const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''\n  const prismaMetaColumn = metaColumn.endsWith('.lesson.lessonkey') || metaColumn === 'lessonkey'\n  return (\n    message.includes('Unknown argument `lessonKey`') ||\n    message.includes('Unknown field `lessonKey`') ||\n    missingColumn ||\n    prismaMetaColumn\n  )\n}\n\nconst",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\[id]\\route.ts",
+        "start": 19,
+        "end": 35,
+        "startLoc": {
+          "line": 19,
+          "column": 1,
+          "position": 218
+        },
+        "endLoc": {
+          "line": 35,
+          "column": 6,
+          "position": 417
+        }
+      },
+      "secondFile": {
+        "name": "lib\\server-data.ts",
+        "start": 6,
+        "end": 22,
+        "startLoc": {
+          "line": 6,
+          "column": 1,
+          "position": 66
+        },
+        "endLoc": {
+          "line": 22,
+          "column": 9,
+          "position": 265
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": "const message = typeof error?.message === 'string' ? error.message : ''\n  const lowerMessage = message.toLowerCase()\n  const missingColumnHint =\n    lowerMessage.includes('unknown column') ||\n    lowerMessage.includes('does not exist') ||\n    lowerMessage.includes('unknown field') ||\n    lowerMessage.includes('unknown argument') ||\n    lowerMessage.includes('field does not exist')\n  const mentionsLegacyColumn = LEGACY_LESSON_OPTIONAL_COLUMNS.some((column) => lowerMessage.includes(column))\n  const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''\n  const prismaMetaColumn = LEGACY_LESSON_OPTIONAL_COLUMNS.some(\n    (column) => metaColumn.endsWith(`.lesson.${column}`) || metaColumn === column\n  )\n  const unknownPrismaField = ['version'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\[id]\\route.ts",
+        "start": 40,
+        "end": 53,
+        "startLoc": {
+          "line": 40,
+          "column": 3,
+          "position": 472
+        },
+        "endLoc": {
+          "line": 53,
+          "column": 10,
+          "position": 678
+        }
+      },
+      "secondFile": {
+        "name": "lib\\data.ts",
+        "start": 35,
+        "end": 48,
+        "startLoc": {
+          "line": 35,
+          "column": 3,
+          "position": 299
+        },
+        "endLoc": {
+          "line": 48,
+          "column": 12,
+          "position": 505
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 23,
+      "fragment": "const legacyLessonReadSelect = {\n  id: true,\n  order: true,\n  slug: true,\n  wikiSlug: true,\n  title_en: true,\n  title_ar: true,\n  coverImage: true,\n  ownerId: true,\n  lastModifiedBy: true,\n  status: true,\n  publishedAt: true,\n  duration_min: true,\n  difficulty: true,\n  prerequisites_en: true,\n  prerequisites_ar: true,\n  materials: true,\n  body: true,\n  createdAt: true,\n  updatedAt: true,\n} as const\n\nfunction stripLegacyDraftSuffix",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\[id]\\route.ts",
+        "start": 61,
+        "end": 83,
+        "startLoc": {
+          "line": 61,
+          "column": 1,
+          "position": 755
+        },
+        "endLoc": {
+          "line": 83,
+          "column": 23,
+          "position": 905
+        }
+      },
+      "secondFile": {
+        "name": "lib\\data.ts",
+        "start": 12,
+        "end": 34,
+        "startLoc": {
+          "line": 12,
+          "column": 1,
+          "position": 135
+        },
+        "endLoc": {
+          "line": 34,
+          "column": 26,
+          "position": 285
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": ".wikiSlug,\n          OR: [\n            ...(baseId ? [{ id: baseId }, { id: toLegacyDraftValue(baseId) }] : []),\n            ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),\n          ],\n        },\n        orderBy: [{ updatedAt: 'desc' }],\n        select: legacyLessonReadSelect,\n      })\n      familyRows = legacyRows.map(mapLegacyLessonRow)\n    }\n    if (!Array.isArray(familyRows) || familyRows.length === 0) {\n      familyRows = [existing",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\[id]\\route.ts",
+        "start": 278,
+        "end": 290,
+        "startLoc": {
+          "line": 278,
+          "column": 9,
+          "position": 3314
+        },
+        "endLoc": {
+          "line": 290,
+          "column": 9,
+          "position": 3481
+        }
+      },
+      "secondFile": {
+        "name": "app\\api\\lessons\\[id]\\route.ts",
+        "start": 171,
+        "end": 183,
+        "startLoc": {
+          "line": 171,
+          "column": 8,
+          "position": 2021
+        },
+        "endLoc": {
+          "line": 183,
+          "column": 8,
+          "position": 2188
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": "function isLessonKeyUnsupportedError(error: any): boolean {\n  const message = typeof error?.message === 'string' ? error.message : ''\n  const lowerMessage = message.toLowerCase()\n  const missingColumn =\n    lowerMessage.includes('lessonkey') &&\n    (lowerMessage.includes('does not exist') || lowerMessage.includes('unknown field') || lowerMessage.includes('unknown argument'))\n  const metaColumn = typeof error?.meta?.column === 'string' ? error.meta.column.toLowerCase() : ''\n  const prismaMetaColumn = metaColumn.endsWith('.lesson.lessonkey') || metaColumn === 'lessonkey'\n  return (\n    message.includes('Unknown argument `lessonKey`') ||\n    message.includes('Unknown field `lessonKey`') ||\n    missingColumn ||\n    prismaMetaColumn\n  )\n}\n\nconst LEGACY_DRAFT_SUFFIX",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\lock\\route.ts",
+        "start": 10,
+        "end": 26,
+        "startLoc": {
+          "line": 10,
+          "column": 1,
+          "position": 88
+        },
+        "endLoc": {
+          "line": 26,
+          "column": 20,
+          "position": 289
+        }
+      },
+      "secondFile": {
+        "name": "lib\\server-data.ts",
+        "start": 6,
+        "end": 35,
+        "startLoc": {
+          "line": 6,
+          "column": 1,
+          "position": 66
+        },
+        "endLoc": {
+          "line": 35,
+          "column": 31,
+          "position": 419
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 24,
+      "fragment": "{\n  id: true,\n  order: true,\n  slug: true,\n  wikiSlug: true,\n  title_en: true,\n  title_ar: true,\n  coverImage: true,\n  ownerId: true,\n  lastModifiedBy: true,\n  status: true,\n  publishedAt: true,\n  duration_min: true,\n  difficulty: true,\n  prerequisites_en: true,\n  prerequisites_ar: true,\n  materials: true,\n  body: true,\n  createdAt: true,\n  updatedAt: true,\n  version: true,\n  activeEditorId: true,\n  lockedUntil: true,\n} as",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\lock\\route.ts",
+        "start": 28,
+        "end": 51,
+        "startLoc": {
+          "line": 28,
+          "column": 2,
+          "position": 302
+        },
+        "endLoc": {
+          "line": 51,
+          "column": 3,
+          "position": 460
+        }
+      },
+      "secondFile": {
+        "name": "lib\\server-data.ts",
+        "start": 99,
+        "end": 122,
+        "startLoc": {
+          "line": 99,
+          "column": 2,
+          "position": 1144
+        },
+        "endLoc": {
+          "line": 122,
+          "column": 2,
+          "position": 1302
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 18,
+      "fragment": ": true,\n} as const\n\nfunction stripLegacyDraftSuffix(value: string | undefined | null): string {\n  const normalized = (value || '').trim()\n  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {\n    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)\n  }\n  return normalized\n}\n\nfunction toLegacyDraftValue(value: string | undefined | null): string {\n  const normalized = stripLegacyDraftSuffix(value) || 'lesson'\n  return `${normalized}${LEGACY_DRAFT_SUFFIX}`\n}\n\nfunction mapLegacyLessonRow(row: any) {\n  return",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\lock\\route.ts",
+        "start": 50,
+        "end": 67,
+        "startLoc": {
+          "line": 50,
+          "column": 12,
+          "position": 453
+        },
+        "endLoc": {
+          "line": 67,
+          "column": 7,
+          "position": 620
+        }
+      },
+      "secondFile": {
+        "name": "app\\api\\lessons\\[id]\\route.ts",
+        "start": 80,
+        "end": 97,
+        "startLoc": {
+          "line": 80,
+          "column": 10,
+          "position": 891
+        },
+        "endLoc": {
+          "line": 97,
+          "column": 6,
+          "position": 1058
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 15,
+      "fragment": "as any)?.slug)\n          const legacyRows = await prisma.lesson.findMany({\n            where: {\n              wikiSlug,\n              OR: [\n                ...(baseId ? [{ id: baseId }, { id: toLegacyDraftValue(baseId) }] : []),\n                ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),\n              ],\n            },\n            orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],\n            select: legacyLessonSelect,\n          })\n          familyRows = legacyRows.map(mapLegacyLessonRow)\n        }\n    }",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\lessons\\lock\\route.ts",
+        "start": 266,
+        "end": 280,
+        "startLoc": {
+          "line": 266,
+          "column": 2,
+          "position": 2829
+        },
+        "endLoc": {
+          "line": 280,
+          "column": 2,
+          "position": 3008
+        }
+      },
+      "secondFile": {
+        "name": "app\\api\\lessons\\lock\\route.ts",
+        "start": 126,
+        "end": 140,
+        "startLoc": {
+          "line": 126,
+          "column": 2,
+          "position": 1293
+        },
+        "endLoc": {
+          "line": 140,
+          "column": 3,
+          "position": 1472
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 12,
+      "fragment": "function getActorIdFromRequest(req: Request): string | undefined {\n  const headers = (req as any)?.headers as Headers | undefined\n  if (!headers) return undefined\n  const raw =\n    headers.get('x-user-id') ||\n    headers.get('x-actor-id') ||\n    headers.get('x-developer-id') ||\n    headers.get('x-dev-id')\n  return raw ? raw.trim() || undefined : undefined\n}\n\nexport async function GET",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\developers\\me\\route.ts",
+        "start": 4,
+        "end": 15,
+        "startLoc": {
+          "line": 4,
+          "column": 1,
+          "position": 25
+        },
+        "endLoc": {
+          "line": 15,
+          "column": 4,
+          "position": 157
+        }
+      },
+      "secondFile": {
+        "name": "app\\api\\lessons\\reorder\\route.ts",
+        "start": 16,
+        "end": 27,
+        "startLoc": {
+          "line": 16,
+          "column": 1,
+          "position": 122
+        },
+        "endLoc": {
+          "line": 27,
+          "column": 5,
+          "position": 265
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 16,
+      "fragment": ".provider || (isVimeo ? 'vimeo' : isYoutube ? 'youtube' : null)\r\n\r\n                const getEmbedUrl = (url: string) => {\r\n                    if (!url) return ''\r\n                    if (url.includes('vimeo.com') && !url.includes('player.vimeo.com')) {\r\n                        const match = url.match(/vimeo\\.com\\/(?:video\\/)*([0-9]+)/)\r\n                        return match ? `https://player.vimeo.com/video/${match[1]}` : url\r\n                    }\r\n                    if ((url.includes('youtube.com') || url.includes('youtu.be')) && !url.includes('youtube.com/embed')) {\r\n                        const match = url.match(/(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&?/\\s]+)/)\r\n                        return match ? `https://www.youtube.com/embed/${match[1]}` : url\r\n                    }\r\n                    return url\r\n                }\r\n\r\n                return",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\lessons\\[id]\\page.tsx",
+        "start": 237,
+        "end": 252,
+        "startLoc": {
+          "line": 237,
+          "column": 5,
+          "position": 2898
+        },
+        "endLoc": {
+          "line": 252,
+          "column": 7,
+          "position": 3112
+        }
+      },
+      "secondFile": {
+        "name": "components\\editor\\extensions\\VideoComponent.tsx",
+        "start": 14,
+        "end": 29,
+        "startLoc": {
+          "line": 14,
+          "column": 6,
+          "position": 269
+        },
+        "endLoc": {
+          "line": 29,
+          "column": 6,
+          "position": 483
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 16,
+      "fragment": ")\r\n\r\n      const payload = {\r\n        ...lesson,\r\n        id: lessonId,\r\n        slug: lesson?.slug || lessonId,\r\n        wikiSlug,\r\n        title_en: lesson?.title_en || lessonTitle,\r\n        title_ar: lesson?.title_ar || '',\r\n        body,\r\n        duration_min: lesson?.duration_min || 30,\r\n        difficulty: lesson?.difficulty || 'Beginner',\r\n        prerequisites_en: lesson?.prerequisites_en || [],\r\n        prerequisites_ar: lesson?.prerequisites_ar || [],\r\n        materials: lesson?.materials || [],\r\n        status",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\editor\\segment\\page.tsx",
+        "start": 159,
+        "end": 174,
+        "startLoc": {
+          "line": 159,
+          "column": 16,
+          "position": 1613
+        },
+        "endLoc": {
+          "line": 174,
+          "column": 7,
+          "position": 1776
+        }
+      },
+      "secondFile": {
+        "name": "app\\editor\\segment\\page.tsx",
+        "start": 101,
+        "end": 116,
+        "startLoc": {
+          "line": 101,
+          "column": 9,
+          "position": 1043
+        },
+        "endLoc": {
+          "line": 116,
+          "column": 2,
+          "position": 1206
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 12,
+      "fragment": "(value: unknown): string[] {\n  if (Array.isArray(value)) {\n    return value.filter((item): item is string => typeof item === 'string')\n  }\n  if (typeof value === 'string') {\n    try {\n      const parsed = JSON.parse(value)\n      if (Array.isArray(parsed)) {\n        return parsed.filter((item): item is string => typeof item === 'string')\n      }\n    } catch {\n      // ignore parse failure and fallback below",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\wikis\\route.ts",
+        "start": 31,
+        "end": 42,
+        "startLoc": {
+          "line": 31,
+          "column": 13,
+          "position": 245
+        },
+        "endLoc": {
+          "line": 42,
+          "column": 43,
+          "position": 393
+        }
+      },
+      "secondFile": {
+        "name": "lib\\server-data.ts",
+        "start": 244,
+        "end": 255,
+        "startLoc": {
+          "line": 244,
+          "column": 17,
+          "position": 2563
+        },
+        "endLoc": {
+          "line": 255,
+          "column": 24,
+          "position": 2711
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 18,
+      "fragment": ",\n      'Content-Type': 'application/json',\n    },\n    body: JSON.stringify(createPayload),\n  })\n\n  if (!createResp.ok) {\n    const details = await createResp.text()\n    throw new Error(`Vimeo create video failed (${createResp.status}): ${details || createResp.statusText}`)\n  }\n\n  const createData = await createResp.json()\n  const uploadLink = createData?.upload?.upload_link_secure || createData?.upload?.upload_link\n  if (!uploadLink) {\n    throw new Error('Vimeo response missing upload link')\n  }\n\n  const uploadResp",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\api\\upload\\route.ts",
+        "start": 44,
+        "end": 61,
+        "startLoc": {
+          "line": 44,
+          "column": 12,
+          "position": 407
+        },
+        "endLoc": {
+          "line": 61,
+          "column": 11,
+          "position": 559
+        }
+      },
+      "secondFile": {
+        "name": "app\\api\\vimeo\\create\\route.ts",
+        "start": 40,
+        "end": 58,
+        "startLoc": {
+          "line": 40,
+          "column": 43,
+          "position": 435
+        },
+        "endLoc": {
+          "line": 58,
+          "column": 9,
+          "position": 606
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 12,
+      "fragment": "=\n    dbWikis.length > 0\n      ? (() => {\n          const bySlug = new Map(fileWikis.map((wiki) => [wiki.slug, wiki]))\n          dbWikis.forEach((wiki) => {\n            bySlug.set(wiki.slug, { ...(bySlug.get(wiki.slug) || {}), ...wiki })\n          })\n          return Array.from(bySlug.values())\n        })()\n      : fileWikis\n\n  const kits",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\wikis\\page.tsx",
+        "start": 175,
+        "end": 186,
+        "startLoc": {
+          "line": 175,
+          "column": 2,
+          "position": 1376
+        },
+        "endLoc": {
+          "line": 186,
+          "column": 5,
+          "position": 1512
+        }
+      },
+      "secondFile": {
+        "name": "app\\editor\\dashboard\\page.tsx",
+        "start": 13,
+        "end": 24,
+        "startLoc": {
+          "line": 13,
+          "column": 2,
+          "position": 119
+        },
+        "endLoc": {
+          "line": 24,
+          "column": 10,
+          "position": 255
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 43,
+      "fragment": "() {\n  const fileWikis = getWikis()\n  const dbWikis = await getWikisFromDb()\n  const wikis =\n    dbWikis.length > 0\n      ? (() => {\n          const bySlug = new Map(fileWikis.map((wiki) => [wiki.slug, wiki]))\n          dbWikis.forEach((wiki) => {\n            bySlug.set(wiki.slug, { ...(bySlug.get(wiki.slug) || {}), ...wiki })\n          })\n          return Array.from(bySlug.values())\n        })()\n      : fileWikis\n\n  const summaries = await Promise.all(\n    wikis.map(async (wiki) => {\n      const kits = getKits(wiki.slug)\r\n      const kitSlugs = kits.length ? kits.map((kit) => kit.slug) : [wiki.slug]\r\n      let lessonCount = 0\r\n      for (const kitSlug of kitSlugs) {\r\n        const lessons = await loadLessonsForKit(kitSlug, wiki.slug)\r\n        lessonCount += lessons.length\r\n      }\r\n      return { wiki, lessonCount }\r\n    })\r\n  )\r\n\n  return (\n    <div className=\"min-h-screen bg-[#eef2f1]\">\n      <AdminNavbar />\n      <div className=\"mx-auto max-w-5xl px-6 py-12 space-y-10 pt-20\">\n        <header className=\"space-y-3\">\n          <h1 className=\"text-3xl font-bold text-gray-900\">Content Editor</h1>\n          <p className=\"text-sm text-gray-600\">\n            Select a wiki to manage its lessons. From there you can jump straight into editing.\n          </p>\n        </header>\n\n        <EditorDashboardClient initialSummaries={summaries} />\n      </div>\n    </div>\n  )\n}",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\editor\\page.tsx",
+        "start": 10,
+        "end": 52,
+        "startLoc": {
+          "line": 10,
+          "column": 11,
+          "position": 84
+        },
+        "endLoc": {
+          "line": 52,
+          "column": 2,
+          "position": 556
+        }
+      },
+      "secondFile": {
+        "name": "app\\editor\\dashboard\\page.tsx",
+        "start": 10,
+        "end": 52,
+        "startLoc": {
+          "line": 10,
+          "column": 20,
+          "position": 85
+        },
+        "endLoc": {
+          "line": 52,
+          "column": 2,
+          "position": 573
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 17,
+      "fragment": ")\n\n  useEffect(() => {\n    if (!pathname) return\n    if (!pathname.includes('/lesson/')) return\n    if (pathname.includes('/unlock')) return\n    if (isUnlocked(kitSlug)) return\n\n    const search = new URLSearchParams({\n      kit: kitSlug,\n      redirect: pathname,\n    })\n\n    router.push(`/${locale}/unlock?${search.toString()}`)\n  }, [pathname, router, locale, kitSlug])\n\r\n  const handleLocaleChange = (l",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\components\\KitShell.tsx",
+        "start": 25,
+        "end": 41,
+        "startLoc": {
+          "line": 25,
+          "column": 2,
+          "position": 264
+        },
+        "endLoc": {
+          "line": 41,
+          "column": 2,
+          "position": 409
+        }
+      },
+      "secondFile": {
+        "name": "components\\kit-navbar.tsx",
+        "start": 31,
+        "end": 47,
+        "startLoc": {
+          "line": 31,
+          "column": 6,
+          "position": 240
+        },
+        "endLoc": {
+          "line": 47,
+          "column": 11,
+          "position": 384
+        }
+      }
+    }
+  ]
+}

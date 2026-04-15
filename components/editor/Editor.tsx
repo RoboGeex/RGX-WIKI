@@ -192,7 +192,7 @@ export default function WikiEditor() {
   const [developer, setDeveloper] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [tocTrigger, setTocTrigger] = useState(0)
-  const [autosaveProgress, setAutosaveProgress] = useState(0)
+  const [autosaveCountdown, setAutosaveCountdown] = useState<number | null>(null)
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [meta, setMeta] = useState(() => {
@@ -881,11 +881,6 @@ export default function WikiEditor() {
     setStatus('English Verified! Summary and lesson mirrored to Arabic pane.')
   }
 
-  // Force a re-render on EVERY selection / update event so all isActive() checks
-  // in the BubbleMenu JSX (bold, italic, color, alignment, etc.) are always fresh.
-  const [enSelectionKey, setEnSelectionKey] = useState(0)
-  const [arSelectionKey, setArSelectionKey] = useState(0)
-
   const getAlignmentFromEditor = useCallback((editor: any, defaultAlign: string) => {
     if (!editor || !editor.state) return defaultAlign
     const node = editor.state.selection.$head?.parent
@@ -895,28 +890,6 @@ export default function WikiEditor() {
     if (['image', 'video', 'youtube'].includes(node.type?.name)) return 'center'
     return defaultAlign
   }, [])
-
-  useEffect(() => {
-    if (!editorEn) return
-    const update = () => setEnSelectionKey(k => k + 1)
-    editorEn.on('selectionUpdate', update)
-    editorEn.on('update', update)
-    return () => {
-      editorEn.off('selectionUpdate', update)
-      editorEn.off('update', update)
-    }
-  }, [editorEn])
-
-  useEffect(() => {
-    if (!editorAr) return
-    const update = () => setArSelectionKey(k => k + 1)
-    editorAr.on('selectionUpdate', update)
-    editorAr.on('update', update)
-    return () => {
-      editorAr.off('selectionUpdate', update)
-      editorAr.off('update', update)
-    }
-  }, [editorAr])
 
   useEffect(() => {
     if (editorAr) {
@@ -935,10 +908,19 @@ export default function WikiEditor() {
   const [, forceArabicDirtyRender] = useState(false)
   const loadedLessonKeyRef = useRef<string | null>(null)
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tocRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const initialLoadRef = useRef(!meta.isNew)
   const publishRef = useRef<any>(null)
   const publishQueueRef = useRef<Promise<void>>(Promise.resolve())
   const pendingPublishCountRef = useRef(0)
+
+  const queueTocRefresh = useCallback((delay = 350) => {
+    if (tocRefreshTimerRef.current) clearTimeout(tocRefreshTimerRef.current)
+    tocRefreshTimerRef.current = setTimeout(() => {
+      tocRefreshTimerRef.current = null
+      setTocTrigger((prev) => prev + 1)
+    }, delay)
+  }, [])
 
   const setSectionDocsIntoEditors = (section: LessonSectionKey) => {
     if (!editorEn || !editorAr) return
@@ -1755,22 +1737,6 @@ export default function WikiEditor() {
 
 
   useEffect(() => {
-    if (!editorEn && !editorAr) return;
-
-    const handler = () => {
-      setTocTrigger(prev => prev + 1);
-    };
-
-    editorEn?.on('update', handler);
-    editorAr?.on('update', handler);
-
-    return () => {
-      editorEn?.off('update', handler);
-      editorAr?.off('update', handler);
-    };
-  }, [editorEn, editorAr]);
-
-  useEffect(() => {
     if (!editorAr) return
     const handler = () => {
       if (syncingArRef.current) return
@@ -1804,17 +1770,29 @@ export default function WikiEditor() {
   ]
   const textColors = ['#111827', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
   const highlightColors = ['#fff59d', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff']
+  const hasExcelLikeFocusRef = useRef(false)
 
   function markExcelLikeFocus(editor: any) {
     if (!editor) return
     const root = editor.view.dom as HTMLElement
-    root.querySelectorAll('td.pm-excel-col, th.pm-excel-col').forEach(el => el.classList.remove('pm-excel-col'))
-    root.querySelectorAll('tr.pm-excel-row').forEach(el => el.classList.remove('pm-excel-row'))
-    root.querySelectorAll('td.pm-excel-cell, th.pm-excel-cell').forEach(el => el.classList.remove('pm-excel-cell'))
+
+    const clearExcelFocusClasses = () => {
+      root.querySelectorAll('td.pm-excel-col, th.pm-excel-col').forEach(el => el.classList.remove('pm-excel-col'))
+      root.querySelectorAll('tr.pm-excel-row').forEach(el => el.classList.remove('pm-excel-row'))
+      root.querySelectorAll('td.pm-excel-cell, th.pm-excel-cell').forEach(el => el.classList.remove('pm-excel-cell'))
+    }
+
     const sel = document.getSelection()
     if (!sel || !sel.focusNode) return
     const cell = (sel.focusNode as Node).parentElement?.closest('td, th') as HTMLTableCellElement | null
-    if (!cell) return
+    if (!cell) {
+      if (!hasExcelLikeFocusRef.current) return
+      clearExcelFocusClasses()
+      hasExcelLikeFocusRef.current = false
+      return
+    }
+
+    clearExcelFocusClasses()
     const row = cell.parentElement as HTMLTableRowElement | null
     const table = cell.closest('table') as HTMLTableElement | null
     if (!row || !table) return
@@ -1822,6 +1800,7 @@ export default function WikiEditor() {
     const colIndex = cell.cellIndex
     Array.from(table.rows).forEach(r => { const c = r.cells.item(colIndex); if (c) c.classList.add('pm-excel-col') })
     cell.classList.add('pm-excel-cell')
+    hasExcelLikeFocusRef.current = true
   }
 
   useEffect(() => {
@@ -1853,13 +1832,19 @@ export default function WikiEditor() {
       switch (node.type) {
         case 'paragraph': {
           const { text, html } = serializeInline(node.content)
-          if (!text && !html) return null
+          const normalizedText = (text || '').trim()
+          const normalizedHtml = (html || '').trim()
           const block: any = {
             type: 'paragraph',
-            [textKey]: (text || '').trim(),
+            [textKey]: normalizedText,
             [jsonKey]: cloneNode(node),
           }
-          if (html) block[htmlKey] = html
+          if (normalizedHtml) {
+            block[htmlKey] = normalizedHtml
+          } else if (!normalizedText) {
+            // Preserve intentionally blank paragraphs so empty lines survive save/load and wiki rendering.
+            block[htmlKey] = '<br />'
+          }
           return block
         }
         case 'blockquote': {
@@ -2360,7 +2345,7 @@ export default function WikiEditor() {
       clearInterval(progressIntervalRef.current)
       progressIntervalRef.current = null
     }
-    setAutosaveProgress(0)
+    setAutosaveCountdown(null)
 
     // Reset the loaded lesson key so the new lesson will load fresh
     loadedLessonKeyRef.current = null
@@ -2542,28 +2527,38 @@ export default function WikiEditor() {
 
   const triggerAutosave = useCallback(() => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current)
+      progressIntervalRef.current = null
+    }
     if (initialLoadRef.current) return
     if (isLockedByOther) return
 
     const duration = 3000
     const start = Date.now()
 
-    setAutosaveProgress(0)
+    setAutosaveCountdown((prev) => (prev === 3 ? prev : 3))
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - start
-      const p = Math.min(100, (elapsed / duration) * 100)
-      setAutosaveProgress(p)
-      if (p >= 100 && progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-    }, 50)
+      const remainingMs = Math.max(0, duration - elapsed)
+      const remainingSeconds = Math.ceil(remainingMs / 1000)
+      setAutosaveCountdown((prev) => (prev === remainingSeconds ? prev : remainingSeconds))
+      if (remainingMs <= 0 && progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
+    }, 250)
 
     autosaveTimerRef.current = setTimeout(() => {
       if (initialLoadRef.current) return
       if (isLockedByOther) return
 
       setStatus('Autosaving...')
-      setAutosaveProgress(0)
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
+      setAutosaveCountdown(null)
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
 
       if (publishRef.current) {
         publishRef.current('draft').catch(() => { })
@@ -2578,11 +2573,11 @@ export default function WikiEditor() {
       if (syncingEnRef.current) return  // Skip: this is a programmatic content load
       if (initialLoadRef.current) return
       triggerAutosave()
-      setTocTrigger(prev => prev + 1)
+      queueTocRefresh()
     }
     editorEn.on('update', handler)
     return () => { editorEn.off('update', handler) }
-  }, [editorEn, triggerAutosave])
+  }, [editorEn, queueTocRefresh, triggerAutosave])
 
   useEffect(() => {
     if (!editorAr) return
@@ -2590,15 +2585,17 @@ export default function WikiEditor() {
       if (syncingArRef.current) return  // Skip: this is a programmatic content load
       if (initialLoadRef.current) return
       triggerAutosave()
-      setTocTrigger(prev => prev + 1)
+      queueTocRefresh()
     }
     editorAr.on('update', handler)
     return () => { editorAr.off('update', handler) }
-  }, [editorAr, triggerAutosave])
+  }, [editorAr, queueTocRefresh, triggerAutosave])
 
   // Cleanup autosave timer
   useEffect(() => () => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
+    if (tocRefreshTimerRef.current) clearTimeout(tocRefreshTimerRef.current)
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
   }, [])
 
   if (isSigningIn) {
@@ -2769,9 +2766,9 @@ export default function WikiEditor() {
               {/* Last Saved Status */}
               {isSaving || status.includes('Saving') || status.includes('Autosaving') ? (
                 <div className="text-[10px] text-slate-400 font-medium italic animate-pulse">Saving...</div>
-              ) : autosaveProgress > 0 && autosaveProgress < 100 ? (
+              ) : autosaveCountdown !== null ? (
                 <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                  Syncing in {Math.ceil((3000 - (autosaveProgress * 3000 / 100)) / 1000)}s...
+                  Syncing in {autosaveCountdown}s...
                 </div>
               ) : status && (status.toLowerCase().includes('error') || status.toLowerCase().includes('only owner') || status.toLowerCase().includes('sign in')) ? (
                 <div className="flex items-center gap-1.5 text-[10px] text-rose-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]" title={status}>
@@ -2853,40 +2850,17 @@ export default function WikiEditor() {
             )}
 
             <div className="relative inline-flex items-center">
-              <AnimatePresence>
-                {autosaveProgress > 0 && autosaveProgress < 100 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute -inset-[3px] pointer-events-none z-10"
-                  >
-                    <svg className="w-full h-full overflow-visible">
-                      <motion.rect
-                        x="0"
-                        y="0"
-                        width="100%"
-                        height="100%"
-                        rx="10"
-                        fill="none"
-                        stroke="#f05d4e"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        pathLength="100"
-                        strokeDasharray="100 100"
-                        initial={{ strokeDashoffset: 100 }}
-                        animate={{ strokeDashoffset: 100 - autosaveProgress }}
-                        transition={{ ease: "linear", duration: 0.1 }}
-                      />
-                    </svg>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {autosaveCountdown !== null && (
+                <div className="absolute -inset-[3px] pointer-events-none z-10 rounded-[11px] border-2 border-[#f05d4e]/80 animate-pulse" />
+              )}
               <button
                 onClick={() => {
                   if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-                  if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-                  setAutosaveProgress(0);
+                  if (progressIntervalRef.current) {
+                    clearInterval(progressIntervalRef.current);
+                    progressIntervalRef.current = null;
+                  }
+                  setAutosaveCountdown(null);
                   publish().catch(() => { });
                 }}
                 disabled={saveDisabled || isSaving}
@@ -2895,7 +2869,7 @@ export default function WikiEditor() {
                 title={saveDisabled ? 'Only owner/admin can save' : isSaving ? 'Save in progress...' : 'Save'}
                 type="button"
               >
-                <Save size={14} className={autosaveProgress > 0 ? 'animate-bounce' : ''} />
+                <Save size={14} className={autosaveCountdown !== null ? 'animate-bounce' : ''} />
                 <span className="hidden sm:inline">Save</span>
               </button>
             </div>

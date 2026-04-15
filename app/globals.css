@@ -534,6 +534,12 @@ html {
   font-size: 1.05rem;
   line-height: 1.5;
 }
+.tiptap th :is(p, div:not([data-type]):not(.media-node-block)),
+.tiptap td :is(p, div:not([data-type]):not(.media-node-block)) {
+  margin: 0 !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
 .tiptap th img,
 .tiptap td img {
   max-width: 100% !important;

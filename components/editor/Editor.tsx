@@ -1312,13 +1312,13 @@ export default function WikiEditor() {
           }
           case 'list': {
             const listItems = Array.isArray(item[itemsKey]) ? item[itemsKey] : []
+            const editor = language === 'ar' ? editorAr : editorEn
             if (listItems.length > 0) {
-              const editor = language === 'ar' ? editorAr : editorEn
               nodes.push({
                 type: item.ordered ? 'orderedList' : 'bulletList',
                 content: listItems.map((entry: any) => {
-                  // Handle both string format and ListItem object format ({text, indent})
-                  const rawText = typeof entry === 'string' ? entry : (entry?.text || '')
+                  // Handle both string format and object format ({ text, html, ... }).
+                  const rawText = typeof entry === 'string' ? entry : (entry?.html || entry?.text || '')
                   const parsedNodes = rawText ? parseHtmlToNodes(rawText, editor) : []
                   let contentNodes = Array.isArray(parsedNodes)
                     ? parsedNodes.filter((node: any) => node && typeof node === 'object')
@@ -1343,6 +1343,17 @@ export default function WikiEditor() {
                   }
                 }),
               })
+            } else {
+              // Fallback for payloads that store a full list HTML string instead of per-item entries.
+              const listHtml = typeof item[htmlKey] === 'string' ? item[htmlKey].trim() : ''
+              if (listHtml) {
+                const parsedNodes = parseHtmlToNodes(listHtml, editor).filter((node: any) =>
+                  node?.type === 'orderedList' || node?.type === 'bulletList'
+                )
+                if (parsedNodes.length > 0) {
+                  parsedNodes.forEach((node: any) => nodes.push(node))
+                }
+              }
             }
             break
           }
@@ -1911,13 +1922,16 @@ export default function WikiEditor() {
         case 'orderedList': {
           const { htmlItems, textItems } = serializeListNode(node, editorInstance)
           if (htmlItems.length === 0 && textItems.length === 0) return null
-          return {
+          const block: any = {
             type: 'list',
             ordered: node.type === 'orderedList',
             [itemsKey]: htmlItems,
             [textKey]: textItems.join('\n'),
             [jsonKey]: cloneNode(node),
           }
+          const html = serializeNodeToHTML(node, editorInstance)
+          if (html) block[htmlKey] = html
+          return block
         }
         case 'table': {
           const block: any = {

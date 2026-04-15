@@ -4,7 +4,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import KitHeader from '@/components/kit-header';
-import { getListMarker } from '@/lib/segment-types';
 import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import { InteractiveHtml } from '@/components/lesson/InteractiveHtml'
 import { LessonEmbed, LessonImage, LessonVideo } from '@/components/lesson/LessonMedia'
@@ -74,6 +73,68 @@ const LessonPage = () => {
         return normalizeTextAlign(item?.align || item?.json_en?.attrs?.textAlign || item?.json_en?.attrs?.align);
     };
 
+    const buildListHtml = (entries: any[], isOrdered: boolean): string => {
+        if (!Array.isArray(entries) || entries.length === 0) return '';
+
+        type ListNode = { html: string; indent: number; children: ListNode[] };
+        const root: { indent: number; children: ListNode[] } = { indent: -1, children: [] };
+        const stack: Array<{ indent: number; node: { children: ListNode[] } }> = [{ indent: -1, node: root }];
+
+        const normalizeEntry = (entry: any): { html: string; indent: number } => {
+            const rawHtml = typeof entry === 'string'
+                ? entry
+                : (
+                    entry?.html
+                    || entry?.text
+                    || entry?.value
+                    || entry?.en
+                    || entry?.ar
+                    || ''
+                );
+            const rawIndent = typeof entry === 'object' ? Number(entry?.indent) : 0;
+            const indent = Number.isFinite(rawIndent) ? Math.max(0, Math.floor(rawIndent)) : 0;
+            return {
+                html: typeof rawHtml === 'string' ? rawHtml : String(rawHtml ?? ''),
+                indent,
+            };
+        };
+
+        entries.forEach((entry: any) => {
+            const normalized = normalizeEntry(entry);
+            let indent = normalized.indent;
+            const maxDepth = stack[stack.length - 1].indent + 1;
+            if (indent > maxDepth) indent = maxDepth;
+
+            while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+                stack.pop();
+            }
+
+            const node: ListNode = {
+                html: normalized.html,
+                indent,
+                children: [],
+            };
+            stack[stack.length - 1].node.children.push(node);
+            stack.push({ indent, node });
+        });
+
+        const renderNodes = (nodes: ListNode[], depth: number): string => {
+            if (!nodes.length) return '';
+            const orderedAtDepth = depth % 2 === 0 ? isOrdered : !isOrdered;
+            const tag = orderedAtDepth ? 'ol' : 'ul';
+            const body = nodes
+                .map((node) => {
+                    const contentHtml = node.html || '<br />';
+                    const nestedHtml = renderNodes(node.children, depth + 1);
+                    return `<li><div class="lesson-list-item-content">${contentHtml}</div>${nestedHtml}</li>`;
+                })
+                .join('');
+            return `<${tag}>${body}</${tag}>`;
+        };
+
+        return renderNodes(root.children, 0);
+    };
+
 
     // Render lesson.body as HTML and add IDs to headings
     const renderBody = () => {
@@ -121,32 +182,19 @@ const LessonPage = () => {
             }
             if (item.type === 'list') {
                 const items = item.items_en || (item.en ? [item.en] : []);
-                if (!Array.isArray(items) || items.length === 0) return null;
+                const listHtml =
+                    typeof item.html_en === 'string' && item.html_en.trim().length > 0
+                        ? item.html_en
+                        : buildListHtml(Array.isArray(items) ? items : [], !!item.ordered);
+
+                if (!listHtml) return null;
 
                 return (
-                    <div key={blockIdx} className="pl-2 mb-4 space-y-2 text-gray-700">
-                        {items.map((li: any, liIdx: number) => {
-                            const text = typeof li === 'object' ? li.text : li;
-                            const indent = typeof li === 'object' ? (li.indent || 0) : 0;
-                            const marker = getListMarker(items, liIdx, !!item.ordered)
-
-                            return (
-                                <div
-                                    key={liIdx}
-                                    className="flex items-start gap-3"
-                                    style={{ paddingLeft: `${indent * 2}rem` }}
-                                >
-                                    <span className={`shrink-0 font-medium ${item.ordered ? 'min-w-[1.5rem]' : 'w-4 text-center'} text-gray-500`}>
-                                        {marker}
-                                    </span>
-                                    <InteractiveHtml
-                                        className="lesson-list-item-content flex-1 min-w-0 [&_p]:m-0"
-                                        html={text || ''}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
+                    <InteractiveHtml
+                        key={blockIdx}
+                        className="tiptap max-w-none my-3"
+                        html={listHtml}
+                    />
                 );
             }
 

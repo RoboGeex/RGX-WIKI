@@ -13,7 +13,6 @@ import PrevNextNav from '@/components/prev-next-nav'
 import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import Step from '@/components/step'
 import LessonToc from '@/components/lesson-toc'
-import { getListMarker } from '@/lib/segment-types'
 import { InteractiveHtml } from '@/components/lesson/InteractiveHtml'
 import { LessonEmbed, LessonImage, LessonVideo } from '@/components/lesson/LessonMedia'
 import { splitBodyBlocksBySection } from '@/lib/lesson-sections'
@@ -83,6 +82,68 @@ export default async function LessonPage(
       return normalized
     }
     return undefined
+  }
+
+  const buildListHtml = (entries: any[], isOrdered: boolean): string => {
+    if (!Array.isArray(entries) || entries.length === 0) return ''
+
+    type ListNode = { html: string; indent: number; children: ListNode[] }
+    const root: { indent: number; children: ListNode[] } = { indent: -1, children: [] }
+    const stack: Array<{ indent: number; node: { children: ListNode[] } }> = [{ indent: -1, node: root }]
+
+    const normalizeEntry = (entry: any): { html: string; indent: number } => {
+      const rawHtml = typeof entry === 'string'
+        ? entry
+        : (
+          entry?.html
+          || entry?.text
+          || entry?.value
+          || entry?.en
+          || entry?.ar
+          || ''
+        )
+      const rawIndent = typeof entry === 'object' ? Number(entry?.indent) : 0
+      const indent = Number.isFinite(rawIndent) ? Math.max(0, Math.floor(rawIndent)) : 0
+      return {
+        html: typeof rawHtml === 'string' ? rawHtml : String(rawHtml ?? ''),
+        indent,
+      }
+    }
+
+    entries.forEach((entry: any) => {
+      const normalized = normalizeEntry(entry)
+      let indent = normalized.indent
+      const maxDepth = stack[stack.length - 1].indent + 1
+      if (indent > maxDepth) indent = maxDepth
+
+      while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+        stack.pop()
+      }
+
+      const node: ListNode = {
+        html: normalized.html,
+        indent,
+        children: [],
+      }
+      stack[stack.length - 1].node.children.push(node)
+      stack.push({ indent, node })
+    })
+
+    const renderNodes = (nodes: ListNode[], depth: number): string => {
+      if (!nodes.length) return ''
+      const orderedAtDepth = depth % 2 === 0 ? isOrdered : !isOrdered
+      const tag = orderedAtDepth ? 'ol' : 'ul'
+      const body = nodes
+        .map((node) => {
+          const contentHtml = node.html || '<br />'
+          const nestedHtml = renderNodes(node.children, depth + 1)
+          return `<li><div class="lesson-list-item-content">${contentHtml}</div>${nestedHtml}</li>`
+        })
+        .join('')
+      return `<${tag}>${body}</${tag}>`
+    }
+
+    return renderNodes(root.children, 0)
   }
 
   const toYoutubeEmbed = (url: string): string => {
@@ -190,6 +251,7 @@ export default async function LessonPage(
           type: 'list',
           ordered: jType === 'orderedList',
           [localeItemsKey]: block[localeItemsKey] || [],
+          [localeHtmlKey]: block[localeHtmlKey] || '',
           [localeTextKey]: block[localeTextKey] || '',
         }
       case 'table':
@@ -315,40 +377,20 @@ export default async function LessonPage(
 
     if (block.type === 'list') {
       const items = locale === 'ar' ? block.items_ar : block.items_en
-      if (!Array.isArray(items) || items.length === 0) return null
+      const html = locale === 'ar' ? block.html_ar : block.html_en
+      const resolvedHtml =
+        typeof html === 'string' && html.trim().length > 0
+          ? html
+          : buildListHtml(Array.isArray(items) ? items : [], !!block.ordered)
 
-      const paddingClass = locale === 'ar' ? 'pr-6' : 'pl-6'
+      if (!resolvedHtml) return null
 
       return (
-        <div
+        <InteractiveHtml
           key={index}
-          dir={locale === 'ar' ? 'rtl' : 'ltr'}
-          className={`text-xl leading-7 text-gray-700 ${paddingClass} space-y-1 my-3`}
-        >
-          {items.map((item: any, itemIndex: number) => {
-            const text = typeof item === 'object' ? item.text : item
-            const indent = typeof item === 'object' ? (item.indent || 0) : 0
-            const marker = getListMarker(items, itemIndex, !!block.ordered)
-
-            return (
-              <div
-                key={itemIndex}
-                className="flex items-start gap-2"
-                style={{
-                  [locale === 'ar' ? 'paddingRight' : 'paddingLeft']: `${indent * 2}rem`
-                }}
-              >
-                <span className={`shrink-0 pt-0.5 leading-7 ${block.ordered ? 'min-w-[1.2rem]' : 'w-4 text-center'} text-gray-700`}>
-                  {marker}
-                </span>
-                <InteractiveHtml
-                  className="lesson-list-item-content flex-1 min-w-0 [&_p]:m-0"
-                  html={text || ''}
-                />
-              </div>
-            )
-          })}
-        </div>
+          className={`my-3 max-w-none ${locale === 'ar' ? 'tiptap tiptap-rtl' : 'tiptap'}`}
+          html={resolvedHtml}
+        />
       )
     }
 

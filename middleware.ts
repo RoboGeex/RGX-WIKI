@@ -153,7 +153,6 @@ export function middleware(request: NextRequest) {
 
   // We have a wiki! Standardize the internal path to /[locale]/[kit]/lesson/[lesson]
   const defaultLocale = wiki.defaultLocale || 'en'
-  const defaultLesson = wiki.defaultLessonSlug || 'getting-started'
   
   // Extract locale from remainder if present
   let currentLocale = defaultLocale
@@ -164,10 +163,18 @@ export function middleware(request: NextRequest) {
     finalRest = normalizedRest.slice(1)
   }
 
-  // Edge case: if we are at the root of a hub wiki (/ziggy), redirect to /ziggy/en/lesson
+  // Edge case: if we are at the root of a hub wiki (/ziggy), redirect to /ziggy/en.
+  // Let app/[locale]/[kit]/page.tsx resolve the true first lesson from DB/file data.
   if (normalizedRest.length === 0 && isHubHost(host)) {
-     url.pathname = `/${wikiSlug}/${defaultLocale}/${defaultLesson}`
+     url.pathname = `/${wikiSlug}/${defaultLocale}`
      return NextResponse.redirect(url)
+  }
+
+  // If locale root is requested (/ziggy/en), route to kit home first so the page
+  // can choose the real first lesson instead of relying on a static default slug.
+  if (finalRest.length === 0) {
+    url.pathname = `/${currentLocale}/${wikiSlug}`
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
   }
 
   // Standardize rewrites
@@ -175,7 +182,11 @@ export function middleware(request: NextRequest) {
     url.pathname = `/${currentLocale}/${wikiSlug}/lesson/resources`
   } else {
     const lessonSlug = finalRest[0] === 'lesson' ? finalRest.slice(1).join('/') : finalRest.join('/')
-    url.pathname = `/${currentLocale}/${wikiSlug}/lesson/${lessonSlug || defaultLesson}`
+    if (!lessonSlug) {
+      url.pathname = `/${currentLocale}/${wikiSlug}`
+      return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
+    }
+    url.pathname = `/${currentLocale}/${wikiSlug}/lesson/${lessonSlug}`
   }
 
   return NextResponse.rewrite(url, { request: { headers: requestHeaders } })

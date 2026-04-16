@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { getWiki } from '@/lib/data'
 import { getPrisma } from '@/lib/prisma-multi'
 import accessCodesData from '@/data/access-codes.json'
+import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365
 
@@ -36,17 +37,21 @@ export async function POST(request: NextRequest) {
   const configuredCodes = getConfiguredCodes(wiki.slug)
   let isValid = configuredCodes.includes(rawCode)
 
-  if (process.env.USE_DB === 'true') {
+  if (process.env.USE_DB === 'true' && !shouldBypassDb(wiki.slug)) {
     try {
       const db = getPrisma(wiki.slug)
-      const matchedCode = await db.accessCode.findFirst({
-        where: {
-          code: rawCode,
-          wikiSlug: wiki.slug,
-        },
-      })
+      const matchedCode = await withDbTimeout(() =>
+        db.accessCode.findFirst({
+          where: {
+            code: rawCode,
+            wikiSlug: wiki.slug,
+          },
+        })
+      )
       isValid = isValid || Boolean(matchedCode)
+      markDbSuccess(wiki.slug)
     } catch (error) {
+      markDbFailure(wiki.slug)
       // Keep static fallback validation active if DB access codes are unavailable.
       console.error(`[Unlock API] DB validation error for wiki ${wiki.slug}:`, error)
     }

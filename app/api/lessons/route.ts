@@ -6,6 +6,7 @@ import { getPrisma } from '@/lib/prisma-multi'
 import { canEditLesson, canManageWiki } from '@/lib/assignments'
 import { findDeveloperById } from '@/lib/developers'
 import { getActorIdFromRequest } from '@/lib/api-auth'
+import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
 import {
   LESSON_STATUS,
   collapseLessonsForEditor,
@@ -1650,28 +1651,32 @@ export async function GET(req: Request) {
     const canSeeDrafts = !!developer && canManageWiki(developer, wikiSlug)
     const publishedOnly = !canSeeDrafts
 
-    if (process.env.USE_DB === 'true') {
+    if (process.env.USE_DB === 'true' && !shouldBypassDb(wikiSlug)) {
       try {
         const prisma: any = getPrisma(wikiSlug || undefined)
         let lessons: any[]
         try {
-          lessons = await prisma.lesson.findMany({
-            where: {
-              wikiSlug,
-              ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
-            },
-            orderBy: [{ order: 'asc' }, { version: 'desc' }],
-          })
+          lessons = await withDbTimeout(() =>
+            prisma.lesson.findMany({
+              where: {
+                wikiSlug,
+                ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
+              },
+              orderBy: [{ order: 'asc' }, { version: 'desc' }],
+            })
+          )
         } catch (error: any) {
           if (!isLegacyLessonReadSchemaError(error)) throw error
-          const legacyRows = await prisma.lesson.findMany({
-            where: {
-              wikiSlug,
-              ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
-            },
-            orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
-            select: legacyLessonReadSelect,
-          })
+          const legacyRows: any[] = await withDbTimeout(() =>
+            prisma.lesson.findMany({
+              where: {
+                wikiSlug,
+                ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
+              },
+              orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
+              select: legacyLessonReadSelect,
+            })
+          )
           lessons = legacyRows.map(mapLegacyLessonRow)
         }
 
@@ -1679,8 +1684,10 @@ export async function GET(req: Request) {
           ? collapseLessonsForPublic(lessons)
           : collapseLessonsForEditor(lessons)
 
+        markDbSuccess(wikiSlug)
         return NextResponse.json(collapsed)
       } catch (error: any) {
+        markDbFailure(wikiSlug)
         console.error(`[api/lessons] DB read failed for "${wikiSlug}", falling back to file data.`, error)
         const list = await readLessonsFromFile(wikiSlug)
         const collapsed = publishedOnly

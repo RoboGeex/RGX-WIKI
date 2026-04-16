@@ -8,6 +8,7 @@ import { getPrisma } from '@/lib/prisma-multi'
 import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasLessonContentChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
 import { normalizeSlug, stripLegacyDraftSuffix, LEGACY_DRAFT_SUFFIX, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from './wikiPaths'
 import { HUB_DOMAIN } from '@/lib/domains'
+import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
 
 const LEGACY_LESSON_OPTIONAL_COLUMNS = ['lessonkey', 'version', 'activeeditorid', 'lockeduntil'] as const
 
@@ -305,6 +306,7 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   const normKit = normalizeSlug(kitSlug)
   const wikiSlug = wikiSlugForKit(normKit)
   const includeDrafts = opts?.includeDrafts === true
+  const shouldUseDb = process.env.USE_DB === 'true'
   const buildLessonsResult = (rows: Lesson[]): Lesson[] => {
     const collapsed = includeDrafts
       ? collapseLessonsForEditor(rows as Lesson[])
@@ -312,51 +314,61 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
     return ensureResourcesLesson(collapsed as Lesson[], wikiSlug)
   }
 
-  try {
-    const prisma: any = getPrisma(wikiSlug)
-    let rows: Lesson[]
+  if (shouldUseDb && !shouldBypassDb(wikiSlug)) {
     try {
-      rows = await prisma.lesson.findMany({
-        where: {
-          wikiSlug,
-          ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
-        },
-        orderBy: [{ order: 'asc' }, { version: 'desc' }],
-      })
-    } catch (error: any) {
-      if (!isLegacyLessonSchemaError(error)) throw error
-      const legacyRows = await prisma.lesson.findMany({
-        where: {
-          wikiSlug,
-          ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
-        },
-        orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
-        select: legacyLessonReadSelect,
-      })
-      rows = legacyRows.map(mapLegacyLessonRow)
-    }
-    const collapsed = includeDrafts
-      ? collapseLessonsForEditor(rows as Lesson[])
-      : collapseLessonsForPublic(rows as Lesson[])
-    const enriched = enrichLessonsWithPublishState(rows as Lesson[], collapsed as Lesson[], includeDrafts)
-    return ensureResourcesLesson(enriched as Lesson[], wikiSlug)
-  } catch (e) {
-    console.error("Failed to fetch lessons from db", e)
-    const fallbackRows = loadJsonFile<Lesson[]>(`lessons.${wikiSlug}.json`, [])
-    if (fallbackRows.length === 0) {
-      const remoteFallbackRows = await loadLessonsFromRemoteFallback(wikiSlug, { includeDrafts })
-      if (remoteFallbackRows && remoteFallbackRows.length > 0) {
-        return buildLessonsResult(remoteFallbackRows)
+      const prisma: any = getPrisma(wikiSlug)
+      let rows: Lesson[]
+      try {
+        rows = await withDbTimeout(() =>
+          prisma.lesson.findMany({
+            where: {
+              wikiSlug,
+              ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
+            },
+            orderBy: [{ order: 'asc' }, { version: 'desc' }],
+          })
+        )
+      } catch (error: any) {
+        if (!isLegacyLessonSchemaError(error)) throw error
+        const legacyRows: any[] = await withDbTimeout(() =>
+          prisma.lesson.findMany({
+            where: {
+              wikiSlug,
+              ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
+            },
+            orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
+            select: legacyLessonReadSelect,
+          })
+        )
+        rows = legacyRows.map(mapLegacyLessonRow)
       }
+      markDbSuccess(wikiSlug)
+      const collapsed = includeDrafts
+        ? collapseLessonsForEditor(rows as Lesson[])
+        : collapseLessonsForPublic(rows as Lesson[])
+      const enriched = enrichLessonsWithPublishState(rows as Lesson[], collapsed as Lesson[], includeDrafts)
+      return ensureResourcesLesson(enriched as Lesson[], wikiSlug)
+    } catch (e) {
+      markDbFailure(wikiSlug)
+      console.error("Failed to fetch lessons from db", e)
     }
-    const filteredRows = includeDrafts
-      ? fallbackRows
-      : fallbackRows.filter((lesson) => {
-          const status = (lesson.status || '').toString().toLowerCase()
-          return !status || status === LESSON_STATUS.PUBLISHED
-        })
-    return buildLessonsResult(filteredRows as Lesson[])
   }
+
+  const fallbackRows = loadJsonFile<Lesson[]>(`lessons.${wikiSlug}.json`, [])
+  if (fallbackRows.length === 0) {
+    const remoteFallbackRows = await loadLessonsFromRemoteFallback(wikiSlug, { includeDrafts })
+    if (remoteFallbackRows && remoteFallbackRows.length > 0) {
+      return buildLessonsResult(remoteFallbackRows)
+    }
+  }
+
+  const filteredRows = includeDrafts
+    ? fallbackRows
+    : fallbackRows.filter((lesson) => {
+        const status = (lesson.status || '').toString().toLowerCase()
+        return !status || status === LESSON_STATUS.PUBLISHED
+      })
+  return buildLessonsResult(filteredRows as Lesson[])
 }
 
 

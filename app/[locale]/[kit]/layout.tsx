@@ -8,6 +8,7 @@ import { headers, cookies } from 'next/headers'
 import { isHubHost, normalizeHost } from '@/lib/domains'
 import { getPrisma } from '@/lib/prisma-multi'
 import accessCodesData from '@/data/access-codes.json'
+import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
 
 function getConfiguredCodes(wikiSlug: string): string[] {
   const raw = (accessCodesData as Record<string, unknown>)[wikiSlug]
@@ -36,21 +37,31 @@ export default async function KitLayout(
     let shouldRequireAccess = configuredCodes.length > 0
     let isValid = false
 
-    try {
-      const db = getPrisma(wiki.slug)
-      const codesCount = await db.accessCode.count({ where: { wikiSlug: wiki.slug } })
-      if (codesCount > 0) {
+    if (!shouldBypassDb(wiki.slug)) {
+      try {
+        const db = getPrisma(wiki.slug)
+        const codesCount = await withDbTimeout(() => db.accessCode.count({ where: { wikiSlug: wiki.slug } }))
+        if (codesCount > 0) {
+          shouldRequireAccess = true
+          const matchedCode = accessCookieValue
+            ? await withDbTimeout(() =>
+                db.accessCode.findFirst({ where: { code: accessCookieValue, wikiSlug: wiki.slug } })
+              )
+            : null
+          isValid = Boolean(matchedCode)
+        } else if (configuredCodes.length > 0) {
+          isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
+        }
+        markDbSuccess(wiki.slug)
+      } catch (e) {
+        markDbFailure(wiki.slug)
+        console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
+        // Fail closed on DB errors. If static codes are configured, allow those.
         shouldRequireAccess = true
-        const matchedCode = accessCookieValue
-          ? await db.accessCode.findFirst({ where: { code: accessCookieValue, wikiSlug: wiki.slug } })
-          : null
-        isValid = Boolean(matchedCode)
-      } else if (configuredCodes.length > 0) {
         isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
       }
-    } catch (e) {
-      console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
-      // Fail closed on DB errors. If static codes are configured, allow those.
+    } else {
+      // Fail closed while DB circuit breaker is active.
       shouldRequireAccess = true
       isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
     }

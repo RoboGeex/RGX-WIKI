@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import type { Lesson } from '@/lib/types'
 import type { Locale } from '@/lib/i18n'
 import { buildLessonHref } from '@/lib/wikiPaths'
-import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
+import { isHubHost, normalizeHost } from '@/lib/domains'
 
 type Props = {
   prevLesson?: Lesson
@@ -14,11 +14,7 @@ type Props = {
 
 export default function PrevNextNav({ prevLesson, nextLesson, locale, kitSlug }: Props) {
   const host = normalizeHost(headers().get('host'))
-  const isHubDomain =
-    host === HUB_DOMAIN ||
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '::1'
+  const isHubDomain = isHubHost(host)
 
   return (
     <div className="flex justify-between gap-4 pt-8 border-t mt-12">

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import wikisData from '@/data/wikis.json'
-import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
+import { HUB_DOMAIN, isCloudRunHost, isHubHost, isLocalHost, normalizeHost } from '@/lib/domains'
 
 function getWikiBySlug(slug?: string | null) {
   if (!slug) return undefined
@@ -30,8 +30,8 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
   const host = normalizeHost(hostname)
-  const allowLocalAdmin = host === 'localhost' || host === '127.0.0.1' || host === '::1'
-  const isCloudRunHost = host.endsWith('.run.app') || host.endsWith('.a.run.app')
+  const allowLocalAdmin = isLocalHost(host)
+  const isCloudRunRequest = isCloudRunHost(host)
   const isAdminRoute = pathname.startsWith('/editor') || pathname.startsWith('/dashboard')
   const rawUrl = request.url || ''
   const isPrefetchRequest =
@@ -46,7 +46,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (isAdminRoute && host !== 'admin.robogeex.com' && !allowLocalAdmin && !isCloudRunHost) {
+  if (isAdminRoute && host !== 'admin.robogeex.com' && !allowLocalAdmin && !isCloudRunRequest) {
     // Avoid cross-origin CORS errors for Next.js prefetch/RSC probes.
     // Real navigations still redirect to the admin domain.
     if (isPrefetchRequest) {
@@ -101,7 +101,7 @@ export function middleware(request: NextRequest) {
   let wikiSlug: string | undefined = undefined
   let normalizedRest = segments
 
-  if (host === HUB_DOMAIN || host === 'localhost' || host === '127.0.0.1' || host === '::1') {
+  if (isHubHost(host)) {
     if (segments.length === 0 || pathname === '/wikis') {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }
@@ -165,7 +165,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Edge case: if we are at the root of a hub wiki (/ziggy), redirect to /ziggy/en/lesson
-  if (normalizedRest.length === 0 && (host === HUB_DOMAIN || host === 'localhost' || host === '127.0.0.1' || host === '::1')) {
+  if (normalizedRest.length === 0 && isHubHost(host)) {
      url.pathname = `/${wikiSlug}/${defaultLocale}/${defaultLesson}`
      return NextResponse.redirect(url)
   }

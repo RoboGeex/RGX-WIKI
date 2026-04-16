@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getWikiByDomain, getKits } from '@/lib/data'
 import { headers } from 'next/headers'
-import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
+import { isHubHost, normalizeHost } from '@/lib/domains'
 import WikisLandingPage from './wikis/page'
 
 // This is the root page of the application. 
@@ -12,7 +12,7 @@ export default async function RootPage() {
   const normalizedHost = normalizeHost(host)
 
   // The hub root should render the wiki index at "/" without URL changes.
-  if (normalizedHost === HUB_DOMAIN) {
+  if (isHubHost(normalizedHost)) {
     return <WikisLandingPage />
   }
 

@@ -5,7 +5,7 @@ import { getKit, getLessons, getWiki } from '@/lib/data'
 import { redirect } from 'next/navigation'
 import type { Locale } from '@/lib/i18n'
 import { headers, cookies } from 'next/headers'
-import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
+import { isHubHost, normalizeHost } from '@/lib/domains'
 import { getPrisma } from '@/lib/prisma-multi'
 import accessCodesData from '@/data/access-codes.json'
 
@@ -65,11 +65,7 @@ export default async function KitLayout(
   const lessons = await getLessons(kit)
   const hostHeader = headers().get('host')
   const host = normalizeHost(hostHeader)
-  const isHubDomain =
-    host === HUB_DOMAIN ||
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '::1'
+  const isHubDomain = isHubHost(host)
 
   return (
     <div className="min-h-screen bg-white sm:bg-[#eef2f1]">

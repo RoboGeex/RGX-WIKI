@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { HUB_DOMAIN } from '@/lib/domains'
+import { isHubHost } from '@/lib/domains'
 import {
   getFirstLesson,
   getKit,
@@ -24,8 +24,7 @@ export default async function KitPage(
     notFound()
   }
 
-  const hostHeader = headers().get('host')
-  const isHub = hostHeader && (hostHeader.includes(HUB_DOMAIN) || hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1'))
+  const isHub = isHubHost(headers().get('host'))
   
   if (isHub) {
     redirect(`/${kit}/${locale}/${firstLesson.slug}`)

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Home } from 'lucide-react'
 import { headers } from 'next/headers'
-import { HUB_DOMAIN, normalizeHost } from '@/lib/domains'
+import { isHubHost, normalizeHost } from '@/lib/domains'
 
 const SUPPORTED_LOCALES = new Set(['en', 'ar'])
 
@@ -32,11 +32,7 @@ function getBackHrefFromRequest(): string {
   const pathOnly = currentPath.split('?')[0]
   const segments = pathOnly.split('/').filter(Boolean)
 
-  const isHubDomain =
-    host === HUB_DOMAIN ||
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '::1'
+  const isHubDomain = isHubHost(host)
 
   // Dedicated domains should go back to the locale root (same wiki by host).
   if (!isHubDomain) {

@@ -223,10 +223,10 @@ export function getKit(slug: string, wikiSlug?: string) {
 }
 
 export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boolean }): Promise<Lesson[]> {
+  const normKit = normalizeSlug(kitSlug)
+  const wikiSlug = wikiSlugForKit(normKit)
+  const includeDrafts = opts?.includeDrafts === true
   try {
-    const normKit = normalizeSlug(kitSlug)
-    const wikiSlug = wikiSlugForKit(normKit)
-    const includeDrafts = opts?.includeDrafts === true
     const prisma: any = getPrisma(wikiSlug)
     let rows: Lesson[]
     try {
@@ -256,7 +256,17 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
     return ensureResourcesLesson(enriched as Lesson[], wikiSlug)
   } catch (e) {
     console.error("Failed to fetch lessons from db", e)
-    return []
+    const fallbackRows = loadJsonFile<Lesson[]>(`lessons.${wikiSlug}.json`, [])
+    const filteredRows = includeDrafts
+      ? fallbackRows
+      : fallbackRows.filter((lesson) => {
+          const status = (lesson.status || '').toString().toLowerCase()
+          return !status || status === LESSON_STATUS.PUBLISHED
+        })
+    const collapsed = includeDrafts
+      ? collapseLessonsForEditor(filteredRows as Lesson[])
+      : collapseLessonsForPublic(filteredRows as Lesson[])
+    return ensureResourcesLesson(collapsed as Lesson[], wikiSlug)
   }
 }
 

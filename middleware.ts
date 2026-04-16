@@ -31,6 +31,11 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const host = normalizeHost(hostname)
   const allowLocalAdmin = host === 'localhost' || host === '127.0.0.1' || host === '::1'
+  const isAdminRoute = pathname.startsWith('/editor') || pathname.startsWith('/dashboard')
+  const isPrefetchRequest =
+    request.headers.get('next-router-prefetch') === '1' ||
+    request.headers.get('purpose') === 'prefetch' ||
+    request.nextUrl.searchParams.has('_rsc')
 
   // Keep the hub on a single canonical domain.
   if (host === 'wikis.robogeex.com' && host !== HUB_DOMAIN) {
@@ -38,7 +43,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if ((pathname.startsWith('/editor') || pathname.startsWith('/dashboard')) && host !== 'admin.robogeex.com' && !allowLocalAdmin) {
+  if (isAdminRoute && host !== 'admin.robogeex.com' && !allowLocalAdmin) {
+    // Avoid cross-origin CORS errors for Next.js prefetch/RSC probes.
+    // Real navigations still redirect to the admin domain.
+    if (isPrefetchRequest) {
+      return new NextResponse(null, { status: 204 })
+    }
     const adminUrl = new URL(pathname, 'https://admin.robogeex.com')
     return NextResponse.redirect(adminUrl)
   }

@@ -32,10 +32,12 @@ export function middleware(request: NextRequest) {
   const host = normalizeHost(hostname)
   const allowLocalAdmin = host === 'localhost' || host === '127.0.0.1' || host === '::1'
   const isAdminRoute = pathname.startsWith('/editor') || pathname.startsWith('/dashboard')
+  const rawUrl = request.url || ''
   const isPrefetchRequest =
     request.headers.get('next-router-prefetch') === '1' ||
     request.headers.get('purpose') === 'prefetch' ||
-    request.nextUrl.searchParams.has('_rsc')
+    request.nextUrl.searchParams.has('_rsc') ||
+    rawUrl.includes('_rsc=')
 
   // Keep the hub on a single canonical domain.
   if (host === 'wikis.robogeex.com' && host !== HUB_DOMAIN) {

@@ -1,5 +1,6 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import {
+  getFirstLesson,
   getKit,
   getLesson,
   getLessons,
@@ -45,6 +46,10 @@ export default async function LessonPage(
     : await getLesson(kit, lessonSlug, { includeDrafts: preview })
 
   if (!lesson) {
+    const firstLesson = await getFirstLesson(kit)
+    if (firstLesson?.slug) {
+      redirect(`/${locale}/${kit}/lesson/${firstLesson.slug}`)
+    }
     notFound()
   }
 

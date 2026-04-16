@@ -31,6 +31,7 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const host = normalizeHost(hostname)
   const allowLocalAdmin = host === 'localhost' || host === '127.0.0.1' || host === '::1'
+  const isCloudRunHost = host.endsWith('.run.app') || host.endsWith('.a.run.app')
   const isAdminRoute = pathname.startsWith('/editor') || pathname.startsWith('/dashboard')
   const rawUrl = request.url || ''
   const isPrefetchRequest =
@@ -45,7 +46,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (isAdminRoute && host !== 'admin.robogeex.com' && !allowLocalAdmin) {
+  if (isAdminRoute && host !== 'admin.robogeex.com' && !allowLocalAdmin && !isCloudRunHost) {
     // Avoid cross-origin CORS errors for Next.js prefetch/RSC probes.
     // Real navigations still redirect to the admin domain.
     if (isPrefetchRequest) {

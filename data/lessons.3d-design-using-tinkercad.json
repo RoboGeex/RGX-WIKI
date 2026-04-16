@@ -1,0 +1,27 @@
+[
+  {
+    "id": "getting-started",
+    "order": 1,
+    "slug": "getting-started",
+    "wikiSlug": "3d-design-using-tinkercad",
+    "title_en": "Getting Started",
+    "title_ar": "البداية",
+    "coverImage": null,
+    "ownerId": "30",
+    "lastModifiedBy": "30",
+    "status": "published",
+    "publishedAt": "2026-04-04T11:25:27.182Z",
+    "duration_min": 30,
+    "difficulty": "Beginner",
+    "prerequisites_en": [],
+    "prerequisites_ar": [],
+    "materials": [],
+    "body": [],
+    "createdAt": "2026-04-04T11:25:27.182Z",
+    "updatedAt": "2026-04-05T11:22:43.238Z",
+    "lessonKey": "getting-started",
+    "version": 0,
+    "activeEditorId": null,
+    "lockedUntil": null
+  }
+]

@@ -7,6 +7,7 @@ import wikisData from '@/data/wikis.json'
 import { getPrisma } from '@/lib/prisma-multi'
 import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasLessonContentChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
 import { normalizeSlug, stripLegacyDraftSuffix, LEGACY_DRAFT_SUFFIX, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from './wikiPaths'
+import { HUB_DOMAIN } from '@/lib/domains'
 
 const LEGACY_LESSON_OPTIONAL_COLUMNS = ['lessonkey', 'version', 'activeeditorid', 'lockeduntil'] as const
 
@@ -83,6 +84,84 @@ function loadJsonFile<T>(file: string, fallback: T): T {
     }
   }
   return fallback
+}
+
+const REMOTE_LESSON_CACHE_TTL_MS = 60 * 1000
+const remoteLessonsCache = new Map<string, { expiresAt: number; lessons: Lesson[] }>()
+
+function getFallbackApiBaseUrl(): string {
+  const configured = (process.env.LESSONS_FALLBACK_API_BASE_URL || '').trim()
+  if (configured) return configured
+  return HUB_DOMAIN ? `https://${HUB_DOMAIN}` : ''
+}
+
+function normalizeLessonFromRemote(lesson: any, wikiSlug: string): Lesson {
+  return {
+    ...lesson,
+    id: String(lesson?.id || lesson?.slug || ''),
+    lessonKey: String(lesson?.lessonKey || lesson?.id || lesson?.slug || ''),
+    slug: String(lesson?.slug || lesson?.id || ''),
+    wikiSlug: String(lesson?.wikiSlug || wikiSlug),
+    order: Number.isFinite(Number(lesson?.order)) ? Number(lesson.order) : 0,
+    status: typeof lesson?.status === 'string' ? lesson.status : LESSON_STATUS.PUBLISHED,
+  } as Lesson
+}
+
+async function loadLessonsFromRemoteFallback(
+  wikiSlug: string,
+  opts?: { includeDrafts?: boolean }
+): Promise<Lesson[] | undefined> {
+  const key = `${wikiSlug}:${opts?.includeDrafts ? 'drafts' : 'published'}`
+  const cached = remoteLessonsCache.get(key)
+  const now = Date.now()
+  if (cached && cached.expiresAt > now) {
+    return cached.lessons
+  }
+
+  const baseUrl = getFallbackApiBaseUrl()
+  if (!baseUrl) return undefined
+
+  try {
+    const endpoint = new URL('/api/lessons', baseUrl)
+    endpoint.searchParams.set('wiki', wikiSlug)
+
+    const timeoutMs = Number.parseInt(process.env.LESSONS_FALLBACK_TIMEOUT_MS || '5000', 10)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) ? timeoutMs : 5000)
+
+    const response = await fetch(endpoint.toString(), {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { 'x-rgx-db-fallback': '1' },
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+
+    if (!response.ok) {
+      return undefined
+    }
+
+    const payload = await response.json()
+    if (!Array.isArray(payload)) {
+      return undefined
+    }
+
+    const normalized = payload
+      .map((lesson) => normalizeLessonFromRemote(lesson, wikiSlug))
+      .filter((lesson) => lesson.id && lesson.slug)
+
+    if (normalized.length > 0) {
+      remoteLessonsCache.set(key, {
+        expiresAt: now + REMOTE_LESSON_CACHE_TTL_MS,
+        lessons: normalized,
+      })
+    }
+
+    return normalized
+  } catch (error) {
+    console.error(`[data] Remote lesson fallback failed for "${wikiSlug}":`, error)
+    return undefined
+  }
 }
 
 function loadWikis(): Wiki[] {
@@ -226,6 +305,13 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   const normKit = normalizeSlug(kitSlug)
   const wikiSlug = wikiSlugForKit(normKit)
   const includeDrafts = opts?.includeDrafts === true
+  const buildLessonsResult = (rows: Lesson[]): Lesson[] => {
+    const collapsed = includeDrafts
+      ? collapseLessonsForEditor(rows as Lesson[])
+      : collapseLessonsForPublic(rows as Lesson[])
+    return ensureResourcesLesson(collapsed as Lesson[], wikiSlug)
+  }
+
   try {
     const prisma: any = getPrisma(wikiSlug)
     let rows: Lesson[]
@@ -257,16 +343,19 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   } catch (e) {
     console.error("Failed to fetch lessons from db", e)
     const fallbackRows = loadJsonFile<Lesson[]>(`lessons.${wikiSlug}.json`, [])
+    if (fallbackRows.length === 0) {
+      const remoteFallbackRows = await loadLessonsFromRemoteFallback(wikiSlug, { includeDrafts })
+      if (remoteFallbackRows && remoteFallbackRows.length > 0) {
+        return buildLessonsResult(remoteFallbackRows)
+      }
+    }
     const filteredRows = includeDrafts
       ? fallbackRows
       : fallbackRows.filter((lesson) => {
           const status = (lesson.status || '').toString().toLowerCase()
           return !status || status === LESSON_STATUS.PUBLISHED
         })
-    const collapsed = includeDrafts
-      ? collapseLessonsForEditor(filteredRows as Lesson[])
-      : collapseLessonsForPublic(filteredRows as Lesson[])
-    return ensureResourcesLesson(collapsed as Lesson[], wikiSlug)
+    return buildLessonsResult(filteredRows as Lesson[])
   }
 }
 

@@ -1681,7 +1681,12 @@ export async function GET(req: Request) {
 
         return NextResponse.json(collapsed)
       } catch (error: any) {
-        return NextResponse.json({ error: error?.message || 'DB error' }, { status: 500 })
+        console.error(`[api/lessons] DB read failed for "${wikiSlug}", falling back to file data.`, error)
+        const list = await readLessonsFromFile(wikiSlug)
+        const collapsed = publishedOnly
+          ? collapseLessonsForPublic(list)
+          : collapseLessonsForEditor(list)
+        return NextResponse.json(sortLessons(collapsed))
       }
     }
 

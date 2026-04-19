@@ -9,6 +9,7 @@ import { isHubHost, normalizeHost } from '@/lib/domains'
 import { getPrisma } from '@/lib/prisma-multi'
 import accessCodesData from '@/data/access-codes.json'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
+import { isDbOnlyMode } from '@/lib/runtime-flags'
 
 function getConfiguredCodes(wikiSlug: string): string[] {
   const raw = (accessCodesData as Record<string, unknown>)[wikiSlug]
@@ -32,9 +33,10 @@ export default async function KitLayout(
 
   // Access check
   if (process.env.USE_DB === 'true' && wiki) {
+    const dbOnlyMode = isDbOnlyMode()
     const configuredCodes = getConfiguredCodes(wiki.slug)
     const accessCookieValue = cookies().get(`wiki-${wiki.slug}-access`)?.value?.trim()
-    let shouldRequireAccess = configuredCodes.length > 0
+    let shouldRequireAccess = dbOnlyMode ? false : configuredCodes.length > 0
     let isValid = false
 
     if (!shouldBypassDb(wiki.slug)) {
@@ -49,18 +51,24 @@ export default async function KitLayout(
               )
             : null
           isValid = Boolean(matchedCode)
-        } else if (configuredCodes.length > 0) {
+        } else if (!dbOnlyMode && configuredCodes.length > 0) {
           isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
         }
         markDbSuccess(wiki.slug)
       } catch (e) {
         markDbFailure(wiki.slug)
         console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
+        if (dbOnlyMode) {
+          throw new Error(`[KitLayout] DB-only mode: failed to validate access for wiki "${wiki.slug}".`)
+        }
         // Fail closed on DB errors. If static codes are configured, allow those.
         shouldRequireAccess = true
         isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
       }
     } else {
+      if (dbOnlyMode) {
+        throw new Error(`[KitLayout] DB-only mode: database bypass active for wiki "${wiki.slug}".`)
+      }
       // Fail closed while DB circuit breaker is active.
       shouldRequireAccess = true
       isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))

@@ -9,6 +9,9 @@ const REASON_LABELS: Record<string, string> = {
   'access-check-failed': 'Access-code validation could not reach the database.',
   'db-bypass-active': 'Database circuit breaker is active after recent DB failures.',
   'lessons-load-failed': 'Lessons could not be loaded from the database.',
+  'first-lesson-load-failed': 'The first lesson could not be retrieved from the database.',
+  'lesson-load-failed': 'The requested lesson could not be loaded from the database.',
+  'neighbors-load-failed': 'Adjacent lesson navigation could not be loaded from the database.',
 }
 
 export default function DbUnavailablePage({ params, searchParams }: Props) {
@@ -50,4 +53,3 @@ export default function DbUnavailablePage({ params, searchParams }: Props) {
     </main>
   )
 }
-

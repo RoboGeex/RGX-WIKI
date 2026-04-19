@@ -19,6 +19,7 @@ import { getListMarker } from '@/lib/segment-types'
 import { InteractiveHtml } from '@/components/lesson/InteractiveHtml'
 import { LessonEmbed, LessonImage, LessonVideo } from '@/components/lesson/LessonMedia'
 import { splitBodyBlocksBySection } from '@/lib/lesson-sections'
+import { normalizeLessonMediaUrl } from '@/lib/media-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,6 +117,21 @@ export default async function LessonPage(
       return normalized
     }
     return undefined
+  }
+  const normalizeMediaUrl = (value: unknown) => normalizeLessonMediaUrl(value, kit)
+  const normalizeSliderImages = (value: unknown): any[] => {
+    if (!Array.isArray(value)) return []
+    return value
+      .map((item: any) => {
+        if (typeof item === 'string') {
+          return normalizeMediaUrl(item)
+        }
+        if (!item || typeof item !== 'object') return ''
+        const normalizedUrl = normalizeMediaUrl(item.url)
+        if (!normalizedUrl) return ''
+        return { ...item, url: normalizedUrl }
+      })
+      .filter((item: any) => (typeof item === 'string' ? Boolean(item) : Boolean(item?.url)))
   }
 
   const toYoutubeEmbed = (url: string): string => {
@@ -444,7 +460,7 @@ export default async function LessonPage(
     }
 
     if (block.type === 'imageSlider') {
-      const images = Array.isArray(block.images) ? block.images.filter(Boolean) : []
+      const images = normalizeSliderImages(block.images)
       if (!images.length) return null
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
       return (
@@ -493,7 +509,8 @@ export default async function LessonPage(
 
     if (block.type === 'image' && block.image) {
       const caption = locale === 'ar' ? (block.caption_ar || block.title_ar || '') : (block.caption_en || block.title_en || '')
-      const imageUrl = block.image
+      const imageUrl = normalizeMediaUrl(block.image)
+      if (!imageUrl) return null
       const width = block.width || '100%'
       const align = block.align || 'center'
       const layoutMode = block.layoutMode || 'fit'
@@ -601,6 +618,9 @@ export default async function LessonPage(
       const alignClass = align === 'left' ? 'items-start' : align === 'right' ? 'items-end' : 'items-center'
       const layoutMode = block.layoutMode || 'aspect-video'
 
+      const normalizedVideoUrl = normalizeMediaUrl(block.url)
+      const normalizedPoster = normalizeMediaUrl(block.poster)
+
       return (
         <figure key={index} className={`media-block flex flex-col ${alignClass} w-full`}>
           <div style={{ width, maxWidth: '100%' }}>
@@ -628,8 +648,8 @@ export default async function LessonPage(
                 'aspect-video'
               }`}>
                 <LessonVideo
-                  src={block.url}
-                  poster={block.poster || undefined}
+                  src={normalizedVideoUrl || block.url}
+                  poster={normalizedPoster || undefined}
                   minHeightClassName={layoutMode === 'fit' ? 'min-h-[14rem]' : undefined}
                   videoClassName={`w-full block object-cover ${layoutMode === 'fit' ? 'h-auto' : 'h-full'}`}
                 />
@@ -721,7 +741,7 @@ export default async function LessonPage(
   const placeholder =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="Arial" font-size="32">Lesson cover</text></svg>'
   const coverCandidates = [
-    lesson.coverImage,
+    normalizeMediaUrl(lesson.coverImage),
     kitData.heroImage,
     placeholder,
   ]

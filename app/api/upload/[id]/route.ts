@@ -30,13 +30,18 @@ function buildSlugCandidates(req: Request) {
     ordered.push(normalized)
   }
 
-  push(slugFromQuery)
-  push(slugFromHeader)
-  push(slugFromHost)
+  const pushDefined = (slug?: string) => {
+    if (!slug) return
+    push(slug)
+  }
+
+  pushDefined(slugFromQuery)
+  pushDefined(slugFromHeader)
+  pushDefined(slugFromHost)
 
   if (ordered.length === 0) {
     for (const wiki of getWikis()) {
-      push(wiki.slug)
+      pushDefined(wiki.slug)
     }
   }
 

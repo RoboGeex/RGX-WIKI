@@ -108,9 +108,92 @@ function normalizeLessonFromRemote(lesson: any, wikiSlug: string): Lesson {
   } as Lesson
 }
 
+function normalizeLessonIdentity(lesson: Pick<Lesson, 'slug' | 'id' | 'lessonKey'>): string {
+  return normalizeSlug(stripLegacyDraftSuffix(lesson.slug || lesson.lessonKey || lesson.id || ''))
+}
+
+function isSpecialLesson(lesson: Pick<Lesson, 'slug' | 'id' | 'lessonKey'>): boolean {
+  const identity = normalizeLessonIdentity(lesson)
+  return identity === DEFAULT_LESSON_SLUG || identity === RESOURCES_LESSON_SLUG
+}
+
+function hasNonSpecialLessons(rows: Lesson[]): boolean {
+  return rows.some((lesson) => !isSpecialLesson(lesson))
+}
+
+function hasRenderableBody(lesson: Lesson): boolean {
+  if (!Array.isArray(lesson.body) || lesson.body.length === 0) return false
+  return lesson.body.some((block: any) => {
+    if (!block || typeof block !== 'object') return false
+    if (typeof block.en === 'string' && block.en.trim()) return true
+    if (typeof block.ar === 'string' && block.ar.trim()) return true
+    if (typeof block.html_en === 'string' && block.html_en.trim()) return true
+    if (typeof block.html_ar === 'string' && block.html_ar.trim()) return true
+    if (Array.isArray(block.items_en) && block.items_en.some((item: any) => typeof item === 'string' && item.trim())) return true
+    if (Array.isArray(block.items_ar) && block.items_ar.some((item: any) => typeof item === 'string' && item.trim())) return true
+    if (typeof block.image === 'string' && block.image.trim()) return true
+    if (typeof block.url === 'string' && block.url.trim()) return true
+    if (Array.isArray(block.images) && block.images.some((item: any) => typeof item === 'string' && item.trim())) return true
+    return block.type === 'horizontalRule'
+  })
+}
+
+function lessonSetScore(rows: Lesson[]): number {
+  const validRows = rows.filter((lesson) => lesson.id && lesson.slug)
+  const nonSpecial = validRows.filter((lesson) => !isSpecialLesson(lesson))
+  const bodyCount = nonSpecial.filter(hasRenderableBody).length
+  return nonSpecial.length * 1000 + bodyCount * 100 + validRows.length
+}
+
+function shouldAttemptRemoteFallback(rows: Lesson[]): boolean {
+  if (rows.length === 0) return true
+  if (!hasNonSpecialLessons(rows)) return true
+  const nonSpecialRows = rows.filter((lesson) => !isSpecialLesson(lesson))
+  return nonSpecialRows.every((lesson) => !hasRenderableBody(lesson))
+}
+
+function shouldUseRemoteRows(localRows: Lesson[], remoteRows: Lesson[]): boolean {
+  if (localRows.length === 0) return true
+  return lessonSetScore(remoteRows) > lessonSetScore(localRows)
+}
+
+function shouldAllowDraftPublicFallback(): boolean {
+  const value = (process.env.LESSONS_PUBLIC_DRAFT_FALLBACK || '').trim().toLowerCase()
+  return value !== '0' && value !== 'false'
+}
+
+function promoteDraftLessonsForPublic(rows: Lesson[]): Lesson[] {
+  return rows.map((lesson) => {
+    const normalizedSlug = normalizeSlug(stripLegacyDraftSuffix(lesson.slug || lesson.lessonKey || lesson.id || ''))
+    const normalizedKey = stripLegacyDraftSuffix(lesson.lessonKey || '') || normalizedSlug
+    const normalizedId = stripLegacyDraftSuffix(lesson.id || '') || normalizedKey || normalizedSlug || lesson.id
+    return {
+      ...lesson,
+      id: normalizedId || lesson.id,
+      slug: normalizedSlug || stripLegacyDraftSuffix(lesson.slug || '') || lesson.slug,
+      lessonKey: normalizedKey || normalizedId || lesson.lessonKey || lesson.id,
+      status: LESSON_STATUS.PUBLISHED,
+      publishedAt: lesson.publishedAt || new Date(0).toISOString(),
+    }
+  })
+}
+
+function getFallbackActorId(): string | undefined {
+  const candidates = [
+    process.env.LESSONS_FALLBACK_ACTOR_ID,
+    process.env.LESSONS_FALLBACK_USER_ID,
+    process.env.LESSONS_FALLBACK_X_USER_ID,
+  ]
+  for (const value of candidates) {
+    const normalized = (value || '').trim()
+    if (normalized) return normalized
+  }
+  return undefined
+}
+
 async function loadLessonsFromRemoteFallback(
   wikiSlug: string,
-  opts?: { includeDrafts?: boolean }
+  opts?: { includeDrafts?: boolean; actorIdHint?: string }
 ): Promise<Lesson[] | undefined> {
   const key = `${wikiSlug}:${opts?.includeDrafts ? 'drafts' : 'published'}`
   const cached = remoteLessonsCache.get(key)
@@ -125,15 +208,23 @@ async function loadLessonsFromRemoteFallback(
   try {
     const endpoint = new URL('/api/lessons', baseUrl)
     endpoint.searchParams.set('wiki', wikiSlug)
+    if (opts?.includeDrafts) {
+      endpoint.searchParams.set('includeDrafts', '1')
+    }
 
     const timeoutMs = Number.parseInt(process.env.LESSONS_FALLBACK_TIMEOUT_MS || '5000', 10)
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) ? timeoutMs : 5000)
+    const headers: Record<string, string> = { 'x-rgx-db-fallback': '1' }
+    const actorId = getFallbackActorId() || (opts?.actorIdHint || '').trim()
+    if (actorId) {
+      headers['x-user-id'] = actorId
+    }
 
     const response = await fetch(endpoint.toString(), {
       method: 'GET',
       cache: 'no-store',
-      headers: { 'x-rgx-db-fallback': '1' },
+      headers,
       signal: controller.signal,
     })
     clearTimeout(timeout)
@@ -307,10 +398,17 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   const wikiSlug = wikiSlugForKit(normKit)
   const includeDrafts = opts?.includeDrafts === true
   const shouldUseDb = process.env.USE_DB === 'true'
-  const buildLessonsResult = (rows: Lesson[]): Lesson[] => {
+  const buildLessonsResult = (rows: Lesson[], draftFallbackRows?: Lesson[]): Lesson[] => {
     const collapsed = includeDrafts
       ? collapseLessonsForEditor(rows as Lesson[])
       : collapseLessonsForPublic(rows as Lesson[])
+    if (!includeDrafts && shouldAllowDraftPublicFallback() && !hasNonSpecialLessons(collapsed as Lesson[])) {
+      const editorCollapsed = collapseLessonsForEditor((draftFallbackRows || rows) as Lesson[])
+      if (hasNonSpecialLessons(editorCollapsed as Lesson[])) {
+        const promoted = promoteDraftLessonsForPublic(editorCollapsed as Lesson[])
+        return ensureResourcesLesson(promoted as Lesson[], wikiSlug)
+      }
+    }
     return ensureResourcesLesson(collapsed as Lesson[], wikiSlug)
   }
 
@@ -355,20 +453,24 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   }
 
   const fallbackRows = loadJsonFile<Lesson[]>(`lessons.${wikiSlug}.json`, [])
-  if (fallbackRows.length === 0) {
-    const remoteFallbackRows = await loadLessonsFromRemoteFallback(wikiSlug, { includeDrafts })
+  let sourceRows = fallbackRows
+  if (shouldAttemptRemoteFallback(fallbackRows)) {
+    const actorIdHint = fallbackRows.find((lesson) => typeof lesson.ownerId === 'string' && lesson.ownerId.trim())?.ownerId
+    const remoteFallbackRows = await loadLessonsFromRemoteFallback(wikiSlug, { includeDrafts, actorIdHint })
     if (remoteFallbackRows && remoteFallbackRows.length > 0) {
-      return buildLessonsResult(remoteFallbackRows)
+      if (shouldUseRemoteRows(sourceRows, remoteFallbackRows)) {
+        sourceRows = remoteFallbackRows
+      }
     }
   }
 
-  const filteredRows = includeDrafts
-    ? fallbackRows
-    : fallbackRows.filter((lesson) => {
+  const publicRows = includeDrafts
+    ? sourceRows
+    : sourceRows.filter((lesson) => {
         const status = (lesson.status || '').toString().toLowerCase()
         return !status || status === LESSON_STATUS.PUBLISHED
       })
-  return buildLessonsResult(filteredRows as Lesson[])
+  return buildLessonsResult(publicRows as Lesson[], sourceRows as Lesson[])
 }
 
 
@@ -387,11 +489,7 @@ export async function getLesson(
   const baseSlug = stripLegacyDraftSuffix(normSlug)
   const draftSlug = `${baseSlug}${LEGACY_DRAFT_SUFFIX}`
 
-  const candidates = new Set<string>([rawSlug, normSlug])
-  if (opts?.includeDrafts) {
-    candidates.add(baseSlug)
-    candidates.add(draftSlug)
-  }
+  const candidates = new Set<string>([rawSlug, normSlug, baseSlug, draftSlug])
 
   return lessons.find((l) => {
     const lessonSlugNorm = normalizeSlug(l.slug || '')

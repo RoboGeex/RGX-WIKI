@@ -58,20 +58,29 @@ export default async function KitLayout(
       } catch (e) {
         markDbFailure(wiki.slug)
         console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
-        if (dbOnlyMode) {
+        if (configuredCodes.length > 0) {
+          // If DB access-code checks fail, fallback to static codes so users can still unlock.
+          shouldRequireAccess = true
+          isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
+        } else if (dbOnlyMode) {
           redirect(`/${locale}/db-unavailable?kit=${encodeURIComponent(kit)}&reason=access-check-failed`)
+        } else {
+          // Fail closed if no fallback static codes exist.
+          shouldRequireAccess = true
+          isValid = false
         }
-        // Fail closed on DB errors. If static codes are configured, allow those.
-        shouldRequireAccess = true
-        isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
       }
     } else {
-      if (dbOnlyMode) {
+      if (configuredCodes.length > 0) {
+        shouldRequireAccess = true
+        isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
+      } else if (dbOnlyMode) {
         redirect(`/${locale}/db-unavailable?kit=${encodeURIComponent(kit)}&reason=db-bypass-active`)
+      } else {
+        // Fail closed while DB circuit breaker is active.
+        shouldRequireAccess = true
+        isValid = false
       }
-      // Fail closed while DB circuit breaker is active.
-      shouldRequireAccess = true
-      isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
     }
 
     if (shouldRequireAccess && !isValid) {

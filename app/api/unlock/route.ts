@@ -37,14 +37,11 @@ export async function POST(request: NextRequest) {
 
   const configuredCodes = getConfiguredCodes(wiki.slug)
   const dbOnlyMode = isDbOnlyMode()
-  let isValid = configuredCodes.includes(rawCode)
+  let isValid = dbOnlyMode ? false : configuredCodes.includes(rawCode)
 
   if (process.env.USE_DB === 'true') {
     if (shouldBypassDb(wiki.slug)) {
-      if (configuredCodes.length > 0) {
-        // DB circuit breaker active: allow static code fallback for continuity.
-        isValid = isValid || configuredCodes.includes(rawCode)
-      } else if (dbOnlyMode) {
+      if (dbOnlyMode) {
         return NextResponse.json(
           { error: `DB-only mode: database is temporarily bypassed for wiki "${wiki.slug}".` },
           { status: 503 }
@@ -65,18 +62,14 @@ export async function POST(request: NextRequest) {
         markDbSuccess(wiki.slug)
       } catch (error) {
         markDbFailure(wiki.slug)
-        if (configuredCodes.length > 0) {
-          // If DB validation fails, fallback to static codes when available.
-          isValid = isValid || configuredCodes.includes(rawCode)
-        } else if (dbOnlyMode) {
+        if (dbOnlyMode) {
           return NextResponse.json(
             { error: `DB-only mode: access-code validation failed for wiki "${wiki.slug}".` },
             { status: 503 }
           )
-        } else {
-          // Keep static fallback validation active if DB access codes are unavailable.
-          console.error(`[Unlock API] DB validation error for wiki ${wiki.slug}:`, error)
         }
+        // Keep static fallback validation active if DB access codes are unavailable.
+        console.error(`[Unlock API] DB validation error for wiki ${wiki.slug}:`, error)
       }
     }
   }

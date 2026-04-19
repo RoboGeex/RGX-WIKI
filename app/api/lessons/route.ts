@@ -7,7 +7,6 @@ import { canEditLesson, canManageWiki } from '@/lib/assignments'
 import { findDeveloperById } from '@/lib/developers'
 import { getActorIdFromRequest } from '@/lib/api-auth'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
-import { isDbOnlyMode } from '@/lib/runtime-flags'
 import {
   LESSON_STATUS,
   collapseLessonsForEditor,
@@ -1651,75 +1650,51 @@ export async function GET(req: Request) {
     const developer = actorId ? await findDeveloperById(actorId) : undefined
     const canSeeDrafts = !!developer && canManageWiki(developer, wikiSlug)
     const publishedOnly = !canSeeDrafts
-    const dbOnlyMode = isDbOnlyMode()
 
-    if (process.env.USE_DB === 'true') {
-      if (shouldBypassDb(wikiSlug)) {
-        if (dbOnlyMode) {
-          return NextResponse.json(
-            { error: `DB-only mode: database is temporarily bypassed for wiki "${wikiSlug}".` },
-            { status: 503 }
-          )
-        }
-      } else {
+    if (process.env.USE_DB === 'true' && !shouldBypassDb(wikiSlug)) {
+      try {
+        const prisma: any = getPrisma(wikiSlug || undefined)
+        let lessons: any[]
         try {
-          const prisma: any = getPrisma(wikiSlug || undefined)
-          let lessons: any[]
-          try {
-            lessons = await withDbTimeout(() =>
-              prisma.lesson.findMany({
-                where: {
-                  wikiSlug,
-                  ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
-                },
-                orderBy: [{ order: 'asc' }, { version: 'desc' }],
-              })
-            )
-          } catch (error: any) {
-            if (!isLegacyLessonReadSchemaError(error)) throw error
-            const legacyRows: any[] = await withDbTimeout(() =>
-              prisma.lesson.findMany({
-                where: {
-                  wikiSlug,
-                  ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
-                },
-                orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
-                select: legacyLessonReadSelect,
-              })
-            )
-            lessons = legacyRows.map(mapLegacyLessonRow)
-          }
-
-          const collapsed = publishedOnly
-            ? collapseLessonsForPublic(lessons)
-            : collapseLessonsForEditor(lessons)
-
-          markDbSuccess(wikiSlug)
-          return NextResponse.json(collapsed)
+          lessons = await withDbTimeout(() =>
+            prisma.lesson.findMany({
+              where: {
+                wikiSlug,
+                ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
+              },
+              orderBy: [{ order: 'asc' }, { version: 'desc' }],
+            })
+          )
         } catch (error: any) {
-          markDbFailure(wikiSlug)
-          if (dbOnlyMode) {
-            console.error(`[api/lessons] DB read failed for "${wikiSlug}" in strict mode.`, error)
-            return NextResponse.json(
-              { error: `DB-only mode: failed to load lessons for wiki "${wikiSlug}".` },
-              { status: 503 }
-            )
-          }
-          console.error(`[api/lessons] DB read failed for "${wikiSlug}", falling back to file data.`, error)
-          const list = await readLessonsFromFile(wikiSlug)
-          const collapsed = publishedOnly
-            ? collapseLessonsForPublic(list)
-            : collapseLessonsForEditor(list)
-          return NextResponse.json(sortLessons(collapsed))
+          if (!isLegacyLessonReadSchemaError(error)) throw error
+          const legacyRows: any[] = await withDbTimeout(() =>
+            prisma.lesson.findMany({
+              where: {
+                wikiSlug,
+                ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
+              },
+              orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
+              select: legacyLessonReadSelect,
+            })
+          )
+          lessons = legacyRows.map(mapLegacyLessonRow)
         }
-      }
-    }
 
-    if (process.env.USE_DB === 'true' && dbOnlyMode) {
-      return NextResponse.json(
-        { error: `DB-only mode: refusing file fallback for wiki "${wikiSlug}".` },
-        { status: 503 }
-      )
+        const collapsed = publishedOnly
+          ? collapseLessonsForPublic(lessons)
+          : collapseLessonsForEditor(lessons)
+
+        markDbSuccess(wikiSlug)
+        return NextResponse.json(collapsed)
+      } catch (error: any) {
+        markDbFailure(wikiSlug)
+        console.error(`[api/lessons] DB read failed for "${wikiSlug}", falling back to file data.`, error)
+        const list = await readLessonsFromFile(wikiSlug)
+        const collapsed = publishedOnly
+          ? collapseLessonsForPublic(list)
+          : collapseLessonsForEditor(list)
+        return NextResponse.json(sortLessons(collapsed))
+      }
     }
 
     const list = await readLessonsFromFile(wikiSlug)

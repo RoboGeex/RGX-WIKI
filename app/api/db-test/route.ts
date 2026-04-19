@@ -7,11 +7,9 @@ import { getPrisma } from "@/lib/prisma-multi";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const wikiSlug = (searchParams.get('wiki') || '').trim()
-    const prisma = getPrisma(wikiSlug || undefined);
+    const prisma = getPrisma();
 
     // A simple, raw query to test the connection without relying on a specific model.
     // This sends a minimal "ping" to the database.
@@ -20,7 +18,6 @@ export async function GET(request: Request) {
     return NextResponse.json({
       status: "success",
       message: "Database connection successful!",
-      target: wikiSlug || 'default',
     });
   } catch (error: any) {
     console.error("DB Connection Test Error:", error);

@@ -4,7 +4,6 @@ import { getWiki } from '@/lib/data'
 import { getPrisma } from '@/lib/prisma-multi'
 import accessCodesData from '@/data/access-codes.json'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
-import { isDbOnlyMode } from '@/lib/runtime-flags'
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365
 
@@ -36,41 +35,25 @@ export async function POST(request: NextRequest) {
   }
 
   const configuredCodes = getConfiguredCodes(wiki.slug)
-  const dbOnlyMode = isDbOnlyMode()
-  let isValid = dbOnlyMode ? false : configuredCodes.includes(rawCode)
+  let isValid = configuredCodes.includes(rawCode)
 
-  if (process.env.USE_DB === 'true') {
-    if (shouldBypassDb(wiki.slug)) {
-      if (dbOnlyMode) {
-        return NextResponse.json(
-          { error: `DB-only mode: database is temporarily bypassed for wiki "${wiki.slug}".` },
-          { status: 503 }
-        )
-      }
-    } else {
-      try {
-        const db = getPrisma(wiki.slug)
-        const matchedCode = await withDbTimeout(() =>
-          db.accessCode.findFirst({
-            where: {
-              code: rawCode,
-              wikiSlug: wiki.slug,
-            },
-          })
-        )
-        isValid = isValid || Boolean(matchedCode)
-        markDbSuccess(wiki.slug)
-      } catch (error) {
-        markDbFailure(wiki.slug)
-        if (dbOnlyMode) {
-          return NextResponse.json(
-            { error: `DB-only mode: access-code validation failed for wiki "${wiki.slug}".` },
-            { status: 503 }
-          )
-        }
-        // Keep static fallback validation active if DB access codes are unavailable.
-        console.error(`[Unlock API] DB validation error for wiki ${wiki.slug}:`, error)
-      }
+  if (process.env.USE_DB === 'true' && !shouldBypassDb(wiki.slug)) {
+    try {
+      const db = getPrisma(wiki.slug)
+      const matchedCode = await withDbTimeout(() =>
+        db.accessCode.findFirst({
+          where: {
+            code: rawCode,
+            wikiSlug: wiki.slug,
+          },
+        })
+      )
+      isValid = isValid || Boolean(matchedCode)
+      markDbSuccess(wiki.slug)
+    } catch (error) {
+      markDbFailure(wiki.slug)
+      // Keep static fallback validation active if DB access codes are unavailable.
+      console.error(`[Unlock API] DB validation error for wiki ${wiki.slug}:`, error)
     }
   }
 

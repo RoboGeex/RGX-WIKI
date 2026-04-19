@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma-multi'
 import { getWikiByDomain, getWikis } from '@/lib/data'
+import { isGcsAssetReadEnabled, readAssetFromGcs } from '@/lib/gcs-assets'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,19 +50,20 @@ function buildSlugCandidates(req: Request) {
   return ordered
 }
 
-async function findAsset(id: number, slugs: (string | undefined)[]) {
+async function findAssetCandidates(id: number, slugs: (string | undefined)[]) {
+  const matches: { slug?: string; asset: any }[] = []
   for (const slug of slugs) {
     try {
       const prisma = getPrisma(slug)
       const asset = await prisma.asset.findUnique({ where: { id } })
-      if (asset?.data) {
-        return asset
+      if (asset) {
+        matches.push({ slug, asset })
       }
     } catch (error) {
       console.error(`Asset lookup failed for wiki "${slug ?? 'default'}":`, error)
     }
   }
-  return null
+  return matches
 }
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -71,17 +73,45 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
     }
     const candidates = buildSlugCandidates(req)
-    const asset = await findAsset(assetId, candidates)
-    if (!asset) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const matches = await findAssetCandidates(assetId, candidates)
+    if (matches.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const body = asset.data as Buffer
-    return new NextResponse(body as any, {
-      headers: {
-        'Content-Type': asset.mimeType || 'application/octet-stream',
-        'Content-Length': String(asset.size ?? body.length),
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
-    })
+    for (const match of matches) {
+      const { slug, asset } = match
+      const mimeType = asset.mimeType || 'application/octet-stream'
+
+      if (isGcsAssetReadEnabled()) {
+        const gcsBody = await readAssetFromGcs({
+          wikiSlug: slug,
+          assetId,
+          filename: asset.filename,
+        })
+        if (gcsBody) {
+          return new NextResponse(gcsBody as any, {
+            headers: {
+              'Content-Type': mimeType,
+              'Content-Length': String(gcsBody.length),
+              'Cache-Control': 'public, max-age=31536000, immutable',
+              'X-Asset-Source': 'gcs',
+            },
+          })
+        }
+      }
+
+      const dbBody = asset.data as Buffer | null
+      if (dbBody && dbBody.length > 0) {
+        return new NextResponse(dbBody as any, {
+          headers: {
+            'Content-Type': mimeType,
+            'Content-Length': String(asset.size ?? dbBody.length),
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'X-Asset-Source': 'db',
+          },
+        })
+      }
+    }
+
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed' }, { status: 500 })
   }

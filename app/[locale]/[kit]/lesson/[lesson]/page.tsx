@@ -19,7 +19,6 @@ import { getListMarker } from '@/lib/segment-types'
 import { InteractiveHtml } from '@/components/lesson/InteractiveHtml'
 import { LessonEmbed, LessonImage, LessonVideo } from '@/components/lesson/LessonMedia'
 import { splitBodyBlocksBySection } from '@/lib/lesson-sections'
-import { isDbOnlyMode } from '@/lib/runtime-flags'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,19 +34,6 @@ export default async function LessonPage(
   const { locale, kit, lesson: lessonSlug } = params
   const preview = searchParams?.preview === '1' || searchParams?.preview === 'true' || Boolean(searchParams?.previewId)
   const previewId = (searchParams?.previewId || '').trim()
-  const strictDbMode = process.env.USE_DB === 'true' && isDbOnlyMode()
-
-  const loadOrRedirect = async <T,>(operation: () => Promise<T>, reason: string): Promise<T> => {
-    try {
-      return await operation()
-    } catch (error) {
-      console.error(`[LessonPage] ${reason} (kit: ${kit}, lesson: ${lessonSlug})`, error)
-      if (strictDbMode) {
-        redirect(`/${locale}/db-unavailable?kit=${encodeURIComponent(kit)}&reason=${encodeURIComponent(reason)}`)
-      }
-      throw error
-    }
-  }
 
   const kitData = getKit(kit)
   if (!kitData) {
@@ -55,24 +41,12 @@ export default async function LessonPage(
   }
 
   const lesson = preview && previewId
-    ? (await loadOrRedirect(
-        () => getLessons(kit, { includeDrafts: true }),
-        'lessons-load-failed',
-      )).find((item) => item.id === previewId)
-      || await loadOrRedirect(
-        () => getLesson(kit, lessonSlug, { includeDrafts: true }),
-        'lesson-load-failed',
-      )
-    : await loadOrRedirect(
-        () => getLesson(kit, lessonSlug, { includeDrafts: preview }),
-        'lesson-load-failed',
-      )
+    ? (await getLessons(kit, { includeDrafts: true })).find((item) => item.id === previewId)
+      || await getLesson(kit, lessonSlug, { includeDrafts: true })
+    : await getLesson(kit, lessonSlug, { includeDrafts: preview })
 
   if (!lesson) {
-    const firstLesson = await loadOrRedirect(
-      () => getFirstLesson(kit),
-      'first-lesson-load-failed',
-    )
+    const firstLesson = await getFirstLesson(kit)
     if (firstLesson?.slug) {
       redirect(`/${locale}/${kit}/lesson/${firstLesson.slug}`)
     }
@@ -80,10 +54,7 @@ export default async function LessonPage(
   }
 
   // Calculate dynamic rank for numbering (skipping special lessons)
-  const allLessons = await loadOrRedirect(
-    () => getLessons(kit, { includeDrafts: preview }),
-    'lessons-load-failed',
-  )
+  const allLessons = await getLessons(kit, { includeDrafts: preview })
   const currentSlug = stripLegacyDraftSuffix(lesson.slug || '')
   const currentKey = stripLegacyDraftSuffix(lesson.lessonKey || '')
   
@@ -744,14 +715,8 @@ export default async function LessonPage(
   const summaryTocEntries = tocEntriesBySection.summary.map((entry) => ({ ...entry }))
   const lessonTocEntries = tocEntriesBySection.lesson.map((entry) => ({ ...entry }))
 
-  const prevLesson = await loadOrRedirect(
-    () => getPrevLesson(kit, lesson.slug, { includeDrafts: preview }),
-    'neighbors-load-failed',
-  )
-  const nextLesson = await loadOrRedirect(
-    () => getNextLesson(kit, lesson.slug, { includeDrafts: preview }),
-    'neighbors-load-failed',
-  )
+  const prevLesson = await getPrevLesson(kit, lesson.slug, { includeDrafts: preview })
+  const nextLesson = await getNextLesson(kit, lesson.slug, { includeDrafts: preview })
 
   const placeholder =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="Arial" font-size="32">Lesson cover</text></svg>'

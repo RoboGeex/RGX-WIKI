@@ -23,7 +23,6 @@ export default async function KitLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale; kit: string } }
 ) {
   const { locale, kit } = params
-  const dbOnlyMode = isDbOnlyMode()
   const kitData = getKit(kit)
   const wiki = kitData ? getWiki(kitData.wikiSlug) : undefined
   
@@ -34,6 +33,7 @@ export default async function KitLayout(
 
   // Access check
   if (process.env.USE_DB === 'true' && wiki) {
+    const dbOnlyMode = isDbOnlyMode()
     const configuredCodes = getConfiguredCodes(wiki.slug)
     const accessCookieValue = cookies().get(`wiki-${wiki.slug}-access`)?.value?.trim()
     let shouldRequireAccess = dbOnlyMode ? false : configuredCodes.length > 0
@@ -59,7 +59,7 @@ export default async function KitLayout(
         markDbFailure(wiki.slug)
         console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
         if (dbOnlyMode) {
-          redirect(`/${locale}/db-unavailable?kit=${encodeURIComponent(kit)}&reason=access-check-failed`)
+          throw new Error(`[KitLayout] DB-only mode: failed to validate access for wiki "${wiki.slug}".`)
         }
         // Fail closed on DB errors. If static codes are configured, allow those.
         shouldRequireAccess = true
@@ -67,7 +67,7 @@ export default async function KitLayout(
       }
     } else {
       if (dbOnlyMode) {
-        redirect(`/${locale}/db-unavailable?kit=${encodeURIComponent(kit)}&reason=db-bypass-active`)
+        throw new Error(`[KitLayout] DB-only mode: database bypass active for wiki "${wiki.slug}".`)
       }
       // Fail closed while DB circuit breaker is active.
       shouldRequireAccess = true
@@ -81,16 +81,7 @@ export default async function KitLayout(
     }
   }
 
-  let lessons = []
-  try {
-    lessons = await getLessons(kit)
-  } catch (error) {
-    console.error(`[KitLayout] Failed to load lessons for kit "${kit}"`, error)
-    if (process.env.USE_DB === 'true' && dbOnlyMode) {
-      redirect(`/${locale}/db-unavailable?kit=${encodeURIComponent(kit)}&reason=lessons-load-failed`)
-    }
-    throw error
-  }
+  const lessons = await getLessons(kit)
   const hostHeader = headers().get('host')
   const host = normalizeHost(hostHeader)
   const isHubDomain = isHubHost(host)

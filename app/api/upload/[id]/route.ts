@@ -13,12 +13,54 @@ function sanitizeSlug(value?: string | null) {
   return cleaned
 }
 
+function getKnownWikiSlugs(): Set<string> {
+  return new Set(
+    getWikis()
+      .map((wiki) => sanitizeSlug(wiki.slug))
+      .filter((slug): slug is string => Boolean(slug)),
+  )
+}
+
+// Older lesson content still contains /api/upload/{id} without a wiki query string.
+// Recover the wiki from the parent page URL so we do not fan out across every DB.
+function inferWikiSlugFromUrl(rawUrl?: string | null): string | undefined {
+  if (!rawUrl) return undefined
+
+  try {
+    const url = new URL(rawUrl)
+    const knownWikiSlugs = getKnownWikiSlugs()
+    const explicitWiki =
+      sanitizeSlug(url.searchParams.get('wiki')) ||
+      sanitizeSlug(url.searchParams.get('wikiSlug')) ||
+      sanitizeSlug(url.searchParams.get('slug'))
+
+    if (explicitWiki) {
+      return explicitWiki
+    }
+
+    const hostWiki = sanitizeSlug(getWikiByDomain(url.host)?.slug)
+    if (hostWiki) {
+      return hostWiki
+    }
+
+    const pathSegments = url.pathname
+      .split('/')
+      .map((segment) => sanitizeSlug(segment))
+      .filter((segment): segment is string => Boolean(segment))
+
+    return pathSegments.find((segment) => knownWikiSlugs.has(segment))
+  } catch {
+    return undefined
+  }
+}
+
 function buildSlugCandidates(req: Request) {
   const host = req.headers.get('host')
   const hostWiki = host ? getWikiByDomain(host)?.slug : undefined
   const url = new URL(req.url)
   const slugFromQuery = sanitizeSlug(url.searchParams.get('wiki'))
   const slugFromHeader = sanitizeSlug(req.headers.get('x-wiki-slug'))
+  const slugFromReferer = inferWikiSlugFromUrl(req.headers.get('referer'))
   const slugFromHost = sanitizeSlug(hostWiki)
 
   const seen = new Set<string>()
@@ -38,6 +80,7 @@ function buildSlugCandidates(req: Request) {
 
   pushDefined(slugFromQuery)
   pushDefined(slugFromHeader)
+  pushDefined(slugFromReferer)
   pushDefined(slugFromHost)
 
   if (ordered.length === 0) {

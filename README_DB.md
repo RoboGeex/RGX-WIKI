@@ -3,6 +3,7 @@ Database-backed storage (SiteGround)
 Env variables
 - `DATABASE_URL`: MySQL connection string (e.g., mysql://user:pass@host:3306/db)
 - `USE_DB`: set to `true` to use DB for lessons API and server pages
+- `USE_SHARED_DB`: optional. Set to `true` when all wikis live in one shared database and the app should ignore wiki-specific `DATABASE_URL_<WIKI>` variables.
 - `STORE_MEDIA_IN_DB`: set to `true` to store uploaded binary files in DB (otherwise files go to `public/uploads` and only URLs are stored). Ignored when `UPLOAD_STRATEGY=sftp`.
 - `GCS_ASSET_BUCKET`: optional. If set, `/api/upload/{id}` first reads from this Cloud Storage bucket, then falls back to `Asset.data`.
 - `GCS_ASSET_PREFIX`: optional Cloud Storage object prefix for migrated assets (default: `wiki-assets`).

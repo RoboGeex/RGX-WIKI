@@ -1651,57 +1651,62 @@ export async function GET(req: Request) {
     const canSeeDrafts = !!developer && canManageWiki(developer, wikiSlug)
     const publishedOnly = !canSeeDrafts
 
-    if (process.env.USE_DB === 'true' && !shouldBypassDb(wikiSlug)) {
-      try {
-        const prisma: any = getPrisma(wikiSlug || undefined)
-        let lessons: any[]
-        try {
-          lessons = await withDbTimeout(() =>
-            prisma.lesson.findMany({
-              where: {
-                wikiSlug,
-                ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
-              },
-              orderBy: [{ order: 'asc' }, { version: 'desc' }],
-            })
-          )
-        } catch (error: any) {
-          if (!isLegacyLessonReadSchemaError(error)) throw error
-          const legacyRows: any[] = await withDbTimeout(() =>
-            prisma.lesson.findMany({
-              where: {
-                wikiSlug,
-                ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
-              },
-              orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
-              select: legacyLessonReadSelect,
-            })
-          )
-          lessons = legacyRows.map(mapLegacyLessonRow)
-        }
-
-        const collapsed = publishedOnly
-          ? collapseLessonsForPublic(lessons)
-          : collapseLessonsForEditor(lessons)
-
-        markDbSuccess(wikiSlug)
-        return NextResponse.json(collapsed)
-      } catch (error: any) {
-        markDbFailure(wikiSlug)
-        console.error(`[api/lessons] DB read failed for "${wikiSlug}", falling back to file data.`, error)
-        const list = await readLessonsFromFile(wikiSlug)
-        const collapsed = publishedOnly
-          ? collapseLessonsForPublic(list)
-          : collapseLessonsForEditor(list)
-        return NextResponse.json(sortLessons(collapsed))
-      }
+    if (process.env.USE_DB !== 'true') {
+      return NextResponse.json(
+        { error: `Lesson file fallback is disabled. Enable database access for wiki "${wikiSlug}".` },
+        { status: 503 }
+      )
     }
 
-    const list = await readLessonsFromFile(wikiSlug)
-    const collapsed = publishedOnly
-      ? collapseLessonsForPublic(list)
-      : collapseLessonsForEditor(list)
-    return NextResponse.json(sortLessons(collapsed))
+    if (shouldBypassDb(wikiSlug)) {
+      return NextResponse.json(
+        { error: `Database access is temporarily unavailable for wiki "${wikiSlug}".` },
+        { status: 503 }
+      )
+    }
+
+    try {
+      const prisma: any = getPrisma(wikiSlug || undefined)
+      let lessons: any[]
+      try {
+        lessons = await withDbTimeout(() =>
+          prisma.lesson.findMany({
+            where: {
+              wikiSlug,
+              ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
+            },
+            orderBy: [{ order: 'asc' }, { version: 'desc' }],
+          })
+        )
+      } catch (error: any) {
+        if (!isLegacyLessonReadSchemaError(error)) throw error
+        const legacyRows: any[] = await withDbTimeout(() =>
+          prisma.lesson.findMany({
+            where: {
+              wikiSlug,
+              ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
+            },
+            orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
+            select: legacyLessonReadSelect,
+          })
+        )
+        lessons = legacyRows.map(mapLegacyLessonRow)
+      }
+
+      const collapsed = publishedOnly
+        ? collapseLessonsForPublic(lessons)
+        : collapseLessonsForEditor(lessons)
+
+      markDbSuccess(wikiSlug)
+      return NextResponse.json(collapsed)
+    } catch (error: any) {
+      markDbFailure(wikiSlug)
+      console.error(`[api/lessons] DB read failed for "${wikiSlug}".`, error)
+      return NextResponse.json(
+        { error: error?.message || `Failed to load lessons from database for wiki "${wikiSlug}".` },
+        { status: 500 }
+      )
+    }
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to load lessons' }, { status: 500 })
   }

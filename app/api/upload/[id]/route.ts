@@ -93,8 +93,12 @@ function buildSlugCandidates(req: Request) {
   return ordered
 }
 
+type AssetLookupMatch = { slug?: string; asset: any }
+type AssetLookupFailure = { slug?: string; message: string }
+
 async function findAssetCandidates(id: number, slugs: (string | undefined)[]) {
-  const matches: { slug?: string; asset: any }[] = []
+  const matches: AssetLookupMatch[] = []
+  const failures: AssetLookupFailure[] = []
   for (const slug of slugs) {
     try {
       const prisma = getPrisma(slug)
@@ -102,11 +106,13 @@ async function findAssetCandidates(id: number, slugs: (string | undefined)[]) {
       if (asset) {
         matches.push({ slug, asset })
       }
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.message || 'Unknown asset lookup failure'
+      failures.push({ slug, message })
       console.error(`Asset lookup failed for wiki "${slug ?? 'default'}":`, error)
     }
   }
-  return matches
+  return { matches, failures }
 }
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -116,8 +122,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
     }
     const candidates = buildSlugCandidates(req)
-    const matches = await findAssetCandidates(assetId, candidates)
-    if (matches.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const { matches, failures } = await findAssetCandidates(assetId, candidates)
+    if (matches.length === 0) {
+      if (failures.length > 0) {
+        console.error(
+          `[upload:${assetId}] Asset lookup failed for all candidates:`,
+          failures.map((failure) => ({
+            wiki: failure.slug ?? 'default',
+            message: failure.message,
+          })),
+        )
+        return NextResponse.json({ error: 'Asset lookup failed' }, { status: 500 })
+      }
+
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
 
     for (const match of matches) {
       const { slug, asset } = match

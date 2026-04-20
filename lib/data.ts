@@ -412,65 +412,53 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
     return ensureResourcesLesson(collapsed as Lesson[], wikiSlug)
   }
 
-  if (shouldUseDb && !shouldBypassDb(wikiSlug)) {
+  if (!shouldUseDb) {
+    throw new Error(`Lesson file fallback is disabled. Enable database access for wiki "${wikiSlug}".`)
+  }
+
+  if (shouldBypassDb(wikiSlug)) {
+    throw new Error(`Database access is temporarily unavailable for wiki "${wikiSlug}".`)
+  }
+
+  try {
+    const prisma: any = getPrisma(wikiSlug)
+    let rows: Lesson[]
     try {
-      const prisma: any = getPrisma(wikiSlug)
-      let rows: Lesson[]
-      try {
-        rows = await withDbTimeout(() =>
-          prisma.lesson.findMany({
-            where: {
-              wikiSlug,
-              ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
-            },
-            orderBy: [{ order: 'asc' }, { version: 'desc' }],
-          })
-        )
-      } catch (error: any) {
-        if (!isLegacyLessonSchemaError(error)) throw error
-        const legacyRows: any[] = await withDbTimeout(() =>
-          prisma.lesson.findMany({
-            where: {
-              wikiSlug,
-              ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
-            },
-            orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
-            select: legacyLessonReadSelect,
-          })
-        )
-        rows = legacyRows.map(mapLegacyLessonRow)
-      }
-      markDbSuccess(wikiSlug)
-      const collapsed = includeDrafts
-        ? collapseLessonsForEditor(rows as Lesson[])
-        : collapseLessonsForPublic(rows as Lesson[])
-      const enriched = enrichLessonsWithPublishState(rows as Lesson[], collapsed as Lesson[], includeDrafts)
-      return ensureResourcesLesson(enriched as Lesson[], wikiSlug)
-    } catch (e) {
-      markDbFailure(wikiSlug)
-      console.error("Failed to fetch lessons from db", e)
+      rows = await withDbTimeout(() =>
+        prisma.lesson.findMany({
+          where: {
+            wikiSlug,
+            ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
+          },
+          orderBy: [{ order: 'asc' }, { version: 'desc' }],
+        })
+      )
+    } catch (error: any) {
+      if (!isLegacyLessonSchemaError(error)) throw error
+      const legacyRows: any[] = await withDbTimeout(() =>
+        prisma.lesson.findMany({
+          where: {
+            wikiSlug,
+            ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
+          },
+          orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
+          select: legacyLessonReadSelect,
+        })
+      )
+      rows = legacyRows.map(mapLegacyLessonRow)
     }
+    markDbSuccess(wikiSlug)
+    const collapsed = includeDrafts
+      ? collapseLessonsForEditor(rows as Lesson[])
+      : collapseLessonsForPublic(rows as Lesson[])
+    const enriched = enrichLessonsWithPublishState(rows as Lesson[], collapsed as Lesson[], includeDrafts)
+    return ensureResourcesLesson(enriched as Lesson[], wikiSlug)
+  } catch (e) {
+    markDbFailure(wikiSlug)
+    console.error("Failed to fetch lessons from db", e)
+    const message = e instanceof Error ? e.message : 'Unknown database error'
+    throw new Error(`Failed to fetch lessons from database for wiki "${wikiSlug}": ${message}`)
   }
-
-  const fallbackRows = loadJsonFile<Lesson[]>(`lessons.${wikiSlug}.json`, [])
-  let sourceRows = fallbackRows
-  if (shouldAttemptRemoteFallback(fallbackRows)) {
-    const actorIdHint = fallbackRows.find((lesson) => typeof lesson.ownerId === 'string' && lesson.ownerId.trim())?.ownerId
-    const remoteFallbackRows = await loadLessonsFromRemoteFallback(wikiSlug, { includeDrafts, actorIdHint })
-    if (remoteFallbackRows && remoteFallbackRows.length > 0) {
-      if (shouldUseRemoteRows(sourceRows, remoteFallbackRows)) {
-        sourceRows = remoteFallbackRows
-      }
-    }
-  }
-
-  const publicRows = includeDrafts
-    ? sourceRows
-    : sourceRows.filter((lesson) => {
-        const status = (lesson.status || '').toString().toLowerCase()
-        return !status || status === LESSON_STATUS.PUBLISHED
-      })
-  return buildLessonsResult(publicRows as Lesson[], sourceRows as Lesson[])
 }
 
 

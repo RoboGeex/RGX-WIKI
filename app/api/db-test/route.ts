@@ -7,9 +7,38 @@ import { getPrisma } from "@/lib/prisma-multi";
 
 export const dynamic = "force-dynamic";
 
+function getDbEnvDebug(wiki?: string) {
+  const normalizedWiki = wiki?.trim()
+  const suffix = normalizedWiki?.toUpperCase().replace(/[^A-Z0-9_]/g, "_")
+  const envKey = suffix ? `DATABASE_URL_${suffix}` : undefined
+  const directEnvKey = envKey ? `${envKey}_DIRECT` : undefined
+  const hasWikiUrl = envKey ? Boolean(process.env[envKey]) : false
+  const hasWikiDirectUrl = directEnvKey ? Boolean(process.env[directEnvKey]) : false
+  const selectedSource = hasWikiDirectUrl
+    ? directEnvKey
+    : hasWikiUrl
+      ? envKey
+      : process.env.USE_SHARED_DB === "true"
+        ? "shared/default"
+        : "default"
+
+  return {
+    useDb: process.env.USE_DB,
+    useSharedDb: process.env.USE_SHARED_DB,
+    envKey,
+    directEnvKey,
+    hasWikiUrl,
+    hasWikiDirectUrl,
+    hasDefaultUrl: Boolean(process.env.DATABASE_URL || process.env.DATABASE_URL_DEFAULT || process.env.DATABASE_URL_HUB),
+    selectedSource,
+  }
+}
+
 export async function GET(req: Request) {
+  const wiki = new URL(req.url).searchParams.get("wiki")?.trim() || undefined;
+  const dbEnv = getDbEnvDebug(wiki);
+
   try {
-    const wiki = new URL(req.url).searchParams.get("wiki")?.trim() || undefined;
     const prisma = getPrisma(wiki);
 
     // A simple, raw query to test the connection without relying on a specific model.
@@ -20,10 +49,10 @@ export async function GET(req: Request) {
       status: "success",
       message: "Database connection successful!",
       wiki: wiki || "default",
+      dbEnv,
     });
   } catch (error: any) {
     console.error("DB Connection Test Error:", error);
-    const wiki = new URL(req.url).searchParams.get("wiki")?.trim() || undefined;
     
     // Return a detailed error response
     return NextResponse.json(
@@ -31,6 +60,7 @@ export async function GET(req: Request) {
         status: "error",
         message: "Database connection failed.",
         wiki: wiki || "default",
+        dbEnv,
         errorMessage: error.message,
         // Prisma often wraps the original error, providing more detail
         errorCode: error.code,

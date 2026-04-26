@@ -21,7 +21,7 @@ function getSafeMs(value: string | undefined, fallback: number): number {
 }
 
 export function getDbQueryTimeoutMs() {
-  return getSafeMs(process.env.DB_QUERY_TIMEOUT_MS, 1500)
+  return getSafeMs(process.env.DB_QUERY_TIMEOUT_MS, 10000)
 }
 
 export function getDbBypassTtlMs() {

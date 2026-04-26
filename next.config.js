@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   experimental: {
     outputFileTracingRoot: undefined,
     serverComponentsExternalPackages: ['ssh2', 'ssh2-sftp-client'],
-    // Allow large video uploads (up to 500 MB) without 413 Payload Too Large errors
+    // Allow large uploads (up to 20 MB) as per GCP migration notes
     serverActions: {
-      bodySizeLimit: '500mb',
+      bodySizeLimit: '20mb',
     },
   },
   // Disable source maps in production for smaller builds

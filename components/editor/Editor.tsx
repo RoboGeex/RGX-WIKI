@@ -400,12 +400,7 @@ export default function WikiEditor() {
 
   // Publish confirmation modal state
   const [showPublishModal, setShowPublishModal] = useState(false)
-  const [publishCheckpoints, setPublishCheckpoints] = useState({
-    linguistic: false,
-    media: false,
-    ux: false,
-    flow: false
-  })
+
 
   // Verify & Mirror confirmation modal state
   const [showVerifyModal, setShowVerifyModal] = useState(false)
@@ -526,9 +521,7 @@ export default function WikiEditor() {
     } else {
       document.body.style.overflow = 'unset'
     }
-    if (showPublishModal) {
-      setPublishCheckpoints({ linguistic: false, media: false, ux: false, flow: false })
-    }
+
     if (showVerifyModal) {
       setVerifyCheckpoints({ content: false, structure: false, readability: false })
     }
@@ -3465,76 +3458,10 @@ export default function WikiEditor() {
                   </div>
                   <h3 className="text-xl font-bold text-slate-900">Publish to Wiki</h3>
                 </div>
-                <p className="text-sm text-slate-500">Please complete the following quality assurance checkpoints before making this lesson live.</p>
+                <p className="text-sm text-slate-500">Are you sure you want to publish this lesson? This will make it live for all users.</p>
               </div>
 
-              {/* Checkpoints */}
-              <div className="p-8 space-y-4">
-                {[
-                  { id: 'linguistic', title: 'Linguistic & Content Accuracy', desc: 'Verified that both English and Arabic translations are accurate and properly contextualized.' },
-                  { id: 'media', title: 'Visual & Media Audit', desc: 'Confirmed all images, sliders, and video assets are present, optimized, and correctly placed.' },
-                  { id: 'ux', title: 'UX & Design Validation', desc: 'Inspected the lesson in Preview Mode to ensure perfect layout, responsiveness, and design excellence.' },
-                  { id: 'flow', title: 'Instructional Continuity', desc: 'Validated the logical flow, educational sequence, and curriculum alignment of the lesson.' }
-                ].map((item, idx) => {
-                  const isChecked = (publishCheckpoints as any)[item.id]
-                  return (
-                    <motion.label
-                      key={item.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 + idx * 0.05 }}
-                      className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${isChecked ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'}`}
-                    >
-                      <div className="mt-1 relative flex items-center justify-center w-6 h-6">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => setPublishCheckpoints(prev => ({ ...prev, [item.id]: e.target.checked }))}
-                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                        />
-                        <motion.div
-                          initial={false}
-                          animate={{
-                            backgroundColor: isChecked ? 'rgb(16 185 129)' : 'rgb(255 255 255)',
-                            borderColor: isChecked ? 'rgb(16 185 129)' : 'rgb(226 232 240)',
-                            scale: isChecked ? [1, 1.15, 1] : 1
-                          }}
-                          transition={{ duration: 0.3 }}
-                          className="flex items-center justify-center w-6 h-6 border-2 rounded-lg shadow-sm"
-                        >
-                          {isChecked && (
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                              <Check className="text-white" size={14} strokeWidth={4} />
-                            </motion.div>
-                          )}
-                        </motion.div>
-                        {/* Shine effect for checkbox */}
-                        {isChecked && (
-                          <motion.div
-                            initial={{ x: '-100%', opacity: 0 }}
-                            animate={{ x: '200%', opacity: [0, 0.5, 0] }}
-                            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-12 pointer-events-none"
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{item.title}</div>
-                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.desc}</p>
-                      </div>
 
-                      {/* Subtle background shine for the whole card when checked */}
-                      {isChecked && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent pointer-events-none"
-                        />
-                      )}
-                    </motion.label>
-                  )
-                })}
-              </div>
 
               {/* Footer */}
               <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
@@ -3545,22 +3472,19 @@ export default function WikiEditor() {
                   Cancel
                 </button>
                 <button
-                  disabled={!Object.values(publishCheckpoints).every(Boolean)}
                   onClick={() => {
                     setShowPublishModal(false)
                     publish('published').catch(() => { })
                   }}
-                  className="group relative px-8 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 disabled:opacity-50 disabled:shadow-none disabled:bg-slate-300 transition-all active:scale-95 overflow-hidden"
+                  className="group relative px-8 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 transition-all active:scale-95 overflow-hidden"
                 >
                   <span className="relative z-10">Confirm & Publish Now</span>
-                  {!Object.values(publishCheckpoints).every(Boolean) ? null : (
-                    <motion.div
-                      initial={{ x: '-100%' }}
-                      animate={{ x: '100%' }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
-                    />
-                  )}
+                  <motion.div
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '100%' }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                  />
                 </button>
               </div>
             </motion.div>

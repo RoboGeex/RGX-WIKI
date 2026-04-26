@@ -12,6 +12,22 @@ datasource db {
   relationMode = "prisma"
 }
 
+model Wiki {
+  slug              String   @id
+  displayName       String
+  grade             String?
+  picture           String?  @db.Text
+  isPublished       Boolean  @default(true)
+  domains           Json?
+  defaultLocale     String?  @default("en")
+  defaultLessonSlug String?  @default("getting-started")
+  resourcesUrl      String?  @default("/resources")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([slug])
+}
+
 model Lesson {
   id               String   @id
   lessonKey        String
@@ -59,12 +75,15 @@ model Developer {
 
 model Asset {
   id        Int      @id @default(autoincrement())
+  wikiSlug  String?
   filename  String
   mimeType  String
   size      Int
   // Optional binary storage (only if STORE_MEDIA_IN_DB=true)
   data      Bytes?   @db.LongBlob
   createdAt DateTime @default(now())
+
+  @@index([wikiSlug])
 }
 
 model AccessCode {

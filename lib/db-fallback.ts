@@ -29,15 +29,7 @@ export function getDbBypassTtlMs() {
 }
 
 export function shouldBypassDb(wikiSlug?: string | null) {
-  const key = normalizeKey(wikiSlug)
-  const state = getBypassState()
-  const until = state.get(key)
-  if (!until) return false
-  if (until <= Date.now()) {
-    state.delete(key)
-    return false
-  }
-  return true
+  return false
 }
 
 export function markDbFailure(wikiSlug?: string | null) {

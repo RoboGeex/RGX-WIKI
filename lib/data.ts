@@ -417,6 +417,7 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   }
 
   if (shouldBypassDb(wikiSlug)) {
+    console.log(`[data] Bypassing DB for wiki: ${wikiSlug} (next retry in <5s)`)
     throw new Error(`Database access is temporarily unavailable for wiki "${wikiSlug}".`)
   }
 

@@ -21,11 +21,11 @@ function getSafeMs(value: string | undefined, fallback: number): number {
 }
 
 export function getDbQueryTimeoutMs() {
-  return getSafeMs(process.env.DB_QUERY_TIMEOUT_MS, 10000)
+  return getSafeMs(process.env.DB_QUERY_TIMEOUT_MS, 30000)
 }
 
 export function getDbBypassTtlMs() {
-  return getSafeMs(process.env.DB_BYPASS_TTL_MS, 60000)
+  return getSafeMs(process.env.DB_BYPASS_TTL_MS, 5000)
 }
 
 export function shouldBypassDb(wikiSlug?: string | null) {

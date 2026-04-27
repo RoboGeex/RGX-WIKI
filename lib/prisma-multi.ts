@@ -138,6 +138,11 @@ function getUrlForWiki(wikiSlug?: string): string | undefined {
     process.env[envKey] ||
     process.env.DATABASE_URL_DEFAULT ||
     process.env.DATABASE_URL
+  
+  if (!configured) {
+    console.warn(`[prisma-multi] No database URL found for wiki "${wikiSlug}" (checked ${envKey}, DATABASE_URL_DEFAULT, DATABASE_URL)`)
+  }
+
   if (isPrismaProxyUrl(configured)) {
     throw new Error(
       `Database for wiki "${wikiSlug}" is configured with a prisma:// URL. Set ${directEnvKey}, DATABASE_URL_DEFAULT_DIRECT, or DIRECT_URL to a direct mysql:// connection.`,
@@ -162,6 +167,8 @@ export function getPrisma(wikiSlug?: string): PrismaClient {
   }
 
   if (!globalForPrisma.prismaClients[url]) {
+    const redactedUrl = url.replace(/:([^:@]+)@/, ':****@')
+    console.log(`[prisma-multi] Creating new client for ${redactedUrl.split('@')[1]} (wiki: ${wikiSlug || 'default'})`)
     globalForPrisma.prismaClients[url] = new PrismaClient({
       datasources: { db: { url } },
     })

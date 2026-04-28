@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
   }
 
   const wiki = getWiki(rawKitSlug)
+  console.log(`[Unlock Debug] Attempting unlock. Input Kit: "${rawKitSlug}", Input Code: "${rawCode}", Found Wiki Slug: "${wiki?.slug}"`)
 
   if (!wiki) {
     return NextResponse.json({ error: 'No wiki found for this slug' }, { status: 400 })

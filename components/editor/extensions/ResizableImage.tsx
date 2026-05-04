@@ -13,10 +13,45 @@ const isListNodeType = (typeName?: string | null) =>
 const CAPTION_DRAFT_EVENT = 'badex:caption-draft-change'
 const AUTOSAVE_PAUSE_EVENT = 'badex:autosave-pause'
 const AUTOSAVE_REQUEST_EVENT = 'badex:autosave-request'
-const TOOLBAR_STICKY_UNTIL_BY_SRC = new Map<string, number>()
+const TOOLBAR_LOCK_UNTIL_BY_KEY = new Map<string, number>()
+const ACTIVE_IMAGE_BY_KEY = new Map<string, boolean>()
 
-const getNodeSrcKey = (node: any) =>
-  typeof node?.attrs?.src === 'string' ? node.attrs.src.trim() : ''
+const getToolbarInteractionKey = (node: any, getPos?: (() => number) | undefined) => {
+  if (typeof getPos === 'function') {
+    try {
+      return `pos:${String(getPos())}`
+    } catch {
+      // fall through to src fallback
+    }
+  }
+  const srcPart = typeof node?.attrs?.src === 'string' ? node.attrs.src.trim() : ''
+  return `src:${srcPart || 'unknown'}`
+}
+
+const isEffectivelyEmptyParagraphNode = (pmNode: any) => {
+  if (!pmNode || pmNode.type?.name !== 'paragraph') return false
+  const normalizedText = (pmNode.textContent || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
+    .trim()
+  if (normalizedText.length > 0) return false
+
+  let hasMeaningfulContent = false
+  pmNode.descendants((child: any) => {
+    if (hasMeaningfulContent) return false
+    if (child.isText && (child.text || '').trim().length > 0) {
+      hasMeaningfulContent = true
+      return false
+    }
+    if (!child.isText && child.type?.name !== 'hardBreak' && child.type?.name !== 'hard_break') {
+      hasMeaningfulContent = true
+      return false
+    }
+    return true
+  })
+
+  return !hasMeaningfulContent
+}
 
 const ResizableImageComponent = (props: any) => {
   const { node, updateAttributes, selected, deleteNode, editor, getPos } = props
@@ -25,11 +60,12 @@ const ResizableImageComponent = (props: any) => {
   const [caption, setCaption] = useState(node.attrs.title || '')
   const [layoutMode, setLayoutMode] = useState(node.attrs.layoutMode || 'fit') // fit | 1:1 | 16:9
   const [isReplacing, setIsReplacing] = useState(false)
+  const interactionKey = getToolbarInteractionKey(node, getPos)
+  const [isActive, setIsActive] = useState(() => ACTIVE_IMAGE_BY_KEY.get(interactionKey) === true)
+  const [toolbarLockUntil, setToolbarLockUntil] = useState(() => TOOLBAR_LOCK_UNTIL_BY_KEY.get(interactionKey) ?? 0)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [localStickyUntil, setLocalStickyUntil] = useState(0)
   const [isInsideListByDom, setIsInsideListByDom] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
-  const replaceInputRef = useRef<HTMLInputElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const latestCaptionRef = useRef(caption)
   const isInsideListByDoc = (() => {
@@ -60,7 +96,46 @@ const ResizableImageComponent = (props: any) => {
     }
     return false
   })()
+  const isFirstMeaningfulInColumn = (() => {
+    if (!editor?.state?.doc || typeof getPos !== 'function') return false
+    try {
+      const doc = editor.state.doc
+      const pos = getPos()
+      const $pos = doc.resolve(pos)
+
+      let columnDepth = -1
+      for (let depth = $pos.depth; depth >= 0; depth--) {
+        if ($pos.node(depth).type.name === 'column') {
+          columnDepth = depth
+          break
+        }
+      }
+      if (columnDepth < 0) return false
+
+      const columnNode = $pos.node(columnDepth)
+      const indexInColumn = $pos.index(columnDepth)
+      let firstMeaningfulIndex = 0
+      while (firstMeaningfulIndex < columnNode.childCount) {
+        const child = columnNode.child(firstMeaningfulIndex)
+        if (isEffectivelyEmptyParagraphNode(child)) {
+          firstMeaningfulIndex += 1
+          continue
+        }
+        break
+      }
+      return indexInColumn === firstMeaningfulIndex
+    } catch {
+      return false
+    }
+  })()
   const isInsideList = isInsideListByDoc || isInsideListByDom
+  const hasCaptionContent = Boolean(
+    (caption || '')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .trim()
+  )
+  const showCaptionEditor = hasCaptionContent || selected || isActive
   const effectiveAlign = textAlign
   const alignItems = effectiveAlign === 'left' ? 'flex-start' : effectiveAlign === 'right' ? 'flex-end' : 'center'
   const toolbarPositionClass =
@@ -81,16 +156,25 @@ const ResizableImageComponent = (props: any) => {
     mediaWrapperStyle.marginInlineEnd = 'auto'
   }
 
-  const srcKey = getNodeSrcKey(node)
-  const stickyUntilBySrc = srcKey ? (TOOLBAR_STICKY_UNTIL_BY_SRC.get(srcKey) ?? 0) : 0
-  const stickyUntil = Math.max(localStickyUntil, stickyUntilBySrc)
-  const isToolbarVisible = selected || stickyUntil > Date.now()
+  useEffect(() => {
+    setToolbarLockUntil(TOOLBAR_LOCK_UNTIL_BY_KEY.get(interactionKey) ?? 0)
+  }, [interactionKey])
 
-  const markToolbarSticky = (ms = 2500) => {
+  useEffect(() => {
+    setIsActive(ACTIVE_IMAGE_BY_KEY.get(interactionKey) === true)
+  }, [interactionKey])
+
+  const isToolbarVisible = isActive || selected || toolbarLockUntil > Date.now()
+
+  const lockToolbarInteraction = (ms = 400) => {
     const nextUntil = Date.now() + ms
-    setLocalStickyUntil(nextUntil)
-    if (!srcKey) return
-    TOOLBAR_STICKY_UNTIL_BY_SRC.set(srcKey, nextUntil)
+    TOOLBAR_LOCK_UNTIL_BY_KEY.set(interactionKey, nextUntil)
+    setToolbarLockUntil(nextUntil)
+  }
+
+  const activateImage = () => {
+    ACTIVE_IMAGE_BY_KEY.set(interactionKey, true)
+    setIsActive(true)
   }
 
   const preserveNodeSelection = () => {
@@ -145,11 +229,12 @@ const ResizableImageComponent = (props: any) => {
   const runToolbarAction = (action: () => void) => (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    activateImage()
+    lockToolbarInteraction()
     const nativeEvent = e.nativeEvent as MouseEvent & { stopImmediatePropagation?: () => void }
     if (typeof nativeEvent.stopImmediatePropagation === 'function') {
       nativeEvent.stopImmediatePropagation()
     }
-    markToolbarSticky(3000)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(AUTOSAVE_PAUSE_EVENT, { detail: { ms: 3500 } }))
     }
@@ -202,6 +287,25 @@ const ResizableImageComponent = (props: any) => {
     return () => cancelAnimationFrame(raf)
   }, [getPos, node.attrs.textAlign, node.attrs.width])
 
+  useEffect(() => {
+    const handlePointerDownOutside = (event: MouseEvent | PointerEvent) => {
+      const wrapper = wrapperRef.current
+      const target = event.target as Node | null
+      if (!wrapper || !target) return
+      if (wrapper.contains(target)) return
+      ACTIVE_IMAGE_BY_KEY.set(interactionKey, false)
+      setIsActive(false)
+    }
+
+    document.addEventListener('mousedown', handlePointerDownOutside, true)
+    document.addEventListener('pointerdown', handlePointerDownOutside, true)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDownOutside, true)
+      document.removeEventListener('pointerdown', handlePointerDownOutside, true)
+    }
+  }, [interactionKey])
+
   const handleBlur = () => {
     const nextCaption = latestCaptionRef.current
     const persistedCaption = node.attrs.title || ''
@@ -235,7 +339,9 @@ const ResizableImageComponent = (props: any) => {
   const handleReplace = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    markToolbarSticky(5000)
+    activateImage()
+    lockToolbarInteraction(5000)
+    stabilizeNodeSelection()
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(AUTOSAVE_PAUSE_EVENT, { detail: { ms: 5000 } }))
     }
@@ -262,7 +368,8 @@ const ResizableImageComponent = (props: any) => {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    markToolbarSticky(3000)
+    activateImage()
+    lockToolbarInteraction(1500)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(AUTOSAVE_PAUSE_EVENT, { detail: { ms: 3500 } }))
     }
@@ -298,11 +405,14 @@ const ResizableImageComponent = (props: any) => {
   return (
     <NodeViewWrapper
       ref={wrapperRef as any}
-      className="media-node-block flex flex-col w-full"
+      className={`media-node-block flex flex-col w-full ${isFirstMeaningfulInColumn ? 'is-column-first-media' : ''}`}
       style={{ textAlign: effectiveAlign as any, alignItems }}
+      onMouseDownCapture={() => {
+        activateImage()
+      }}
     >
       <div className="relative block group" style={mediaWrapperStyle}>
-        <div className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-md ${selected ? 'ring-2 ring-primary' : ''} ${
+        <div className={`relative w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-md ${(selected || isActive) ? 'ring-2 ring-primary' : ''} ${
           layoutMode === '1:1' ? 'aspect-square flex items-center justify-center' :
           layoutMode === '3:4' ? 'aspect-[3/4] flex items-center justify-center' :
           layoutMode === '2:3' ? 'aspect-[2/3] flex items-center justify-center' :
@@ -320,7 +430,7 @@ const ResizableImageComponent = (props: any) => {
           {/* Resize Handle */}
           <div
             className={`media-node-resize-handle absolute bottom-2 right-2 p-1.5 bg-white/90 shadow-sm border border-gray-200 rounded cursor-ew-resize hover:bg-gray-100 transition-opacity z-20 ${
-              isToolbarVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+              isToolbarVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}
             contentEditable={false}
             draggable={false}
@@ -332,20 +442,22 @@ const ResizableImageComponent = (props: any) => {
         </div>
 
         {/* Caption Input */}
-        <div className="mt-1 w-full flex justify-center text-center mx-auto relative z-10">
-          <NodeViewErrorBoundary>
-            <RichCaptionInput
-              initialContent={caption}
-              onChange={(html) => {
-                setCaption(html)
-                latestCaptionRef.current = html
-                emitCaptionDraft('draft', html)
-              }}
-              onBlur={handleBlur}
-              placeholder="Add a caption..."
-            />
-          </NodeViewErrorBoundary>
-        </div>
+        {showCaptionEditor && (
+          <div className="mt-1 w-full flex justify-center text-center mx-auto relative z-10">
+            <NodeViewErrorBoundary>
+              <RichCaptionInput
+                initialContent={caption}
+                onChange={(html) => {
+                  setCaption(html)
+                  latestCaptionRef.current = html
+                  emitCaptionDraft('draft', html)
+                }}
+                onBlur={handleBlur}
+                placeholder="Add a caption..."
+              />
+            </NodeViewErrorBoundary>
+          </div>
+        )}
 
         {/* Hidden file input for Replace — must be outside toolbar to avoid onClickCapture killing it */}
         <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleReplace} disabled={isReplacing} />
@@ -353,14 +465,15 @@ const ResizableImageComponent = (props: any) => {
         {/* Toolbar */}
         <div
           className={`media-node-toolbar absolute -top-12 ${toolbarPositionClass} flex items-center gap-1 bg-white/95 backdrop-blur shadow-lg rounded-lg border border-gray-200 p-1.5 z-50 whitespace-nowrap min-w-max transition-opacity ${
-            isToolbarVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+            isToolbarVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           contentEditable={false}
           draggable={false}
           onMouseDown={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            markToolbarSticky(3000)
+            activateImage()
+            lockToolbarInteraction()
             preserveNodeSelection()
           }}
           onMouseUpCapture={(e) => {
@@ -375,41 +488,44 @@ const ResizableImageComponent = (props: any) => {
 
             {/* Alignment */}
             <div className="flex gap-0.5 border-r border-gray-200 pr-1 mr-1">
-              <button type="button" onMouseDown={runToolbarAction(() => setAlignment('left'))} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setAlignment('left'))} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'left' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
                 <AlignLeft size={16} />
               </button>
-              <button type="button" onMouseDown={runToolbarAction(() => setAlignment('center'))} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setAlignment('center'))} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'center' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
                 <AlignCenter size={16} />
               </button>
-              <button type="button" onMouseDown={runToolbarAction(() => setAlignment('right'))} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setAlignment('right'))} className={`p-1 rounded hover:bg-gray-100 ${textAlign === 'right' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>
                 <AlignRight size={16} />
               </button>
             </div>
 
             {/* Aspect Ratio */}
             <div className="flex gap-1 border-r border-gray-200 pr-1 mr-1">
-              <button type="button" onMouseDown={runToolbarAction(() => setLayout('fit'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === 'fit' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>Fit</button>
-              <button type="button" onMouseDown={runToolbarAction(() => setLayout('1:1'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '1:1' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>1:1</button>
-              <button type="button" onMouseDown={runToolbarAction(() => setLayout('3:4'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '3:4' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>3:4</button>
-              <button type="button" onMouseDown={runToolbarAction(() => setLayout('2:3'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '2:3' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>2:3</button>
-              <button type="button" onMouseDown={runToolbarAction(() => setLayout('16:9'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '16:9' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>16:9</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setLayout('fit'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === 'fit' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>Fit</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setLayout('1:1'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '1:1' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>1:1</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setLayout('3:4'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '3:4' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>3:4</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setLayout('2:3'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '2:3' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>2:3</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setLayout('16:9'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${layoutMode === '16:9' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>16:9</button>
             </div>
 
             {/* Presets */}
             <div className="flex gap-1 border-r border-gray-200 pr-1 mr-1">
-              <button type="button" onMouseDown={runToolbarAction(() => setSize('25%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>25%</button>
-              <button type="button" onMouseDown={runToolbarAction(() => setSize('50%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>50%</button>
-              <button type="button" onMouseDown={runToolbarAction(() => setSize('75%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '75%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>75%</button>
-              <button type="button" onMouseDown={runToolbarAction(() => setSize('100%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setSize('25%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '25%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>25%</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setSize('50%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '50%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>50%</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setSize('75%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '75%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>75%</button>
+              <button type="button" tabIndex={-1} onMouseDown={runToolbarAction(() => setSize('100%'))} className={`px-2 text-xs font-medium rounded hover:bg-gray-100 ${width === '100%' ? 'text-primary bg-primary/10' : 'text-gray-600'}`}>100%</button>
             </div>
 
             {/* Replace */}
             <button
               type="button"
+              tabIndex={-1}
               onMouseDown={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                markToolbarSticky(5000)
+                activateImage()
+                lockToolbarInteraction(5000)
+                stabilizeNodeSelection()
                 fileInputRef.current?.click()
               }}
               className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded hover:bg-gray-100 text-gray-600 ${isReplacing ? 'opacity-50 pointer-events-none' : ''}`}
@@ -422,6 +538,7 @@ const ResizableImageComponent = (props: any) => {
             {/* Remove */}
             <button
               type="button"
+              tabIndex={-1}
               onMouseDown={runToolbarAction(() => { if (typeof deleteNode === 'function') deleteNode() })}
               className="p-1 rounded hover:bg-red-50 text-red-500 hover:text-red-600 ml-0.5"
               title="Remove image"

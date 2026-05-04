@@ -1,6 +1,7 @@
 import { Extension, type Editor } from '@tiptap/core'
 import Suggestion, { SuggestionOptions } from '@tiptap/suggestion'
-import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Plugin, PluginKey, Transaction } from '@tiptap/pm/state'
+import { Node as ProseMirrorNode } from '@tiptap/pm/model'
 
 export type SlashItem = {
   title: string
@@ -76,6 +77,18 @@ const insertUploadedImage = (editor: Editor, src: string) => {
     attrs.textAlign = 'center'
   }
   editor.chain().focus().insertContent({ type: 'image', attrs }).run()
+}
+
+const replaceNodeUrl = (editor: Editor, nodeType: string, oldUrl: string, newUrl: string, extraAttrs: Record<string, any> = {}) => {
+  editor.state.doc.descendants((node: ProseMirrorNode, pos: number) => {
+    if (node.type.name === nodeType && node.attrs.src === oldUrl) {
+      editor.commands.command(({ tr }: { tr: Transaction }) => {
+        tr.setNodeMarkup(pos, null, { ...node.attrs, src: newUrl, ...extraAttrs })
+        return true
+      })
+      return false
+    }
+  })
 }
 
 const insertListWithFallback = (editor: Editor, range: { from: number; to: number }, listType: 'bulletList' | 'orderedList') => {
@@ -222,7 +235,7 @@ const items: SlashItem[] = [
       // Use a tiny delay to override Tiptap's internal selection management after slash command
       setTimeout(() => {
         const { state } = editor
-        state.doc.descendants((node: any, pos: number) => {
+        state.doc.descendants((node: ProseMirrorNode, pos: number) => {
           if (node.type.name === 'columns' && Math.abs(pos - range.from) < 10) {
             editor.commands.setTextSelection(pos + 3)
             return false
@@ -243,7 +256,7 @@ const items: SlashItem[] = [
       // Use a tiny delay to override Tiptap's internal selection management after slash command
       setTimeout(() => {
         const { state } = editor
-        state.doc.descendants((node: any, pos: number) => {
+        state.doc.descendants((node: ProseMirrorNode, pos: number) => {
           if (node.type.name === 'columns' && Math.abs(pos - range.from) < 10) {
             editor.commands.setTextSelection(pos + 3)
             return false
@@ -285,9 +298,11 @@ const items: SlashItem[] = [
       input.onchange = async () => {
         const file = input.files?.[0]
         if (!file) return
+        const previewUrl = typeof window !== 'undefined' ? URL.createObjectURL(file) : ''
         try {
+          insertUploadedImage(editor, previewUrl)
           const url = await uploadImageFile(editor, file)
-          insertUploadedImage(editor, url)
+          replaceNodeUrl(editor, 'image', previewUrl, url)
         } catch (e: any) {
           alert('Upload error: ' + (e?.message || 'unknown'))
         }
@@ -311,16 +326,36 @@ const items: SlashItem[] = [
       input.onchange = async () => {
         const files = Array.from(input.files ?? []).filter((file) => file.type.startsWith('image/'))
         if (!files.length) return
+        
         try {
-          const uploads = await Promise.all(files.map(async (file) => {
-            const url = await uploadImageFile(editor, file)
-            // Initialize with an empty caption
-            return { url, caption: '' }
-          }))
-          if (!uploads.length) return
-          const attrs: any = { images: uploads }
+          const previewUploads = files.map(file => ({ previewUrl: typeof window !== 'undefined' ? URL.createObjectURL(file) : '', caption: '', file }))
+          const attrs: any = { images: previewUploads.map(pu => ({ url: pu.previewUrl, caption: pu.caption })) }
           if (isSelectionInList(editor)) attrs.textAlign = 'center'
           editor.chain().focus().insertImageSlider(attrs).run()
+
+          const uploads = await Promise.all(previewUploads.map(async (pu) => {
+            const url = await uploadImageFile(editor, pu.file)
+            return { url, previewUrl: pu.previewUrl }
+          }))
+          
+          if (!uploads.length) return
+          
+          editor.state.doc.descendants((node: ProseMirrorNode, pos: number) => {
+             if (node.type.name === 'imageSlider') {
+                 const hasPreview = node.attrs.images?.some((img: any) => uploads.some(u => u.previewUrl === img.url))
+                 if (hasPreview) {
+                     const newImages = node.attrs.images.map((img: any) => {
+                         const match = uploads.find(u => u.previewUrl === img.url)
+                         return match ? { ...img, url: match.url } : img
+                     })
+                     editor.commands.command(({ tr }: { tr: Transaction }) => {
+                         tr.setNodeMarkup(pos, null, { ...node.attrs, images: newImages })
+                         return true
+                     })
+                 }
+             }
+          })
+          
         } catch (error: any) {
           console.error('Image slider upload failed', error)
           alert(error?.message || 'Failed to upload images for slider')
@@ -362,6 +397,18 @@ const items: SlashItem[] = [
       input.onchange = async () => {
         const file = input.files?.[0]
         if (!file) return
+
+        const previewUrl = typeof window !== 'undefined' ? URL.createObjectURL(file) : ''
+        editor
+          .chain()
+          .focus()
+          .insertVideo({
+            src: previewUrl,
+            provider: null,
+            controls: true,
+            textAlign: isSelectionInList(editor) ? 'center' : undefined,
+          })
+          .run()
 
         // Visual indicator that upload is starting
         const originalCursor = document.body.style.cursor
@@ -426,17 +473,13 @@ const items: SlashItem[] = [
             videoProvider = data.provider || (data.url.includes('vimeo.com') ? 'vimeo' : undefined)
           }
 
-          // 4. Insert video block into editor
-          editor
-            .chain()
-            .focus()
-            .insertVideo({
-              src: videoUrl,
+          // 4. Update the preview node with the real URL
+          if (videoUrl) {
+            replaceNodeUrl(editor, 'video', previewUrl, videoUrl, {
               provider: videoProvider,
               controls: videoProvider === 'vimeo' ? false : true,
-              textAlign: isSelectionInList(editor) ? 'center' : undefined,
             })
-            .run()
+          }
 
           if (videoProvider === 'vimeo') {
             alert('Video uploaded successfully. It may take a moment for processing to catch up before playback works.')
@@ -585,12 +628,50 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
           void (async () => {
             try {
               for (const file of imageFiles) {
+                const previewUrl = typeof window !== 'undefined' ? URL.createObjectURL(file) : ''
+                insertUploadedImage(editor, previewUrl)
+                
                 const url = await uploadImageFile(editor, file)
-                insertUploadedImage(editor, url)
+                replaceNodeUrl(editor, 'image', previewUrl, url)
               }
             } catch (error: any) {
               console.error('Clipboard image paste upload failed', error)
               alert(error?.message || 'Failed to paste image from clipboard')
+            }
+          })()
+
+          return true
+        },
+        handleDrop: (view, event, slice, moved) => {
+          if (!event.dataTransfer?.files?.length) return false
+          
+          const imageFiles = Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/'))
+          if (!imageFiles.length) return false
+
+          event.preventDefault()
+          const editor = this.editor
+
+          // For drops, ProseMirror provides coordinates so we map them to a document position
+          const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
+          if (!coordinates) return false
+          
+          const insertPos = coordinates.pos
+
+          void (async () => {
+            try {
+              for (const file of imageFiles) {
+                const previewUrl = typeof window !== 'undefined' ? URL.createObjectURL(file) : ''
+                
+                // insert exactly at the drop coordinates
+                const attrs: Record<string, any> = { src: previewUrl }
+                editor.chain().insertContentAt(insertPos, { type: 'image', attrs }).run()
+
+                const url = await uploadImageFile(editor, file)
+                replaceNodeUrl(editor, 'image', previewUrl, url)
+              }
+            } catch (error: any) {
+              console.error('Image drop upload failed', error)
+              alert(error?.message || 'Failed to drop image')
             }
           })()
 

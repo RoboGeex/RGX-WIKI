@@ -54,10 +54,14 @@ export default function LessonToc({ entries, lessonTitle, locale = 'en' }: Lesso
       let currentHeadingId: string | undefined = undefined;
 
       for (const headingEl of headingElements) {
-        if (headingEl.offsetTop < activationLine) {
-          currentHeadingId = headingEl.id;
-        } else {
-          break;
+        const topOfs = headingEl.getBoundingClientRect().top + window.scrollY;
+        if (topOfs < activationLine) {
+          // Keep updating to find the last item whose offset is < activationLine
+          // We don't break early anymore, because items in columns might be slightly 
+          // out of vertical order relative to their DOM array sequence.
+          if (!currentHeadingId || topOfs > document.getElementById(currentHeadingId!)!.getBoundingClientRect().top + window.scrollY) {
+             currentHeadingId = headingEl.id;
+          }
         }
       }
       
@@ -102,8 +106,9 @@ export default function LessonToc({ entries, lessonTitle, locale = 'en' }: Lesso
         clickLockRef.current = null
       }, 1000)
 
+      const topOfs = el.getBoundingClientRect().top + window.scrollY;
       window.scrollTo({
-        top: el.offsetTop - 100, 
+        top: topOfs - 100, 
         behavior: 'smooth'
       });
     }
@@ -115,9 +120,11 @@ export default function LessonToc({ entries, lessonTitle, locale = 'en' }: Lesso
       className={`bg-white border border-gray-200 rounded-2xl p-5 shadow-sm sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar smooth-panel-scroll ${isArabic ? 'text-right' : 'text-left'}`}
     >
       {lessonTitle && (
-        <div className={`rounded-2xl bg-primary/15 text-primary px-4 py-3 mb-4 space-y-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+        <div className={`min-w-0 rounded-2xl bg-primary/15 text-primary px-4 py-3 mb-4 space-y-1 ${isArabic ? 'text-right' : 'text-left'}`}>
           <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/70">Lesson</div>
-          <div className="text-sm font-semibold leading-snug text-primary">{lessonTitle}</div>
+          <div className="min-w-0 break-words text-sm font-semibold leading-snug text-primary [overflow-wrap:anywhere]">
+            {lessonTitle}
+          </div>
         </div>
       )}
 
@@ -139,7 +146,7 @@ export default function LessonToc({ entries, lessonTitle, locale = 'en' }: Lesso
                 activeId === entry.id
                   ? 'bg-primary/10 text-primary font-semibold'
                   : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-              }`}
+              } break-words [overflow-wrap:anywhere]`}
             >
               {entry.text}
             </button>

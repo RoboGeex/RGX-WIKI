@@ -2,6 +2,31 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { TextSelection, Selection, Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
+const isEffectivelyEmptyParagraph = (node: any) => {
+  if (!node || node.type?.name !== 'paragraph') return false
+  const normalizedText = (node.textContent || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
+    .trim()
+  if (normalizedText.length > 0) return false
+
+  let hasMeaningfulContent = false
+  node.descendants((child: any) => {
+    if (hasMeaningfulContent) return false
+    if (child.isText && (child.text || '').trim().length > 0) {
+      hasMeaningfulContent = true
+      return false
+    }
+    if (!child.isText && child.type?.name !== 'hardBreak' && child.type?.name !== 'hard_break') {
+      hasMeaningfulContent = true
+      return false
+    }
+    return true
+  })
+
+  return !hasMeaningfulContent
+}
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     columns: {
@@ -165,6 +190,24 @@ export const Columns = Node.create({
           doc.descendants((node, pos) => {
             if (changed) return false
             if (node.type.name === 'column') {
+              const firstChild = node.firstChild
+              const secondChild = node.childCount > 1 ? node.child(1) : null
+
+              // If a column starts with an editor placeholder paragraph and then any
+              // non-paragraph block, remove that placeholder so the block is truly first.
+              if (
+                firstChild &&
+                isEffectivelyEmptyParagraph(firstChild) &&
+                secondChild &&
+                secondChild.type.name !== 'paragraph'
+              ) {
+                const from = pos + 1
+                const to = from + firstChild.nodeSize
+                tr.delete(from, to)
+                changed = true
+                return false
+              }
+
               const lastChild = node.lastChild
               // If the column is empty (should not happen but for safety) or ends with 
               // a non-text block (like an hr, media, etc.), append a paragraph.

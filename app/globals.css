@@ -1,3 +1,7 @@
+@import url('https://rsms.me/inter/inter.css');
+
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -32,33 +36,37 @@
   border-color: hsl(var(--border));
 }
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;700&text=I&display=swap');
 
-/* 1. Define a font wrapper that ONLY contains the barred capital I */
-@font-face {
-  font-family: "BarredI-Premium";
-  /* Optimized: Selective IBM Plex Sans 'I' with Verdana fallback */
-  src: local("IBM Plex Sans"), local("Verdana"), local("sans-serif");
-  unicode-range: U+0049; /* Targets exactly the Capital 'I' */
-}
+
+
+
+
+
+
+
+
 
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   /* Combine our Premium barred I with the official Inter font variable */
-  font-family: "BarredI-Premium", var(--font-inter), sans-serif !important;
-  font-feature-settings: "cv08" 1, "ss02" 1 !important;
+  /* Use native Inter features for legibility: cv08=Classic I, cv05=Tail l */
+  font-family: "Inter", var(--font-inter), sans-serif !important;
+  font-feature-settings: "cv08" 1, "cv05" 1, "ss02" 1 !important;
+  font-feature-settings: "cv08" 1, "cv05" 1, "ss02" 1 !important;
 }
 
 /* Ensure it applies to the editor, headings, and prose which might have their own stacks */
 .tiptap, .prose, .glass-editor-content, h1, h2, h3, h4, h5, h6, p, span, li, a {
-  font-family: "BarredI-Premium", var(--font-inter), sans-serif !important;
+  font-family: "Inter", var(--font-inter), sans-serif !important;
+  font-feature-settings: "cv08" 1, "cv05" 1, "ss02" 1 !important;
 }
 
 /* Force bold barred I for headings to match stroke width */
 h1, h2, h3, .font-bold, strong {
   font-weight: 700;
-  font-family: "BarredI-Premium", var(--font-inter), sans-serif !important;
+  font-family: "Inter", var(--font-inter), sans-serif !important;
+  font-feature-settings: "cv08" 1, "cv05" 1, "ss02" 1 !important;
 }
 
 html {
@@ -95,8 +103,7 @@ html {
 
 /* Match editor and wiki spacing */
 .tiptap > * + *,
-.ProseMirror > * + *,
-.column-layout > * + * {
+.ProseMirror > * + * {
   margin-top: 0.25rem !important;
 }
 
@@ -171,6 +178,12 @@ html {
 .ProseMirror [data-node-view-wrapper].media-node-block {
   margin-top: 3.5rem !important;
   margin-bottom: 3.5rem !important;
+}
+
+/* Deterministic editor signal: image is first meaningful node in its column. */
+.tiptap .media-node-block.is-column-first-media,
+.ProseMirror .media-node-block.is-column-first-media {
+  margin-top: 0 !important;
 }
 
 .tiptap img,
@@ -276,7 +289,7 @@ html {
   margin-top: clamp(1.25rem, 3vw, 1.875rem) !important;
   margin-bottom: clamp(0.75rem, 2vw, 1rem) !important;
   font-weight: 700 !important;
-  color: #111827 !important;
+  color: #F05D4E !important;
 }
 .tiptap h2,
 .prose :where(h2):not(:where(.not-prose *)) {
@@ -1946,31 +1959,182 @@ html {
   margin-top: 0 !important;
 }
 
-/* Inside columns, strip the standalone 3.5rem media margins entirely.
-   The column's own > * + * rule handles all inter-element spacing. */
+/* Inside columns, neutralize standalone media margins only for direct children. */
 .column-layout > figure.media-block,
+.column-layout > figure,
 .column-layout > .media-node-block,
 .column-layout > [data-node-view-wrapper].media-node-block,
 .column-layout > div.media-node-block,
 .column-layout > [data-node-view-wrapper],
-.column-layout figure.media-block,
-.column-layout .media-node-block,
-.column-layout [data-node-view-wrapper].media-node-block,
-.column-layout [data-node-view-wrapper],
-.tiptap .column-layout .media-node-block,
-.tiptap .column-layout [data-node-view-wrapper].media-node-block,
-.tiptap .column-layout [data-node-view-wrapper],
-.ProseMirror .column-layout .media-node-block,
-.ProseMirror .column-layout [data-node-view-wrapper].media-node-block,
-.ProseMirror .column-layout [data-node-view-wrapper],
-.prose .column-layout figure.media-block {
+.column-layout > .tiptap-video-embed,
+.column-layout > video,
+.column-layout > iframe,
+.column-layout > div[data-type="image-slider"] {
+  margin-bottom: 0 !important;
+}
+
+/* Editor node-view wrappers may contain nested media classes with global 3.5rem margins. */
+.column-layout > [data-node-view-wrapper] > .media-node-block,
+.column-layout > [data-node-view-wrapper] > figure.media-block,
+.column-layout > [data-node-view-wrapper] > figure,
+.column-layout > [data-node-view-wrapper] > .tiptap-video-embed,
+.column-layout > [data-node-view-wrapper] > video,
+.column-layout > [data-node-view-wrapper] > iframe,
+.column-layout > [data-node-view-wrapper] > div[data-type="image-slider"] {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
+}
+
+/* Keep first media element flush to the top edge of its column. */
+.column-layout > figure.media-block:first-child,
+.column-layout > figure:first-child,
+.column-layout > .media-node-block:first-child,
+.column-layout > [data-node-view-wrapper].media-node-block:first-child,
+.column-layout > div.media-node-block:first-child,
+.column-layout > [data-node-view-wrapper]:first-child,
+.column-layout > .tiptap-video-embed:first-child,
+.column-layout > video:first-child,
+.column-layout > iframe:first-child,
+.column-layout > div[data-type="image-slider"]:first-child {
+  margin-top: 0 !important;
+}
+
+/* Any non-first media in a column must keep visible top spacing. */
+.column-layout > figure.media-block:not(:first-child),
+.column-layout > figure:not(:first-child),
+.column-layout > .media-node-block:not(:first-child),
+.column-layout > [data-node-view-wrapper].media-node-block:not(:first-child),
+.column-layout > div.media-node-block:not(:first-child),
+.column-layout > [data-node-view-wrapper]:not(:first-child),
+.column-layout > .tiptap-video-embed:not(:first-child),
+.column-layout > video:not(:first-child),
+.column-layout > iframe:not(:first-child),
+.column-layout > div[data-type="image-slider"]:not(:first-child) {
+  margin-top: 1.5rem !important;
 }
 
 /* Vertical spacing inside columns should match the main flow */
 .column-layout > * + * {
   margin-top: 1.5rem !important;
+}
+
+/* Editor-only: normalize React node-view wrappers in columns so spacing matches wiki. */
+.glass-editor-content .column-layout > [data-node-view-wrapper] {
+  margin-bottom: 0 !important;
+}
+
+.glass-editor-content .column-layout > [data-node-view-wrapper] > .media-node-block,
+.glass-editor-content .column-layout > [data-node-view-wrapper] > figure.media-block,
+.glass-editor-content .column-layout > [data-node-view-wrapper] > figure,
+.glass-editor-content .column-layout > [data-node-view-wrapper] > .tiptap-video-embed,
+.glass-editor-content .column-layout > [data-node-view-wrapper] > video,
+.glass-editor-content .column-layout > [data-node-view-wrapper] > iframe,
+.glass-editor-content .column-layout > [data-node-view-wrapper] > div[data-type="image-slider"],
+.glass-editor-content .column-layout > [data-node-view-wrapper] .media-node-block,
+.glass-editor-content .column-layout > [data-node-view-wrapper] figure.media-block {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.glass-editor-content .column-layout > [data-node-view-wrapper]:first-child {
+  margin-top: 0 !important;
+}
+
+.glass-editor-content .column-layout > * + [data-node-view-wrapper] {
+  margin-top: 1.5rem !important;
+}
+
+/* Editor-only: collapse leading placeholder line(s) before first media in columns. */
+.glass-editor-content .column-layout > p:first-child:has(> br):has(
+  + :is(
+    [data-node-view-wrapper],
+    [data-node-view-wrapper].media-node-block,
+    .media-node-block,
+    figure.media-block,
+    .tiptap-video-embed,
+    video,
+    iframe,
+    div[data-type="image-slider"]
+  )
+),
+.glass-editor-content .column-layout > .ProseMirror-widget:first-child + p:has(> br):has(
+  + :is(
+    [data-node-view-wrapper],
+    [data-node-view-wrapper].media-node-block,
+    .media-node-block,
+    figure.media-block,
+    .tiptap-video-embed,
+    video,
+    iframe,
+    div[data-type="image-slider"]
+  )
+) {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+}
+
+.glass-editor-content .column-layout > p:first-child:has(> br) + :is(
+  [data-node-view-wrapper],
+  [data-node-view-wrapper].media-node-block,
+  .media-node-block,
+  figure.media-block,
+  .tiptap-video-embed,
+  video,
+  iframe,
+  div[data-type="image-slider"]
+) ,
+.glass-editor-content .column-layout > .ProseMirror-widget:first-child + :is(
+  [data-node-view-wrapper],
+  [data-node-view-wrapper].media-node-block,
+  .media-node-block,
+  figure.media-block,
+  .tiptap-video-embed,
+  video,
+  iframe,
+  div[data-type="image-slider"]
+),
+.glass-editor-content .column-layout > .ProseMirror-widget:first-child + p:has(> br) + :is(
+  [data-node-view-wrapper],
+  [data-node-view-wrapper].media-node-block,
+  .media-node-block,
+  figure.media-block,
+  .tiptap-video-embed,
+  video,
+  iframe,
+  div[data-type="image-slider"]
+) {
+  margin-top: 0 !important;
+}
+
+/* Fallback for leading decoration nodes that are non-editable. */
+.glass-editor-content .column-layout > [contenteditable="false"]:first-child + :is(
+  [data-node-view-wrapper],
+  [data-node-view-wrapper].media-node-block,
+  .media-node-block,
+  figure.media-block,
+  .tiptap-video-embed,
+  video,
+  iframe,
+  div[data-type="image-slider"]
+) {
+  margin-top: 0 !important;
+}
+
+/* If media is truly first editor child, keep it flush regardless of wrapper flavor. */
+.glass-editor-content .column-layout > :is(
+  [data-node-view-wrapper],
+  [data-node-view-wrapper].media-node-block,
+  .media-node-block,
+  figure.media-block,
+  .tiptap-video-embed,
+  video,
+  iframe,
+  div[data-type="image-slider"]
+):first-child {
+  margin-top: 0 !important;
 }
 
 .column-layout hr {
@@ -2086,5 +2250,7 @@ button.lesson-section-tab {
   height: 100% !important;
   object-fit: contain !important;
 }
+
+
 
 

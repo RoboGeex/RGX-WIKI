@@ -1818,6 +1818,26 @@ export default function WikiEditor() {
   ]
   const textColors = ['#111827', '#F05D4E', '#F09D4F', '#10b981', '#1D91D0', '#8b5cf6']
   const highlightColors = ['#fff59d', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff']
+
+  /** Case-insensitive check for active text color — Tiptap normalizes hex to lowercase */
+  const isTextColorActive = useCallback((editor: any, col: string): boolean => {
+    if (!editor) return false
+    // Try exact match first (fast path)
+    if (editor.isActive('textStyle', { color: col })) return true
+    // Fall back to case-insensitive comparison against the stored color attribute
+    const attrs = editor.getAttributes('textStyle')
+    if (!attrs?.color) return false
+    return attrs.color.toLowerCase() === col.toLowerCase()
+  }, [])
+
+  /** Case-insensitive check for active highlight color */
+  const isHighlightActive = useCallback((editor: any, col: string): boolean => {
+    if (!editor) return false
+    if (editor.isActive('highlight', { color: col })) return true
+    const attrs = editor.getAttributes('highlight')
+    if (!attrs?.color) return false
+    return attrs.color.toLowerCase() === col.toLowerCase()
+  }, [])
   const hasExcelLikeFocusRef = useRef(false)
 
   function markExcelLikeFocus(editor: any) {
@@ -3192,9 +3212,9 @@ export default function WikiEditor() {
                           <button type="button" className="glass-bubble-btn" onClick={() => editorEn?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {textColors.map(col => (
-                            <button type="button" key={col} className={`glass-bubble-color ${editorEn?.isActive('textStyle', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} title="Text color" />
+                            <button type="button" key={col} className={`glass-bubble-color ${isTextColorActive(editorEn, col) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorEn || !supportsColorEn) return; editorEn.chain().focus().setColor(col).run() }} title="Text color" />
                           ))}
-                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
+                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorEn ? editorEn?.chain().focus().unsetMark('textStyle').run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
                           <span className="glass-bubble-divider" />
                           <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorEn, 'left') === 'left' ? 'active' : ''}`} onClick={() => editorEn?.chain().focus().setTextAlign('left').run()} title="Align left"><AlignLeft className="inline w-3.5 h-3.5" /></button>
                           <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorEn, 'left') === 'center' ? 'active' : ''}`} onClick={() => editorEn?.chain().focus().setTextAlign('center').run()} title="Align center"><AlignCenter className="inline w-3.5 h-3.5" /></button>
@@ -3202,7 +3222,7 @@ export default function WikiEditor() {
                           <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorEn, 'left') === 'justify' ? 'active' : ''}`} onClick={() => editorEn?.chain().focus().setTextAlign('justify').run()} title="Justify"><AlignJustify className="inline w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {highlightColors.map(col => (
-                            <button type="button" key={col} className={`glass-bubble-color ${editorEn?.isActive('highlight', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                            <button type="button" key={col} className={`glass-bubble-color ${isHighlightActive(editorEn, col) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorEn) return; editorEn.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
                           ))}
                           <button type="button" className="glass-bubble-btn text-xs" onClick={() => editorEn?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
                         </div>
@@ -3291,9 +3311,9 @@ export default function WikiEditor() {
                           <button type="button" className="glass-bubble-btn" onClick={() => editorAr?.chain().focus().unsetLink().run()} title="Remove link"><Unlock className="inline w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {textColors.map(col => (
-                            <button type="button" key={col} className={`glass-bubble-color ${editorAr?.isActive('textStyle', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorAr || !supportsColorAr) return; editorAr.chain().focus().setColor(col).run() }} title="Text color" />
+                            <button type="button" key={col} className={`glass-bubble-color ${isTextColorActive(editorAr, col) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorAr || !supportsColorAr) return; editorAr.chain().focus().setColor(col).run() }} title="Text color" />
                           ))}
-                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorAr ? editorAr?.chain().focus().unsetColor().run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
+                          <button type="button" className="glass-bubble-btn text-xs" onClick={() => supportsColorAr ? editorAr?.chain().focus().unsetMark('textStyle').run() : undefined} title="Clear color"><X className="inline w-3 h-3" /></button>
                           <span className="glass-bubble-divider" />
                           <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'right' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('right').run()} title="�&حاذاة ���`�&�`� "><AlignRight className="inline w-3.5 h-3.5" /></button>
                           <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'center' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('center').run()} title="ت��س�`ط"><AlignCenter className="inline w-3.5 h-3.5" /></button>
@@ -3301,7 +3321,7 @@ export default function WikiEditor() {
                           <button type="button" className={`glass-bubble-btn ${getAlignmentFromEditor(editorAr, 'right') === 'justify' ? 'active' : ''}`} onClick={() => editorAr?.chain().focus().setTextAlign('justify').run()} title="ضبط"><AlignJustify className="inline w-3.5 h-3.5" /></button>
                           <span className="glass-bubble-divider" />
                           {highlightColors.map(col => (
-                            <button type="button" key={col} className={`glass-bubble-color ${editorAr?.isActive('highlight', { color: col }) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorAr) return; editorAr.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
+                            <button type="button" key={col} className={`glass-bubble-color ${isHighlightActive(editorAr, col) ? 'active' : ''}`} style={{ background: col }} onClick={() => { if (!editorAr) return; editorAr.chain().focus().toggleHighlight({ color: col }).run() }} title="Highlight" />
                           ))}
                           <button type="button" className="glass-bubble-btn text-xs" onClick={() => editorAr?.chain().focus().unsetHighlight().run()} title="Clear highlight"><X className="inline w-3 h-3" /></button>
                         </div>

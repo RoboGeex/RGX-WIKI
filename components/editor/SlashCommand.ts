@@ -1,6 +1,7 @@
 import { Extension, type Editor } from '@tiptap/core'
 import Suggestion, { SuggestionOptions } from '@tiptap/suggestion'
-import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Plugin, PluginKey, Transaction } from '@tiptap/pm/state'
+import { Node as ProseMirrorNode } from '@tiptap/pm/model'
 
 export type SlashItem = {
   title: string
@@ -79,9 +80,9 @@ const insertUploadedImage = (editor: Editor, src: string) => {
 }
 
 const replaceNodeUrl = (editor: Editor, nodeType: string, oldUrl: string, newUrl: string, extraAttrs: Record<string, any> = {}) => {
-  editor.state.doc.descendants((node: any, pos: number) => {
+  editor.state.doc.descendants((node: ProseMirrorNode, pos: number) => {
     if (node.type.name === nodeType && node.attrs.src === oldUrl) {
-      editor.commands.command(({ tr }: any) => {
+      editor.commands.command(({ tr }: { tr: Transaction }) => {
         tr.setNodeMarkup(pos, null, { ...node.attrs, src: newUrl, ...extraAttrs })
         return true
       })
@@ -234,7 +235,7 @@ const items: SlashItem[] = [
       // Use a tiny delay to override Tiptap's internal selection management after slash command
       setTimeout(() => {
         const { state } = editor
-        state.doc.descendants((node: any, pos: number) => {
+        state.doc.descendants((node: ProseMirrorNode, pos: number) => {
           if (node.type.name === 'columns' && Math.abs(pos - range.from) < 10) {
             editor.commands.setTextSelection(pos + 3)
             return false
@@ -255,7 +256,7 @@ const items: SlashItem[] = [
       // Use a tiny delay to override Tiptap's internal selection management after slash command
       setTimeout(() => {
         const { state } = editor
-        state.doc.descendants((node: any, pos: number) => {
+        state.doc.descendants((node: ProseMirrorNode, pos: number) => {
           if (node.type.name === 'columns' && Math.abs(pos - range.from) < 10) {
             editor.commands.setTextSelection(pos + 3)
             return false
@@ -339,7 +340,7 @@ const items: SlashItem[] = [
           
           if (!uploads.length) return
           
-          editor.state.doc.descendants((node: any, pos: number) => {
+          editor.state.doc.descendants((node: ProseMirrorNode, pos: number) => {
              if (node.type.name === 'imageSlider') {
                  const hasPreview = node.attrs.images?.some((img: any) => uploads.some(u => u.previewUrl === img.url))
                  if (hasPreview) {
@@ -347,7 +348,7 @@ const items: SlashItem[] = [
                          const match = uploads.find(u => u.previewUrl === img.url)
                          return match ? { ...img, url: match.url } : img
                      })
-                     editor.commands.command(({ tr }: any) => {
+                     editor.commands.command(({ tr }: { tr: Transaction }) => {
                          tr.setNodeMarkup(pos, null, { ...node.attrs, images: newImages })
                          return true
                      })

@@ -69,6 +69,13 @@ export default function VideoComponent(props: any) {
     return false
   })()
   const isInsideList = isInsideListByDoc || isInsideListByDom
+  const hasCaptionContent = Boolean(
+    (caption || '')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .trim()
+  )
+  const showCaptionEditor = hasCaptionContent || selected
   const effectiveAlign = textAlign
   const alignItems = effectiveAlign === 'left' ? 'flex-start' : effectiveAlign === 'right' ? 'flex-end' : 'center'
   const mediaWrapperStyle: React.CSSProperties = {
@@ -472,20 +479,22 @@ export default function VideoComponent(props: any) {
         )}
 
         {/* Caption Input */}
-        <div className="mt-1 w-full flex justify-center text-center mx-auto relative z-10">
-          <NodeViewErrorBoundary>
-            <RichCaptionInput
-              initialContent={caption}
-              onChange={(html) => {
-                setCaption(html)
-                latestCaptionRef.current = html
-                emitCaptionDraft('draft', html)
-              }}
-              onBlur={handleBlur}
-              placeholder="Add a caption..."
-            />
-          </NodeViewErrorBoundary>
-        </div>
+        {showCaptionEditor && (
+          <div className="mt-1 w-full flex justify-center text-center mx-auto relative z-10">
+            <NodeViewErrorBoundary>
+              <RichCaptionInput
+                initialContent={caption}
+                onChange={(html) => {
+                  setCaption(html)
+                  latestCaptionRef.current = html
+                  emitCaptionDraft('draft', html)
+                }}
+                onBlur={handleBlur}
+                placeholder="Add a caption..."
+              />
+            </NodeViewErrorBoundary>
+          </div>
+        )}
       </div>
     </NodeViewWrapper>
   )

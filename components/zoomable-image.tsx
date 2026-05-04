@@ -46,7 +46,24 @@ export function ZoomableImage({ children, className = '' }: ZoomableImageProps) 
                     slides={[{ src, alt }]}
                     plugins={[Zoom]}
                     zoom={{ scrollToZoom: true, maxZoomPixelRatio: 5 }}
-                    carousel={{ finite: true }}
+                    carousel={{ 
+                        finite: true,
+                        imageProps: (slide) => {
+                            const slideIsSvg = slide.src.toLowerCase().endsWith('.svg') || slide.src.includes('.svg?') || slide.src.includes('data:image/svg+xml');
+                            const baseStyle = { ...childStyle };
+                            delete (baseStyle as any).width;
+                            delete (baseStyle as any).height;
+                            return {
+                                style: {
+                                    ...baseStyle,
+                                    width: slideIsSvg ? '100vw' : undefined,
+                                    height: slideIsSvg ? '100vh' : undefined,
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                },
+                            };
+                        }
+                    }}
                     controller={{ closeOnBackdropClick: true }}
                     styles={{
                         root: {
@@ -58,33 +75,6 @@ export function ZoomableImage({ children, className = '' }: ZoomableImageProps) 
                     render={{
                         buttonPrev: () => null,
                         buttonNext: () => null,
-                        slide: ({ slide, rect }) => {
-                            const slideIsSvg = slide.src.toLowerCase().endsWith('.svg') || slide.src.includes('.svg?') || slide.src.includes('data:image/svg+xml');
-                            
-                            // Use the child's style (which contains whitespace trim scale/clipPath)
-                            // But ensure we don't accidentally constrain width/height if it was set to small values
-                            const baseStyle = { ...childStyle };
-                            delete (baseStyle as any).width;
-                            delete (baseStyle as any).height;
-
-                            return (
-                                <div className="flex items-center justify-center w-full h-full pointer-events-none">
-                                    <img
-                                        src={slide.src}
-                                        alt={slide.alt}
-                                        className="yarl__slide_image pointer-events-auto"
-                                        style={{
-                                            ...baseStyle,
-                                            width: slideIsSvg ? rect.width : undefined,
-                                            height: slideIsSvg ? rect.height : undefined,
-                                            maxWidth: '100%',
-                                            maxHeight: '100%',
-                                            objectFit: 'contain',
-                                        }}
-                                    />
-                                </div>
-                            );
-                        }
                     }}
                 />
             )}

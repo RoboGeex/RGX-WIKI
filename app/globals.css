@@ -289,7 +289,7 @@ html {
   margin-top: clamp(1.25rem, 3vw, 1.875rem) !important;
   margin-bottom: clamp(0.75rem, 2vw, 1rem) !important;
   font-weight: 700 !important;
-  color: #111827 !important;
+  color: #F05D4E !important;
 }
 .tiptap h2,
 .prose :where(h2):not(:where(.not-prose *)) {

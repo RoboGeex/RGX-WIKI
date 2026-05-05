@@ -342,6 +342,101 @@ export async function GET() {
   }
 }
 
+async function savePictureToDb(picture: File, wikiSlug: string): Promise<string> {
+  const bytes = await picture.arrayBuffer()
+  const buf = Buffer.from(bytes)
+  const safeName = (picture.name || 'wiki-picture').replace(/[^a-zA-Z0-9._-]/g, '_')
+  const filename = `${Date.now()}-${safeName}`
+  const prisma: any = getPrisma(wikiSlug)
+  const saved = await prisma.asset.create({
+    data: {
+      wikiSlug,
+      filename,
+      mimeType: picture.type || 'application/octet-stream',
+      size: buf.length,
+      data: buf,
+    },
+  })
+  return `/api/upload/${saved.id}`
+}
+
+async function seedLessonsForWikiInDb(wiki: any): Promise<void> {
+  const prisma: any = getPrisma(wiki.slug)
+  const now = new Date()
+
+  const gettingStarted = {
+    id: `${wiki.slug}-getting-started-${Date.now()}`,
+    lessonKey: 'getting-started',
+    order: 0,
+    slug: 'getting-started',
+    wikiSlug: wiki.slug,
+    title_en: 'Getting Started',
+    title_ar: 'Getting Started',
+    coverImage: wiki.picture || null,
+    status: 'published',
+    publishedAt: now,
+    duration_min: 30,
+    difficulty: 'Beginner',
+    prerequisites_en: [],
+    prerequisites_ar: [],
+    materials: [],
+    body: [
+      { type: 'heading', level: 1, en: 'Getting Started', ar: 'Getting Started' },
+      { type: 'heading', level: 2, en: `Welcome to ${wiki.displayName}`, ar: `Welcome to ${wiki.displayName}` },
+      {
+        type: 'paragraph',
+        en: `Welcome to the ${wiki.displayName} wiki! This is your starting point.`,
+        ar: `Welcome to the ${wiki.displayName} wiki! This is your starting point.`,
+      },
+    ],
+    version: 1,
+  }
+
+  const resources = {
+    id: `${wiki.slug}-resources-${Date.now() + 1}`,
+    lessonKey: 'resources',
+    order: 1,
+    slug: 'resources',
+    wikiSlug: wiki.slug,
+    title_en: 'Resources',
+    title_ar: 'Resources',
+    coverImage: null,
+    status: 'published',
+    publishedAt: now,
+    duration_min: 15,
+    difficulty: 'Beginner',
+    prerequisites_en: [],
+    prerequisites_ar: [],
+    materials: [],
+    body: [
+      { type: 'heading', level: 1, en: 'Resources', ar: 'Resources' },
+      {
+        type: 'paragraph',
+        en: `Resources for ${wiki.displayName} will appear here.`,
+        ar: `Resources for ${wiki.displayName} will appear here.`,
+      },
+    ],
+    version: 1,
+  }
+
+  for (const lesson of [gettingStarted, resources]) {
+    try {
+      await prisma.lesson.create({ data: lesson })
+    } catch (err) {
+      console.warn(`[wikis.POST] Failed to seed lesson "${lesson.slug}":`, err)
+    }
+  }
+}
+
+async function tryWriteFile(action: () => Promise<void>, label: string): Promise<void> {
+  try {
+    await action()
+  } catch (err: any) {
+    // Read-only filesystem on Cloud Run is expected — log and move on.
+    console.warn(`[wikis.POST] Skipping ${label} (filesystem not writable): ${err?.message || err}`)
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const form = await req.formData()
@@ -355,14 +450,14 @@ export async function POST(req: Request) {
 
     const slug = slugify(name)
 
-    let existingWikis = await readWikisFromFile()
+    let existingWikis: any[] = []
     try {
-      const dbWikis = await readWikisFromDb()
-      if (dbWikis.length > 0) {
-        existingWikis = dbWikis
-      }
+      existingWikis = await readWikisFromDb()
     } catch {
-      // keep file fallback
+      // ignore — fall back to file
+    }
+    if (existingWikis.length === 0) {
+      existingWikis = await readWikisFromFile()
     }
 
     if (existingWikis.some(w => w.slug === slug)) {
@@ -370,17 +465,13 @@ export async function POST(req: Request) {
     }
 
     let pictureUrl = ''
-
-    if (picture) {
-      const bytes = await picture.arrayBuffer()
-      const buf = Buffer.from(bytes)
-      const safeName = (picture.name || 'wiki-picture').replace(/[^a-zA-Z0-9._-]/g, '_')
-      const ts = Date.now()
-      const outDir = path.join(process.cwd(), 'public', 'uploads', 'wikis')
-      await fs.mkdir(outDir, { recursive: true })
-      const outPath = path.join(outDir, `${ts}-${safeName}`)
-      await fs.writeFile(outPath, buf)
-      pictureUrl = `/uploads/wikis/${path.basename(outPath)}`
+    if (picture && picture.size > 0) {
+      try {
+        pictureUrl = await savePictureToDb(picture, slug)
+      } catch (err: any) {
+        console.warn(`[wikis.POST] Picture upload failed: ${err?.message || err}`)
+        // Wiki creation continues without a picture rather than failing outright.
+      }
     }
 
     const newWiki = {
@@ -400,14 +491,19 @@ export async function POST(req: Request) {
       createdAt: new Date().toISOString()
     }
 
+    // Persistent state: DB. This is the source of truth on Cloud Run.
     await saveWikiToDb(newWiki)
+    await seedLessonsForWikiInDb(newWiki)
 
-    const fileWikis = await readWikisFromFile()
-    await writeWikisToFile([...fileWikis, newWiki])
-
-    await createKitForWiki(newWiki)
-    await createLessonFilesForWiki(newWiki)
-    await createModuleFilesForWiki(newWiki)
+    // Best-effort file mirroring for local dev. Silently skipped when the
+    // filesystem is read-only (Cloud Run).
+    await tryWriteFile(async () => {
+      const fileWikis = await readWikisFromFile()
+      await writeWikisToFile([...fileWikis, newWiki])
+    }, 'wikis.json write')
+    await tryWriteFile(() => createKitForWiki(newWiki), 'kits.json write')
+    await tryWriteFile(() => createLessonFilesForWiki(newWiki), 'lessons.<slug>.json write')
+    await tryWriteFile(() => createModuleFilesForWiki(newWiki), 'modules.<slug>.json write')
 
     return NextResponse.json({
       ok: true,

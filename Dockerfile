@@ -19,6 +19,10 @@ COPY . .
 # but usually prisma generate doesn't need it.
 RUN npx prisma generate
 
+# NEXT_PUBLIC_* vars must be present at build time to be inlined into the client bundle.
+ARG NEXT_PUBLIC_HUB_DOMAIN=robogeex-wiki-gcp-183768683810.europe-west1.run.app
+ENV NEXT_PUBLIC_HUB_DOMAIN=$NEXT_PUBLIC_HUB_DOMAIN
+
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
@@ -31,6 +35,8 @@ FROM node:18-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
+ARG NEXT_PUBLIC_HUB_DOMAIN=robogeex-wiki-gcp-183768683810.europe-west1.run.app
+ENV NEXT_PUBLIC_HUB_DOMAIN=$NEXT_PUBLIC_HUB_DOMAIN
 # ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN addgroup --system --gid 1001 nodejs

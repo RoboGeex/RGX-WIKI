@@ -5,6 +5,7 @@ import {
   getFirstLesson,
   getKit,
 } from '@/lib/data'
+import { getWikisFromDb } from '@/lib/server-data'
 import type { Locale } from '@/lib/i18n'
 
 export const dynamic = 'force-dynamic'
@@ -14,9 +15,12 @@ export default async function KitPage(
 ) {
   const { locale, kit } = params
 
-  const kitData = getKit(kit)
+  let kitData = getKit(kit)
   if (!kitData) {
-    notFound()
+    const dbWiki = (await getWikisFromDb()).find((w) => w.slug === kit)
+    if (!dbWiki) {
+      notFound()
+    }
   }
 
   const firstLesson = await getFirstLesson(kit)

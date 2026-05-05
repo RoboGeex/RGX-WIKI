@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import KitNavbar from '@/components/kit-navbar'
 import { getKit, getLessons, getWiki } from '@/lib/data'
+import { getWikisFromDb } from '@/lib/server-data'
 import { redirect } from 'next/navigation'
 import type { Locale } from '@/lib/i18n'
 import { headers, cookies } from 'next/headers'
@@ -22,10 +23,26 @@ export default async function KitLayout(
   { children, params }: { children: React.ReactNode; params: { locale: Locale; kit: string } }
 ) {
   const { locale, kit } = params
-  const kitData = getKit(kit)
-  const wiki = kitData ? getWiki(kitData.wikiSlug) : undefined
-  
-  // If kit not found, redirect to default kit
+  let kitData = getKit(kit)
+  let wiki = kitData ? getWiki(kitData.wikiSlug) : undefined
+
+  // Fallback for DB-only wikis: synthesize a kit from the Wiki row.
+  if (!kitData) {
+    const dbWiki = (await getWikisFromDb()).find((w) => w.slug === kit)
+    if (dbWiki) {
+      wiki = dbWiki as any
+      kitData = {
+        slug: dbWiki.slug,
+        wikiSlug: dbWiki.slug,
+        title_en: dbWiki.displayName || dbWiki.slug,
+        title_ar: dbWiki.displayName || dbWiki.slug,
+        heroImage: dbWiki.picture || '/images/robogeex-logo.png',
+        overview_en: '',
+        overview_ar: '',
+      } as any
+    }
+  }
+
   if (!kitData) {
     redirect(`/${locale}/student-kit`)
   }

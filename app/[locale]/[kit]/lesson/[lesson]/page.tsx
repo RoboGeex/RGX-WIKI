@@ -7,6 +7,7 @@ import {
   getNextLesson, getPrevLesson,
 } from '@/lib/data'
 import { stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
+import { getWikisFromDb } from '@/lib/server-data'
 import type { Locale } from '@/lib/i18n'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
@@ -36,9 +37,22 @@ export default async function LessonPage(
   const preview = searchParams?.preview === '1' || searchParams?.preview === 'true' || Boolean(searchParams?.previewId)
   const previewId = (searchParams?.previewId || '').trim()
 
-  const kitData = getKit(kit)
+  let kitData = getKit(kit)
   if (!kitData) {
-    notFound()
+    const dbWiki = (await getWikisFromDb()).find((w) => w.slug === kit)
+    if (dbWiki) {
+      kitData = {
+        slug: dbWiki.slug,
+        wikiSlug: dbWiki.slug,
+        title_en: dbWiki.displayName || dbWiki.slug,
+        title_ar: dbWiki.displayName || dbWiki.slug,
+        heroImage: dbWiki.picture || '/images/robogeex-logo.png',
+        overview_en: '',
+        overview_ar: '',
+      } as any
+    } else {
+      notFound()
+    }
   }
 
   const lesson = preview && previewId

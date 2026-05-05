@@ -480,11 +480,7 @@ export async function POST(req: Request) {
       grade,
       picture: pictureUrl,
       isPublished: true,
-      domains: [
-        `${slug}.localhost`,
-        'localhost',
-        '127.0.0.1'
-      ],
+      domains: [],
       defaultLocale: 'en',
       defaultLessonSlug: 'getting-started',
       resourcesUrl: '/resources',

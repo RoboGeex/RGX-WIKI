@@ -72,7 +72,19 @@ const CARD_ART_TONES = [
 ]
 
 function getWikiHref(domains: string[] | undefined, locale: string | undefined, slug: string) {
-  const primaryDomain = (domains || []).find((domain) => domain && domain.trim())
+  const isPublicDomain = (domain: string) => {
+    const normalized = domain
+      .replace(/https?:\/\//i, '')
+      .replace(/\/$/, '')
+      .trim()
+      .toLowerCase()
+    if (!normalized) return false
+    if (normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1') return false
+    if (normalized.endsWith('.localhost')) return false
+    return true
+  }
+
+  const primaryDomain = (domains || []).find(isPublicDomain)
   const normalizedDomain = primaryDomain
     ?.replace(/https?:\/\//i, '')
     .replace(/\/$/, '')

@@ -40,20 +40,20 @@ export default async function LessonPage(
   let kitData = getKit(kit)
   if (!kitData) {
     const dbWiki = (await getWikisFromDb()).find((w) => w.slug === kit)
-    if (dbWiki) {
-      kitData = {
-        slug: dbWiki.slug,
-        wikiSlug: dbWiki.slug,
-        title_en: dbWiki.displayName || dbWiki.slug,
-        title_ar: dbWiki.displayName || dbWiki.slug,
-        heroImage: dbWiki.picture || '/images/robogeex-logo.png',
-        overview_en: '',
-        overview_ar: '',
-      } as any
-    } else {
+    if (!dbWiki) {
       notFound()
     }
+    kitData = {
+      slug: dbWiki.slug,
+      wikiSlug: dbWiki.slug,
+      title_en: dbWiki.displayName || dbWiki.slug,
+      title_ar: dbWiki.displayName || dbWiki.slug,
+      heroImage: dbWiki.picture || '/images/robogeex-logo.png',
+      overview_en: '',
+      overview_ar: '',
+    } as any
   }
+  if (!kitData) notFound()
 
   const lesson = preview && previewId
     ? (await getLessons(kit, { includeDrafts: true })).find((item) => item.id === previewId)

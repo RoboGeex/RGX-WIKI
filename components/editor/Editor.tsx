@@ -3518,13 +3518,14 @@ export default function WikiEditor() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/70"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-3 overflow-hidden max-h-[88vh] overflow-y-auto"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
+              className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-3 max-h-[88vh] overflow-y-auto"
             >
               <div className="bg-slate-50 px-6 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-3 mb-1">

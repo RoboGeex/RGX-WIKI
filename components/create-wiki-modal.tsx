@@ -9,8 +9,18 @@ interface CreateWikiModalProps {
   onSubmit: (data: { name: string; grade: string; picture: File | null }) => void
 }
 
+function slugifyClient(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWikiModalProps) {
   const [name, setName] = useState('')
+  const [slug, setSlug] = useState('')
+  const [slugTouched, setSlugTouched] = useState(false)
   const [grade, setGrade] = useState('')
   const [picture, setPicture] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -28,14 +38,17 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
     }
   }
 
+  const effectiveSlug = (slugTouched ? slug : slugifyClient(name)).trim()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !grade.trim()) return
+    if (!name.trim() || !grade.trim() || !effectiveSlug) return
 
     setIsSubmitting(true)
     try {
       const formData = new FormData()
       formData.append('name', name.trim())
+      formData.append('slug', effectiveSlug)
       formData.append('grade', grade.trim())
       if (picture) {
         formData.append('picture', picture)
@@ -66,6 +79,8 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
 
   const handleClose = () => {
     setName('')
+    setSlug('')
+    setSlugTouched(false)
     setGrade('')
     setPicture(null)
     setPreview(null)
@@ -104,6 +119,28 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                 required
               />
+            </div>
+
+            {/* Wiki Slug */}
+            <div>
+              <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-2">
+                URL Slug *
+              </label>
+              <input
+                id="slug"
+                type="text"
+                value={effectiveSlug}
+                onChange={(e) => {
+                  setSlugTouched(true)
+                  setSlug(slugifyClient(e.target.value))
+                }}
+                placeholder="arduino-basics"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors font-mono text-sm"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Used in the URL: <span className="font-mono">/{effectiveSlug || 'your-slug'}/en</span>
+              </p>
             </div>
 
             {/* Grade Level */}

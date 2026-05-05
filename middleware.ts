@@ -105,11 +105,11 @@ export function middleware(request: NextRequest) {
     if (segments.length === 0 || pathname === '/wikis') {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }
-    
+
     // Check if first segment is a locale
     const firstSegment = segments[0]
     const isLocale = firstSegment === 'en' || firstSegment === 'ar'
-    
+
     if (isLocale) {
       if (segments[1] === 'unlock') return NextResponse.next({ request: { headers: requestHeaders } })
       if (segments.length === 1) { // Just /en or /ar
@@ -119,15 +119,22 @@ export function middleware(request: NextRequest) {
       wikiSlug = segments[1]
       wiki = getWikiBySlug(wikiSlug)
       normalizedRest = segments.slice(2)
-      if (wiki) {
-        // Redir /en/ziggy -> /ziggy/en
-        url.pathname = `/${wikiSlug}/${firstSegment}${normalizedRest.length > 0 ? '/' + normalizedRest.join('/') : ''}`
-        return NextResponse.redirect(url)
-      }
+      // Redir /en/<slug> -> /<slug>/en. We do this even for slugs that
+      // aren't in the static wiki list (new wikis live only in the DB),
+      // so the rewrite below can find them.
+      url.pathname = `/${wikiSlug}/${firstSegment}${normalizedRest.length > 0 ? '/' + normalizedRest.join('/') : ''}`
+      return NextResponse.redirect(url)
     } else {
       wikiSlug = segments[0]
       wiki = getWikiBySlug(wikiSlug)
       normalizedRest = segments.slice(1)
+      // Optimistic resolution: even when the slug isn't in the static
+      // wiki file, treat the path as /<wikiSlug>/<rest> so newly-created
+      // (DB-only) wikis can route. The destination page returns notFound
+      // if the wiki really doesn't exist.
+      if (!wiki) {
+        wiki = { slug: wikiSlug, defaultLocale: 'en' }
+      }
     }
   } else {
     // Dedicated domain or legacy subdomain

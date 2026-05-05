@@ -443,12 +443,16 @@ export async function POST(req: Request) {
     const name = form.get('name') as string
     const grade = form.get('grade') as string
     const picture = form.get('picture') as File | null
+    const slugInput = (form.get('slug') as string | null)?.trim() || ''
 
     if (!name || !grade) {
       return NextResponse.json({ error: 'Name and grade are required' }, { status: 400 })
     }
 
-    const slug = slugify(name)
+    const slug = slugify(slugInput || name)
+    if (!slug) {
+      return NextResponse.json({ error: 'A valid slug is required' }, { status: 400 })
+    }
 
     let existingWikis: any[] = []
     try {

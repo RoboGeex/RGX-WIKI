@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getWiki } from '@/lib/data'
+import { getWikisFromDb } from '@/lib/server-data'
 import { getPrisma } from '@/lib/prisma-multi'
 import accessCodesData from '@/data/access-codes.json'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
@@ -28,7 +29,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing access code' }, { status: 400 })
   }
 
-  const wiki = getWiki(rawKitSlug)
+  let wiki: any = getWiki(rawKitSlug)
+  if (!wiki) {
+    const dbWiki = (await getWikisFromDb()).find((w) => w.slug === rawKitSlug)
+    if (dbWiki) wiki = dbWiki
+  }
   console.log(`[Unlock Debug] Attempting unlock. Input Kit: "${rawKitSlug}", Input Code: "${rawCode}", Found Wiki Slug: "${wiki?.slug}"`)
 
   if (!wiki) {

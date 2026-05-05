@@ -73,13 +73,15 @@ export default async function KitLayout(
       } catch (e) {
         markDbFailure(wiki.slug)
         console.error(`[KitLayout] Database error (wiki: ${wiki.slug}):`, e)
-        // Fail closed on DB errors. If static codes are configured, allow those.
-        shouldRequireAccess = true
+        // If static codes are configured, gate on those. Otherwise the wiki
+        // has no access codes anywhere, so don't gate just because the DB
+        // check itself failed (would lock new public wikis behind /unlock).
+        shouldRequireAccess = configuredCodes.length > 0
         isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
       }
     } else {
-      // Fail closed while DB circuit breaker is active.
-      shouldRequireAccess = true
+      // DB circuit breaker active. Same logic: only gate if static codes exist.
+      shouldRequireAccess = configuredCodes.length > 0
       isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
     }
 

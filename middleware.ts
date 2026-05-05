@@ -15,6 +15,23 @@ const legacyDomainMap: Record<string, string> = {
   'clicky2.robogeex.com': 'clicky'
 }
 
+// Top-level paths under app/ that are NOT wikis. The middleware must
+// pass these through to Next.js routing instead of treating them as a
+// wiki slug.
+const RESERVED_APP_SEGMENTS = new Set([
+  'api',
+  'editor',
+  'dashboard',
+  'wikis',
+  'lessons',
+  'student',
+  'unlock',
+  '_next',
+  'images',
+  'uploads',
+  'favicon.ico',
+])
+
 export function middleware(request: NextRequest) {
   const hostHeader = request.headers.get('host')
   const { pathname } = request.nextUrl
@@ -131,8 +148,9 @@ export function middleware(request: NextRequest) {
       // Optimistic resolution: even when the slug isn't in the static
       // wiki file, treat the path as /<wikiSlug>/<rest> so newly-created
       // (DB-only) wikis can route. The destination page returns notFound
-      // if the wiki really doesn't exist.
-      if (!wiki) {
+      // if the wiki really doesn't exist. Skip this for reserved app
+      // routes (editor, dashboard, wikis, etc.) — those must pass through.
+      if (!wiki && !RESERVED_APP_SEGMENTS.has(wikiSlug)) {
         wiki = { slug: wikiSlug, defaultLocale: 'en' }
       }
     }

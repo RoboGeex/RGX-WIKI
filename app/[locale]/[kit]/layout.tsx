@@ -67,8 +67,11 @@ export default async function KitLayout(
             : null
           isValid = Boolean(matchedCode)
         } else if (configuredCodes.length > 0) {
+          // DB has no codes but static codes are configured — validate against static
+          shouldRequireAccess = true
           isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
         }
+        // codesCount === 0 && configuredCodes.length === 0: no codes anywhere → wiki is public
         markDbSuccess(wiki.slug)
       } catch (e) {
         markDbFailure(wiki.slug)

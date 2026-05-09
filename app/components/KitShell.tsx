@@ -6,7 +6,7 @@ import Navbar from '@/components/navbar'
 import Sidebar from '@/components/sidebar'
 import type { Locale } from '@/lib/i18n'
 import type { Lesson, Module } from '@/lib/types'
-import { isUnlocked, setStoredLocale } from '@/lib/unlock'
+import { isUnlocked, setUnlocked, setStoredLocale } from '@/lib/unlock'
 
 interface Props {
   locale: Locale
@@ -28,14 +28,31 @@ export default function KitShell({ locale, kitSlug, modules, lessons, defaultLes
     if (!pathname) return
     if (!pathname.includes('/lesson/')) return
     if (pathname.includes('/unlock')) return
-    if (isUnlocked(kitSlug)) return
 
-    const search = new URLSearchParams({
-      kit: kitSlug,
-      redirect: pathname,
-    })
+    const redirectToUnlock = () => {
+      const search = new URLSearchParams({ kit: kitSlug, redirect: pathname })
+      router.push(`/${locale}/unlock?${search.toString()}`)
+    }
 
-    router.push(`/${locale}/unlock?${search.toString()}`)
+    // Fast local check — redirect immediately if nothing stored at all
+    if (!isUnlocked(kitSlug)) {
+      redirectToUnlock()
+      return
+    }
+
+    // Re-validate stored code against the server so a deleted/changed code
+    // is caught even when the layout hasn't re-rendered (client-side nav).
+    fetch(`/api/validate-access?kit=${encodeURIComponent(kitSlug)}`)
+      .then((res) => res.json())
+      .then((data: { valid?: boolean }) => {
+        if (!data.valid) {
+          setUnlocked(false, kitSlug)
+          redirectToUnlock()
+        }
+      })
+      .catch(() => {
+        // Network/server error — don't lock out, let the server-side layout handle it
+      })
   }, [pathname, router, locale, kitSlug])
 
   const handleLocaleChange = (l: Locale) => {

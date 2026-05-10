@@ -165,17 +165,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         console.log(`[upload:${assetId}] GCS miss for slug=${assetWikiSlug ?? 'default'}, falling back to DB`)
       }
 
-      const dbBody = asset.data as Buffer | null
-      if (dbBody && dbBody.length > 0) {
-        return new NextResponse(dbBody as any, {
-          headers: {
-            'Content-Type': mimeType,
-            'Content-Length': String(asset.size ?? dbBody.length),
-            'Cache-Control': 'public, max-age=31536000, immutable',
-            'X-Asset-Source': 'db',
-          },
-        })
-      }
     }
 
     return NextResponse.json({ error: 'Not found' }, { status: 404 })

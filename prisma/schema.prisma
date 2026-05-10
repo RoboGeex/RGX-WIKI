@@ -79,8 +79,6 @@ model Asset {
   filename  String
   mimeType  String
   size      Int
-  // Optional binary storage (only if STORE_MEDIA_IN_DB=true)
-  data      Bytes?   @db.LongBlob
   createdAt DateTime @default(now())
 
   @@index([wikiSlug])

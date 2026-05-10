@@ -149,19 +149,32 @@ export async function POST(req: Request) {
     if (storeInDb) {
       try {
         const { getPrisma } = await import('@/lib/prisma-multi')
+        const { writeAssetToGcs } = await import('@/lib/gcs-assets')
         const prisma = getPrisma(normalizedWikiSlug || undefined)
         const saved = await prisma.asset.create({
           data: {
+            wikiSlug: normalizedWikiSlug || null,
             filename,
             mimeType: file.type || 'application/octet-stream',
             size: buf.length,
-            data: buf,
           },
         })
+        try {
+          await writeAssetToGcs({
+            wikiSlug: normalizedWikiSlug,
+            assetId: saved.id,
+            filename,
+            mimeType: file.type || 'application/octet-stream',
+            buffer: buf,
+          })
+        } catch (gcsError: any) {
+          await prisma.asset.delete({ where: { id: saved.id } }).catch(() => {})
+          throw gcsError
+        }
         const slugForUrl = sanitizedWikiSegment && sanitizedWikiSegment !== 'global' ? sanitizedWikiSegment : undefined
         publicUrl = slugForUrl ? `/api/upload/${saved.id}?wiki=${encodeURIComponent(slugForUrl)}` : `/api/upload/${saved.id}`
       } catch (e: any) {
-        return NextResponse.json({ error: e?.message || 'DB storage not configured' }, { status: 500 })
+        return NextResponse.json({ error: e?.message || 'Asset storage failed' }, { status: 500 })
       }
     } else if (uploadStrategy === 'sftp') {
       const host = process.env.SFTP_HOST

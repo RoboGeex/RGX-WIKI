@@ -67,6 +67,37 @@ async function tryDownload(bucketName: string, objectPath: string, assetId: numb
   }
 }
 
+export async function writeAssetToGcs(input: {
+  wikiSlug?: string | null
+  assetId: number
+  filename?: string | null
+  mimeType?: string | null
+  buffer: Buffer
+}): Promise<void> {
+  const bucketName = getGcsAssetBucket()
+  if (!bucketName) {
+    throw new Error('GCS_ASSET_BUCKET is not configured')
+  }
+  const objectPath = buildGcsAssetObjectPath({
+    wikiSlug: input.wikiSlug || undefined,
+    assetId: input.assetId,
+    filename: input.filename,
+  })
+  const file = getStorageClient().bucket(bucketName).file(objectPath)
+  await file.save(input.buffer, {
+    resumable: false,
+    contentType: input.mimeType || 'application/octet-stream',
+    metadata: {
+      metadata: {
+        wikiSlug: input.wikiSlug || 'default',
+        assetId: String(input.assetId),
+        originalFilename: input.filename || '',
+        source: 'upload-route',
+      },
+    },
+  })
+}
+
 export async function readAssetFromGcs(input: {
   wikiSlug?: string
   assetId: number

@@ -354,9 +354,21 @@ async function savePictureToDb(picture: File, wikiSlug: string): Promise<string>
       filename,
       mimeType: picture.type || 'application/octet-stream',
       size: buf.length,
-      data: buf,
     },
   })
+  try {
+    const { writeAssetToGcs } = await import('@/lib/gcs-assets')
+    await writeAssetToGcs({
+      wikiSlug,
+      assetId: saved.id,
+      filename,
+      mimeType: picture.type || 'application/octet-stream',
+      buffer: buf,
+    })
+  } catch (gcsError) {
+    await prisma.asset.delete({ where: { id: saved.id } }).catch(() => {})
+    throw gcsError
+  }
   return `/api/upload/${saved.id}`
 }
 

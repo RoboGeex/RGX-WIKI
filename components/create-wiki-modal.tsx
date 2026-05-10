@@ -1,12 +1,20 @@
 "use client"
 
-import { useState } from 'react'
-import { X, Upload, Image as ImageIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { X, Upload } from 'lucide-react'
+import { applyDeveloperHeader } from '@/components/editor/dev-identity'
 
 interface CreateWikiModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: { name: string; grade: string; picture: File | null }) => void
+}
+
+type DeveloperOption = {
+  id: string
+  name?: string
+  email: string
+  role?: string
 }
 
 function slugifyClient(value: string) {
@@ -25,6 +33,8 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
   const [picture, setPicture] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [developers, setDevelopers] = useState<DeveloperOption[]>([])
+  const [assignedIds, setAssignedIds] = useState<string[]>([])
 
   const handlePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -37,6 +47,15 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
       reader.readAsDataURL(file)
     }
   }
+
+  // Fetch developers when modal opens (only visible to superadmins — API returns 403 otherwise)
+  useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/developers', { headers: applyDeveloperHeader() as HeadersInit })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: DeveloperOption[]) => setDevelopers(data))
+      .catch(() => {})
+  }, [isOpen])
 
   const effectiveSlug = (slugTouched ? slug : slugifyClient(name)).trim()
 
@@ -64,9 +83,16 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
         throw new Error(error.error || 'Failed to create wiki')
       }
 
-      const result = await response.json()
-      
-      // Call the parent onSubmit callback
+      // Assign selected team members to the new wiki
+      if (assignedIds.length > 0) {
+        const memberHeaders = applyDeveloperHeader({ 'Content-Type': 'application/json' })
+        await fetch(`/api/wikis/${effectiveSlug}/members`, {
+          method: 'PUT',
+          headers: memberHeaders as HeadersInit,
+          body: JSON.stringify({ assignedIds }),
+        })
+      }
+
       await onSubmit({ name: name.trim(), grade: grade.trim(), picture })
       handleClose()
     } catch (error) {
@@ -84,6 +110,8 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
     setGrade('')
     setPicture(null)
     setPreview(null)
+    setAssignedIds([])
+    setDevelopers([])
     onClose()
   }
 
@@ -216,6 +244,55 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
                 )}
               </div>
             </div>
+
+            {/* Team Assignment — only shown to superadmins (API returns [] otherwise) */}
+            {developers.filter((d) => d.role !== 'superadmin').length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Wiki Team
+                  <span className="text-xs font-normal text-gray-400 ml-2">Who can manage this wiki</span>
+                </label>
+                <div className="border border-gray-200 rounded-xl divide-y max-h-44 overflow-y-auto">
+                  {developers
+                    .filter((d) => d.role !== 'superadmin')
+                    .map((dev) => (
+                      <label
+                        key={dev.id}
+                        className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={assignedIds.includes(dev.id)}
+                          onChange={(e) =>
+                            setAssignedIds((prev) =>
+                              e.target.checked
+                                ? [...prev, dev.id]
+                                : prev.filter((id) => id !== dev.id),
+                            )
+                          }
+                          className="rounded border-gray-300"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-800 truncate">{dev.name || dev.email}</div>
+                          {dev.name && (
+                            <div className="text-xs text-gray-400 truncate">{dev.email}</div>
+                          )}
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            dev.role === 'admin'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {dev.role || 'editor'}
+                        </span>
+                      </label>
+                    ))}
+                </div>
+                <p className="mt-1 text-xs text-gray-400">Superadmins always have full access.</p>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">

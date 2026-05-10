@@ -141,10 +141,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     for (const match of matches) {
       const { slug, asset } = match
       const mimeType = asset.mimeType || 'application/octet-stream'
+      const assetWikiSlug = (asset as any).wikiSlug || slug
 
-      if (isGcsAssetReadEnabled()) {
+      const gcsEnabled = isGcsAssetReadEnabled()
+      console.log(`[upload:${assetId}] gcsEnabled=${gcsEnabled} reqSlug=${slug ?? 'none'} assetSlug=${(asset as any).wikiSlug ?? 'none'}`)
+
+      if (gcsEnabled) {
         const gcsBody = await readAssetFromGcs({
-          wikiSlug: slug,
+          wikiSlug: assetWikiSlug,
           assetId,
           filename: asset.filename,
         })
@@ -158,6 +162,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             },
           })
         }
+        console.log(`[upload:${assetId}] GCS miss for slug=${assetWikiSlug ?? 'default'}, falling back to DB`)
       }
 
       const dbBody = asset.data as Buffer | null

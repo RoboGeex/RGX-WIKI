@@ -27,7 +27,7 @@ function sanitizeFilename(value?: string | null, assetId?: number): string {
 }
 
 export function getGcsAssetBucket(): string {
-  return (process.env.GCS_ASSET_BUCKET || '').trim()
+  return (process.env.GCS_ASSET_BUCKET || 'robogeex-wiki-assets').trim()
 }
 
 export function isGcsAssetReadEnabled(): boolean {

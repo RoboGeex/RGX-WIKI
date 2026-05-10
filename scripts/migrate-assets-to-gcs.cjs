@@ -55,7 +55,6 @@ function toInt(value, fallback) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  const wikiSlug = args.wiki || '3d-design-using-tinkercad'
   const bucketName = args.bucket || process.env.GCS_ASSET_BUCKET
   const prefix = args.prefix || process.env.GCS_ASSET_PREFIX || 'wiki-assets'
   const batchSize = Math.max(1, toInt(args.batch, 200))
@@ -68,11 +67,9 @@ async function main() {
     throw new Error('Missing bucket. Pass --bucket=<name> or set GCS_ASSET_BUCKET.')
   }
 
-  const dbUrl = getDatabaseUrl(args, wikiSlug)
+  const dbUrl = args['db-url'] || process.env.DATABASE_URL_DEFAULT || process.env.DATABASE_URL
   if (!dbUrl) {
-    throw new Error(
-      `No DB URL found for wiki "${wikiSlug}". Set DATABASE_URL_${wikiToEnvSuffix(wikiSlug)} or DATABASE_URL_DEFAULT.`,
-    )
+    throw new Error('No DB URL found. Set DATABASE_URL_DEFAULT or pass --db-url=<url>.')
   }
 
   const prisma = new PrismaClient({
@@ -96,7 +93,7 @@ async function main() {
   }
 
   const total = await prisma.asset.count({ where })
-  console.log(`[migrate-assets-to-gcs] wiki=${wikiSlug} total_with_blob=${total} batch=${batchSize} dry_run=${dryRun}`)
+  console.log(`[migrate-assets-to-gcs] single-db total_with_blob=${total} batch=${batchSize} dry_run=${dryRun}`)
 
   let cursor = 0
   let reachedLimit = false
@@ -109,6 +106,7 @@ async function main() {
       },
       select: {
         id: true,
+        wikiSlug: true,
         filename: true,
         mimeType: true,
         size: true,
@@ -129,7 +127,7 @@ async function main() {
 
       stats.scanned += 1
       const objectPath = buildObjectPath({
-        wikiSlug,
+        wikiSlug: row.wikiSlug || 'default',
         assetId: row.id,
         filename: row.filename,
         prefix,

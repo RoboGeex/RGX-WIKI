@@ -4,7 +4,12 @@ let storageClient: Storage | null = null
 
 function getStorageClient(): Storage {
   if (!storageClient) {
-    storageClient = new Storage()
+    const inlineJson = (process.env.GCS_SERVICE_ACCOUNT_JSON || '').trim()
+    if (inlineJson) {
+      storageClient = new Storage({ credentials: JSON.parse(inlineJson) })
+    } else {
+      storageClient = new Storage()
+    }
   }
   return storageClient
 }
@@ -45,17 +50,8 @@ function isNotFoundError(error: any): boolean {
   return error?.code === 404 || error?.statusCode === 404
 }
 
-export async function readAssetFromGcs(input: {
-  wikiSlug?: string
-  assetId: number
-  filename?: string | null
-}): Promise<Buffer | null> {
-  const bucketName = getGcsAssetBucket()
-  if (!bucketName) return null
-
-  const objectPath = buildGcsAssetObjectPath(input)
+async function tryDownload(bucketName: string, objectPath: string, assetId: number): Promise<Buffer | null> {
   const file = getStorageClient().bucket(bucketName).file(objectPath)
-
   try {
     const [contents] = await file.download()
     return contents
@@ -64,9 +60,31 @@ export async function readAssetFromGcs(input: {
       return null
     }
     console.error(
-      `[gcs-assets] Failed reading gs://${bucketName}/${objectPath} for asset ${input.assetId}:`,
+      `[gcs-assets] Failed reading gs://${bucketName}/${objectPath} for asset ${assetId}:`,
       error,
     )
     return null
   }
+}
+
+export async function readAssetFromGcs(input: {
+  wikiSlug?: string
+  assetId: number
+  filename?: string | null
+}): Promise<Buffer | null> {
+  const bucketName = getGcsAssetBucket()
+  if (!bucketName) return null
+
+  const primaryPath = buildGcsAssetObjectPath(input)
+  const primary = await tryDownload(bucketName, primaryPath, input.assetId)
+  if (primary) return primary
+
+  const requestedSlug = sanitizeWikiSlug(input.wikiSlug)
+  if (requestedSlug !== 'default') {
+    const fallbackPath = buildGcsAssetObjectPath({ ...input, wikiSlug: 'default' })
+    const fallback = await tryDownload(bucketName, fallbackPath, input.assetId)
+    if (fallback) return fallback
+  }
+
+  return null
 }

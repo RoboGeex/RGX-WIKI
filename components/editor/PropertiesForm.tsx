@@ -9,6 +9,14 @@ import { readSessionStorageJson } from '@/lib/session-storage'
 const ENABLE_SEGMENTS_EDITOR = false
 // Removed static import - will use dynamic loading instead
 
+type DeveloperOption = {
+  id: string
+  name?: string
+  email: string
+  role?: string
+  wikiSlugs: string[]
+}
+
 type WikiOption = {
   slug: string
   displayName: string
@@ -68,6 +76,15 @@ export default function PropertiesForm() {
   const [coverUploadStatus, setCoverUploadStatus] = useState('')
   const [coverUploading, setCoverUploading] = useState(false)
   const coverInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Wiki Team state
+  const [currentUser, setCurrentUser] = useState<{ role?: string } | null>(null)
+  const [allDevelopers, setAllDevelopers] = useState<DeveloperOption[]>([])
+  const [assignedIds, setAssignedIds] = useState<string[]>([])
+  const [teamLoading, setTeamLoading] = useState(false)
+  const [teamSaving, setTeamSaving] = useState(false)
+  const [teamSaved, setTeamSaved] = useState(false)
+  const [teamError, setTeamError] = useState('')
 
   const initialWikiSlug = wikiFromQuery || DEFAULT_WIKI
 
@@ -232,6 +249,58 @@ export default function PropertiesForm() {
     setAutoHydrateDone(true)
     hydrateLesson(identifier)
   }, [slugFromQuery, idFromQuery, autoHydrateDone, kitSlug])
+
+  // Fetch current user role
+  useEffect(() => {
+    fetch('/api/developers/me', { headers: applyDeveloperHeader() as HeadersInit })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.developer) setCurrentUser(data.developer) })
+      .catch(() => {})
+  }, [])
+
+  // Fetch all developers when superadmin, re-run when wiki changes
+  useEffect(() => {
+    if (currentUser?.role !== 'superadmin') return
+    setTeamLoading(true)
+    setTeamSaved(false)
+    setTeamError('')
+    fetch('/api/developers', { headers: applyDeveloperHeader() as HeadersInit })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: DeveloperOption[]) => {
+        setAllDevelopers(data)
+        setAssignedIds(
+          data
+            .filter((d) => d.wikiSlugs?.includes(meta.wikiSlug))
+            .map((d) => d.id),
+        )
+      })
+      .catch(() => {})
+      .finally(() => setTeamLoading(false))
+  }, [currentUser, meta.wikiSlug])
+
+  const saveTeam = async () => {
+    setTeamSaving(true)
+    setTeamError('')
+    setTeamSaved(false)
+    try {
+      const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
+      const res = await fetch(`/api/wikis/${meta.wikiSlug}/members`, {
+        method: 'PUT',
+        headers: headers as HeadersInit,
+        body: JSON.stringify({ assignedIds }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.error || 'Failed to save')
+      }
+      setTeamSaved(true)
+      setTimeout(() => setTeamSaved(false), 3000)
+    } catch (e: any) {
+      setTeamError(e.message || 'Failed to save team')
+    } finally {
+      setTeamSaving(false)
+    }
+  }
 
   const handleOpenEditor = () => {
     const nextMeta: LessonMeta = { ...meta }
@@ -483,6 +552,86 @@ export default function PropertiesForm() {
               </button>
             </div>
           </div>
+          {/* Wiki Team — visible to superadmins only */}
+          {currentUser?.role === 'superadmin' && (
+            <div className="sm:col-span-2 border-t pt-4 mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-medium text-gray-600">Wiki Team</label>
+                <span className="text-xs text-gray-400">Who can manage lessons in this wiki</span>
+              </div>
+
+              {teamLoading ? (
+                <div className="text-xs text-gray-400 py-2">Loading developers…</div>
+              ) : (
+                <div className="border rounded-lg divide-y overflow-y-auto max-h-52 bg-white">
+                  {allDevelopers.filter((d) => d.role !== 'superadmin').length === 0 ? (
+                    <div className="px-3 py-3 text-xs text-gray-400">No non-superadmin developers found.</div>
+                  ) : (
+                    allDevelopers
+                      .filter((d) => d.role !== 'superadmin')
+                      .map((dev) => {
+                        const checked = assignedIds.includes(dev.id)
+                        return (
+                          <label
+                            key={dev.id}
+                            className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) =>
+                                setAssignedIds((prev) =>
+                                  e.target.checked
+                                    ? [...prev, dev.id]
+                                    : prev.filter((id) => id !== dev.id),
+                                )
+                              }
+                              className="rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm text-gray-800 truncate">
+                                {dev.name || dev.email}
+                              </div>
+                              {dev.name && (
+                                <div className="text-xs text-gray-400 truncate">{dev.email}</div>
+                              )}
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                dev.role === 'admin'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {dev.role || 'editor'}
+                            </span>
+                          </label>
+                        )
+                      })
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-gray-400">
+                  Superadmins always have full access.
+                </span>
+                <div className="flex items-center gap-2">
+                  {teamSaved && <span className="text-xs text-green-600">Saved!</span>}
+                  {teamError && <span className="text-xs text-red-500">{teamError}</span>}
+                  <button
+                    type="button"
+                    onClick={saveTeam}
+                    disabled={teamSaving || teamLoading}
+                    className="px-3 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {teamSaving ? 'Saving…' : 'Save Team'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="sm:col-span-2 flex items-center justify-between">
             {error ? <div className="text-sm text-red-600">{error}</div> : <div />}
             <button

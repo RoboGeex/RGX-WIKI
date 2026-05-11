@@ -3,6 +3,7 @@ import { getWikis } from '@/lib/data'
 import path from 'path'
 import { promises as fs } from 'fs'
 import { getPrisma } from '@/lib/prisma-multi'
+import { findDeveloperById } from '@/lib/developers'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -449,8 +450,26 @@ async function tryWriteFile(action: () => Promise<void>, label: string): Promise
   }
 }
 
+function getActorId(req: Request): string | undefined {
+  const headers = (req as any)?.headers as Headers | undefined
+  if (!headers) return undefined
+  const raw =
+    headers.get('x-user-id') ||
+    headers.get('x-actor-id') ||
+    headers.get('x-developer-id') ||
+    headers.get('x-dev-id')
+  return raw ? raw.trim() || undefined : undefined
+}
+
 export async function POST(req: Request) {
   try {
+    const actorId = getActorId(req)
+    if (!actorId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const actor = await findDeveloperById(actorId)
+    if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (actor.role !== 'superadmin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     const form = await req.formData()
     const name = form.get('name') as string
     const grade = form.get('grade') as string

@@ -91,23 +91,25 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
       ) : null}
 
       <div className="grid gap-6 sm:grid-cols-2">
-        {/* Create New Wiki Tile - First */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow group"
-        >
-          <div className="flex flex-col items-center justify-center text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <Plus size={24} className="text-primary" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-900">Create New Wiki</div>
-              <div className="text-xs text-gray-500 mt-1">
-                Add a new educational wiki
+        {/* Create New Wiki Tile - Super Admins only */}
+        {devRole === 'superadmin' && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:shadow group"
+          >
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Plus size={24} className="text-primary" />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-900">Create New Wiki</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Add a new educational wiki
+                </div>
               </div>
             </div>
-          </div>
-        </button>
+          </button>
+        )}
 
         {/* Existing Wiki Tiles */}
         {filteredSummaries.map(({ wiki, lessonCount }) => (
@@ -125,12 +127,14 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
         ))}
       </div>
 
-      {/* Create Wiki Modal */}
-      <CreateWikiModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleWikiCreated}
-      />
+      {/* Create Wiki Modal - Super Admins only */}
+      {devRole === 'superadmin' && (
+        <CreateWikiModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleWikiCreated}
+        />
+      )}
     </>
   )
 }

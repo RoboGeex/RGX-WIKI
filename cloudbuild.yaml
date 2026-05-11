@@ -1,4 +1,4 @@
-# Build + deploy to Cloud Run with Docker layer caching
+# Build + deploy to Cloud Run with Docker layer caching.
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'

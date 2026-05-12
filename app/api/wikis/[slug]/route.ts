@@ -133,6 +133,8 @@ type WikiUpdates = {
   displayName?: string
   picture?: string
   scheduledDeletionAt?: Date | null
+  /** New primary-key value — triggers a cascading rename of all lesson rows too */
+  newSlug?: string
 }
 
 /**
@@ -169,6 +171,24 @@ async function applyWikiUpdates(slug: string, updates: WikiUpdates): Promise<num
         ? Number(await prisma.$executeRawUnsafe('UPDATE Wiki SET scheduledDeletionAt = NULL WHERE slug = ?', slug))
         : Number(await prisma.$executeRaw`UPDATE Wiki SET scheduledDeletionAt = ${updates.scheduledDeletionAt} WHERE slug = ${slug}`),
     )
+  }
+
+  // ── Slug rename (last, after all other fields are set) ─────────────────────
+  if (updates.newSlug && updates.newSlug !== slug) {
+    const newSlug = updates.newSlug
+    // Cascade to all lessons that belong to this wiki
+    await prisma.$executeRawUnsafe(
+      'UPDATE Lesson SET wikiSlug = ? WHERE wikiSlug = ?',
+      newSlug,
+      slug,
+    )
+    // Rename the wiki itself (PK update)
+    await prisma.$executeRawUnsafe(
+      'UPDATE Wiki SET slug = ? WHERE slug = ?',
+      newSlug,
+      slug,
+    )
+    return 1
   }
 
   if (affected > 0) return affected
@@ -285,6 +305,31 @@ export async function PATCH(
       fileUpdates.displayName = updates.displayName
     }
 
+    // ── Slug rename (superadmin only) ────────────────────────────────────────
+    if (typeof body.newSlug === 'string') {
+      const actorId = getActorId(req)
+      if (!actorId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const actor = await findDeveloperById(actorId)
+      if (!actor || actor.role !== 'superadmin') {
+        return NextResponse.json({ error: 'Forbidden: only superadmins can rename wiki slugs' }, { status: 403 })
+      }
+
+      const newSlug = body.newSlug.trim().toLowerCase()
+      const slugPattern = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/
+      if (!newSlug || !slugPattern.test(newSlug)) {
+        return NextResponse.json(
+          { error: 'Invalid slug. Use lowercase letters, numbers and hyphens only.' },
+          { status: 400 },
+        )
+      }
+      if (newSlug === slug) {
+        return NextResponse.json({ ok: true, slug, newSlug: slug })
+      }
+
+      updates.newSlug = newSlug
+      fileUpdates.slug = newSlug
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
@@ -292,8 +337,10 @@ export async function PATCH(
     const result = await applyWikiUpdates(slug, updates)
     if (!result) return NextResponse.json({ error: 'Wiki not found' }, { status: 404 })
 
-    await patchFileWiki(slug, fileUpdates)
-    return NextResponse.json({ ok: true, slug, ...updates })
+    // When a slug rename happened, also update the slug field in wikis.json
+    const finalSlug = updates.newSlug ?? slug
+    await patchFileWiki(updates.newSlug ? finalSlug : slug, fileUpdates)
+    return NextResponse.json({ ok: true, slug: finalSlug, ...updates })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to update wiki' }, { status: 500 })
   }

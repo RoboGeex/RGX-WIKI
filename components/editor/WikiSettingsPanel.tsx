@@ -63,6 +63,14 @@ export default function WikiSettingsPanel({
   const [renameSuccess, setRenameSuccess] = useState(false)
   const [renameError, setRenameError] = useState<string | null>(null)
 
+  // Slug rename
+  const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/
+  const [newSlug, setNewSlug] = useState(wikiSlug)
+  const [renamingSlug, setRenamingSlug] = useState(false)
+  const [slugSuccess, setSlugSuccess] = useState(false)
+  const [slugError, setSlugError] = useState<string | null>(null)
+  const slugValid = SLUG_PATTERN.test(newSlug.trim())
+
   // Picture
   const [picture, setPicture] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -120,6 +128,39 @@ export default function WikiSettingsPanel({
       .catch(() => {})
       .finally(() => setLoadingTeam(false))
   }, [isOpen, devRole, wikiSlug])
+
+  // ── Slug rename ────────────────────────────────────────────────────────────
+
+  const handleSlugRename = async () => {
+    const trimmed = newSlug.trim().toLowerCase()
+    if (!trimmed || !SLUG_PATTERN.test(trimmed) || trimmed === wikiSlug) return
+    setRenamingSlug(true)
+    setSlugError(null)
+    setSlugSuccess(false)
+    try {
+      const res = await fetch(`/api/wikis/${wikiSlug}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(applyDeveloperHeader() as Record<string, string>),
+        },
+        body: JSON.stringify({ newSlug: trimmed }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error || "Failed to rename slug")
+      }
+      setSlugSuccess(true)
+      // URL is now invalid — redirect to the new wiki dashboard
+      setTimeout(() => {
+        router.push(`/editor/dashboard/${trimmed}`)
+      }, 800)
+    } catch (e: any) {
+      setSlugError(e.message)
+    } finally {
+      setRenamingSlug(false)
+    }
+  }
 
   // ── Rename ─────────────────────────────────────────────────────────────────
 
@@ -381,6 +422,62 @@ export default function WikiSettingsPanel({
                   <p className="mt-1.5 text-xs text-red-600">{renameError}</p>
                 )}
               </section>
+
+              {/* ── Wiki Slug (superadmin only) ── */}
+              {devRole === "superadmin" && (
+                <section>
+                  <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Pencil size={14} />
+                    Wiki Slug
+                  </h3>
+                  <p className="mb-3 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    ⚠ Changing the slug updates all URLs. Share the new link after saving.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSlug}
+                      onChange={(e) => {
+                        setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))
+                        setSlugError(null)
+                        setSlugSuccess(false)
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleSlugRename()}
+                      placeholder="wiki-slug"
+                      className={`flex-1 rounded-lg border px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 ${
+                        !slugValid && newSlug !== ""
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-200"
+                          : "border-gray-300 focus:border-primary focus:ring-primary/30"
+                      }`}
+                    />
+                    <button
+                      onClick={handleSlugRename}
+                      disabled={renamingSlug || !slugValid || newSlug.trim() === wikiSlug}
+                      className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {renamingSlug ? (
+                        <span className="text-xs">Saving…</span>
+                      ) : slugSuccess ? (
+                        <>
+                          <Check size={14} /> Saved
+                        </>
+                      ) : (
+                        <>
+                          <Save size={14} /> Save
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {!slugValid && newSlug !== "" && (
+                    <p className="mt-1.5 text-xs text-red-600">
+                      Only lowercase letters, numbers, and hyphens. Must start and end with a letter or number.
+                    </p>
+                  )}
+                  {slugError && (
+                    <p className="mt-1.5 text-xs text-red-600">{slugError}</p>
+                  )}
+                </section>
+              )}
 
               {/* ── Cover picture ── */}
               <section>

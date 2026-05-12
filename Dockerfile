@@ -21,7 +21,7 @@ COPY . .
 RUN npx prisma generate
 
 # NEXT_PUBLIC_* vars must be present at build time to be inlined into the client bundle.
-ARG NEXT_PUBLIC_HUB_DOMAIN=wikis.robogeex.com
+ARG NEXT_PUBLIC_HUB_DOMAIN=wiki.robogeex.com
 ENV NEXT_PUBLIC_HUB_DOMAIN=$NEXT_PUBLIC_HUB_DOMAIN
 
 # Next.js collects completely anonymous telemetry data about general usage.
@@ -37,7 +37,7 @@ RUN apk add --no-cache openssl
 WORKDIR /app
 
 ENV NODE_ENV production
-ARG NEXT_PUBLIC_HUB_DOMAIN=wikis.robogeex.com
+ARG NEXT_PUBLIC_HUB_DOMAIN=wiki.robogeex.com
 ENV NEXT_PUBLIC_HUB_DOMAIN=$NEXT_PUBLIC_HUB_DOMAIN
 # ENV NEXT_TELEMETRY_DISABLED 1
 

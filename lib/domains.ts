@@ -1,4 +1,4 @@
-export const HUB_DOMAIN = (process.env.NEXT_PUBLIC_HUB_DOMAIN || 'wikis.robogeex.com').toLowerCase()
+export const HUB_DOMAIN = (process.env.NEXT_PUBLIC_HUB_DOMAIN || 'wiki.robogeex.com').toLowerCase()
 
 export function normalizeHost(host?: string | null) {
   if (!host) return ''

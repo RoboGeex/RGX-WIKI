@@ -96,6 +96,13 @@ function getUrlForWiki(wikiSlug?: string): string | undefined {
     return getDefaultUrl()
   }
 
+  // When shared-DB mode is active, skip per-wiki routing entirely so that
+  // DATABASE_URL_* entries present in .env (or other lower-priority env files)
+  // cannot override the shared DATABASE_URL set in .env.local.
+  if (shouldUseSharedDatabaseOnly()) {
+    return getDefaultUrl()
+  }
+
   const upper = wikiSlug.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_')
   const envKey = `DATABASE_URL_${upper}`
   const directEnvKey = `${envKey}_DIRECT`
@@ -109,10 +116,6 @@ function getUrlForWiki(wikiSlug?: string): string | undefined {
     process.env.DATABASE_URL,
   )
   if (specific) return specific
-
-  if (shouldUseSharedDatabaseOnly()) {
-    return getDefaultUrl()
-  }
 
   if (!hasWikiSpecificUrl) {
     const strictWikiUrl = process.env.STRICT_WIKI_DB_URL === 'true'

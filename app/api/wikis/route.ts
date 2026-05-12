@@ -63,8 +63,11 @@ function normalizeWikiRow(row: WikiRow) {
   }
 }
 
+const wikiTableEnsured = new WeakSet<object>()
+
 async function ensureWikiTable(): Promise<void> {
   const prisma: any = getPrisma()
+  if (wikiTableEnsured.has(prisma)) return
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS Wiki (
       slug VARCHAR(191) NOT NULL,
@@ -89,6 +92,7 @@ async function ensureWikiTable(): Promise<void> {
   } catch {
     // Column might already exist or server may not support IF NOT EXISTS.
   }
+  wikiTableEnsured.add(prisma)
 }
 
 async function readWikisFromDb(): Promise<any[]> {

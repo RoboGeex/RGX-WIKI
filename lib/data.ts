@@ -471,12 +471,7 @@ export function getModules(wikiSlug: string): any[] {
     return []
 }
 
-export async function getLesson(
-  kit: string,
-  lessonSlug: string,
-  opts?: { includeDrafts?: boolean }
-): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kit, opts)
+export function findLessonInList(lessons: Lesson[], lessonSlug: string): Lesson | undefined {
   const rawSlug = (lessonSlug || '').trim()
   const normSlug = normalizeSlug(rawSlug)
   const baseSlug = stripLegacyDraftSuffix(normSlug)
@@ -491,8 +486,30 @@ export async function getLesson(
   })
 }
 
+export async function getLesson(
+  kit: string,
+  lessonSlug: string,
+  opts?: { includeDrafts?: boolean }
+): Promise<Lesson | undefined> {
+  const lessons = await getLessons(kit, opts)
+  return findLessonInList(lessons, lessonSlug)
+}
+
 function sortLessons(list: Lesson[]): Lesson[] {
   return list.slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+export function findPrevNextInList(
+  lessons: Lesson[],
+  slug: string
+): { prev?: Lesson; next?: Lesson } {
+  const list = sortLessons(lessons)
+  const idx = list.findIndex((l) => l.slug === slug)
+  if (idx < 0) return {}
+  return {
+    prev: idx > 0 ? list[idx - 1] : undefined,
+    next: idx < list.length - 1 ? list[idx + 1] : undefined,
+  }
 }
 
 export async function getFirstLesson(kitSlug: string): Promise<Lesson | undefined> {

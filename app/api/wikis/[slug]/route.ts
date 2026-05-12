@@ -28,8 +28,11 @@ function isReadOnlyFsError(err: any): boolean {
   return code === 'EROFS' || msg.includes('read-only file system')
 }
 
+const wikiColumnsEnsured = new WeakSet<object>()
+
 async function ensureWikiColumns(): Promise<void> {
   const prisma: any = getPrisma()
+  if (wikiColumnsEnsured.has(prisma)) return
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS Wiki (
       slug VARCHAR(191) NOT NULL,
@@ -52,6 +55,7 @@ async function ensureWikiColumns(): Promise<void> {
   ]) {
     try { await prisma.$executeRawUnsafe(ddl) } catch { /* already exists */ }
   }
+  wikiColumnsEnsured.add(prisma)
 }
 
 async function readWikiFromFile(slug: string): Promise<any | null> {

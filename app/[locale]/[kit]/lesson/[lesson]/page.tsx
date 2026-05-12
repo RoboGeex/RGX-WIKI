@@ -1,10 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 import {
-  getFirstLesson,
+  findLessonInList,
+  findPrevNextInList,
   getKit,
-  getLesson,
   getLessons,
-  getNextLesson, getPrevLesson,
 } from '@/lib/data'
 import { stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
 import { getWikisFromDb } from '@/lib/server-data'
@@ -55,21 +54,20 @@ export default async function LessonPage(
   }
   if (!kitData) notFound()
 
+  const allLessons = await getLessons(kit, { includeDrafts: preview || Boolean(previewId) })
+
   const lesson = preview && previewId
-    ? (await getLessons(kit, { includeDrafts: true })).find((item) => item.id === previewId)
-      || await getLesson(kit, lessonSlug, { includeDrafts: true })
-    : await getLesson(kit, lessonSlug, { includeDrafts: preview })
+    ? allLessons.find((item) => item.id === previewId) || findLessonInList(allLessons, lessonSlug)
+    : findLessonInList(allLessons, lessonSlug)
 
   if (!lesson) {
-    const firstLesson = await getFirstLesson(kit)
+    const sorted = allLessons.slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+    const firstLesson = sorted[0]
     if (firstLesson?.slug) {
       redirect(`/${locale}/${kit}/lesson/${firstLesson.slug}`)
     }
     notFound()
   }
-
-  // Calculate dynamic rank for numbering (skipping special lessons)
-  const allLessons = await getLessons(kit, { includeDrafts: preview })
   const currentSlug = stripLegacyDraftSuffix(lesson.slug || '')
   const currentKey = stripLegacyDraftSuffix(lesson.lessonKey || '')
   
@@ -749,8 +747,7 @@ export default async function LessonPage(
   const summaryTocEntries = tocEntriesBySection.summary.map((entry) => ({ ...entry }))
   const lessonTocEntries = tocEntriesBySection.lesson.map((entry) => ({ ...entry }))
 
-  const prevLesson = await getPrevLesson(kit, lesson.slug, { includeDrafts: preview })
-  const nextLesson = await getNextLesson(kit, lesson.slug, { includeDrafts: preview })
+  const { prev: prevLesson, next: nextLesson } = findPrevNextInList(allLessons, lesson.slug)
 
   const placeholder =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="Arial" font-size="32">Lesson cover</text></svg>'

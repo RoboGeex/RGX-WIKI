@@ -258,6 +258,37 @@ function parseWikiDomains(value: unknown): string[] {
   return []
 }
 
+const wikiTableEnsured = new WeakSet<object>()
+
+async function ensureWikiTableOnce(prisma: any): Promise<void> {
+  if (wikiTableEnsured.has(prisma)) return
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS Wiki (
+      slug VARCHAR(191) NOT NULL,
+      displayName VARCHAR(255) NOT NULL,
+      grade VARCHAR(191) NULL,
+      picture TEXT NULL,
+      isPublished BOOLEAN NOT NULL DEFAULT TRUE,
+      domains JSON NULL,
+      defaultLocale VARCHAR(16) NULL,
+      defaultLessonSlug VARCHAR(191) NULL,
+      resourcesUrl VARCHAR(255) NULL,
+      createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+      updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+      PRIMARY KEY (slug)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  `)
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE Wiki
+      ADD COLUMN IF NOT EXISTS isPublished BOOLEAN NOT NULL DEFAULT TRUE;
+    `)
+  } catch {
+    // Column might already exist or server may not support IF NOT EXISTS.
+  }
+  wikiTableEnsured.add(prisma)
+}
+
 export async function getWikisFromDb(): Promise<Wiki[]> {
   if (process.env.USE_DB !== 'true') {
     return []
@@ -265,30 +296,7 @@ export async function getWikisFromDb(): Promise<Wiki[]> {
 
   try {
     const prisma: any = getPrisma()
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS Wiki (
-        slug VARCHAR(191) NOT NULL,
-        displayName VARCHAR(255) NOT NULL,
-        grade VARCHAR(191) NULL,
-        picture TEXT NULL,
-        isPublished BOOLEAN NOT NULL DEFAULT TRUE,
-        domains JSON NULL,
-        defaultLocale VARCHAR(16) NULL,
-        defaultLessonSlug VARCHAR(191) NULL,
-        resourcesUrl VARCHAR(255) NULL,
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-        PRIMARY KEY (slug)
-      ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-    `)
-    try {
-      await prisma.$executeRawUnsafe(`
-        ALTER TABLE Wiki
-        ADD COLUMN IF NOT EXISTS isPublished BOOLEAN NOT NULL DEFAULT TRUE;
-      `)
-    } catch {
-      // Column might already exist or server may not support IF NOT EXISTS.
-    }
+    await ensureWikiTableOnce(prisma)
     const rows = (await prisma.$queryRawUnsafe(`
       SELECT slug, displayName, grade, picture, isPublished, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
       FROM Wiki

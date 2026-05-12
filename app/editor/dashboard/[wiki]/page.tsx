@@ -5,7 +5,9 @@ import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { HUB_DOMAIN } from "@/lib/domains"
 import LessonsReorderList from "@/components/editor/LessonsReorderList"
 import WikiPublishToggle from "@/components/editor/WikiPublishToggle"
+import WikiSettingsPanel from "@/components/editor/WikiSettingsPanel"
 import { getWikisFromDb } from "@/lib/server-data"
+import { getPrisma } from "@/lib/prisma-multi"
 
 export const dynamic = "force-dynamic"
 
@@ -25,6 +27,22 @@ export default async function EditorWikiDashboardPage({
   const wiki = dbWiki ? { ...(fileWiki || {}), ...dbWiki } : fileWiki
   if (!wiki) notFound()
   const initialIsPublished = wiki.isPublished ?? true
+
+  // Fetch scheduledDeletionAt from DB (column may not exist yet — gracefully falls back to null)
+  let scheduledDeletionAt: string | null = null
+  if (dbWiki) {
+    try {
+      const prisma = getPrisma() as any
+      const rows: any[] = await prisma.$queryRawUnsafe(
+        'SELECT scheduledDeletionAt FROM Wiki WHERE slug = ? LIMIT 1',
+        wikiSlug,
+      )
+      const dt = rows?.[0]?.scheduledDeletionAt
+      if (dt) scheduledDeletionAt = new Date(dt).toISOString()
+    } catch {
+      // column not yet created — ignore
+    }
+  }
 
   // Only use absolute domain URL in production to ensure local previews work via relative paths
   const viewBaseUrl = process.env.NODE_ENV === 'production' 
@@ -68,8 +86,22 @@ export default async function EditorWikiDashboardPage({
           <h1 className="text-3xl font-bold text-gray-900">
             {selectedKitSlug ? `${filteredKits[0]?.title} - Reorder Lessons` : wiki.displayName || wiki.slug}
           </h1>
-          <WikiPublishToggle wikiSlug={wiki.slug} initialIsPublished={initialIsPublished} />
+          <div className="flex items-center gap-2">
+            <WikiSettingsPanel
+              wikiSlug={wiki.slug}
+              initialDisplayName={wiki.displayName || wiki.slug}
+              initialPicture={(wiki as any).picture || undefined}
+              initialScheduledDeletionAt={scheduledDeletionAt}
+            />
+            <WikiPublishToggle wikiSlug={wiki.slug} initialIsPublished={initialIsPublished} />
+          </div>
         </div>
+        {/* Deletion banner — rendered here so it appears above lessons list */}
+        {scheduledDeletionAt && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+            ⚠ This wiki is scheduled for deletion. Open <strong>Settings</strong> to undo.
+          </div>
+        )}
         <p className="text-sm text-gray-600">
           {selectedKitSlug ? "Drag and drop to reorder lessons. Getting Started lesson is fixed and cannot be moved or deleted." : "Select a lesson to open it in the editor."}
         </p>

@@ -13,7 +13,8 @@ interface WikiSummary {
     grade?: string
     picture?: string
   }
-  lessonCount: number
+  /** null until the per-tile fetch resolves */
+  lessonCount: number | null
 }
 
 interface EditorDashboardClientProps {
@@ -71,9 +72,49 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
     // Super Admins see all wikis
     if (devRole === 'superadmin') return summaries
     // Admins and Editors only see what they are assigned to
-    if (!wikiAccess) return [] 
+    if (!wikiAccess) return []
     return summaries.filter(({ wiki }) => wikiAccess.includes(wiki.slug))
   }, [summaries, wikiAccess, devRole])
+
+  // Fetch lesson counts client-side, per visible wiki, in parallel.  This
+  // replaces the previous server-side counting which blocked the entire
+  // dashboard render when any single wiki's DB was slow or unreachable.
+  // Each tile shows its own "…" placeholder until its count resolves.
+  useEffect(() => {
+    if (loadingAccess) return
+    const targets = filteredSummaries.filter(({ lessonCount }) => lessonCount === null)
+    if (targets.length === 0) return
+
+    let cancelled = false
+    targets.forEach(({ wiki }) => {
+      fetch(`/api/wikis/${encodeURIComponent(wiki.slug)}/lesson-count`, {
+        headers: applyDeveloperHeader(),
+        cache: 'no-store',
+      })
+        .then((res) => (res.ok ? res.json() : { count: 0 }))
+        .then((data) => {
+          if (cancelled) return
+          const count = Number.isFinite(data?.count) ? Number(data.count) : 0
+          setSummaries((prev) =>
+            prev.map((s) => (s.wiki.slug === wiki.slug ? { ...s, lessonCount: count } : s)),
+          )
+        })
+        .catch(() => {
+          if (cancelled) return
+          setSummaries((prev) =>
+            prev.map((s) => (s.wiki.slug === wiki.slug ? { ...s, lessonCount: 0 } : s)),
+          )
+        })
+    })
+
+    return () => {
+      cancelled = true
+    }
+    // We deliberately key this on the set of visible slugs so it only fires
+    // when the access list resolves or new wikis appear — not when individual
+    // counts update inside `summaries`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingAccess, devRole, wikiAccess?.join(',')])
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleWikiCreated = async (data: { name: string; grade: string; picture: File | null }) => {
@@ -121,7 +162,13 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
             <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">Wiki</div>
             <h2 className="text-xl font-semibold text-gray-900">{wiki.displayName || wiki.slug}</h2>
             <p className="mt-4 text-sm text-gray-600">
-              {lessonCount} lesson{lessonCount === 1 ? "" : "s"} available
+              {lessonCount === null ? (
+                <span className="text-gray-400">Loading lessons…</span>
+              ) : (
+                <>
+                  {lessonCount} lesson{lessonCount === 1 ? "" : "s"} available
+                </>
+              )}
             </p>
           </Link>
         ))}

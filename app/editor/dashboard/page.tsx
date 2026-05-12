@@ -1,6 +1,4 @@
-import Link from "next/link"
-import { getWikis, getKits } from "@/lib/data"
-import { loadLessonsForKit } from "@/lib/lesson-loader"
+import { getWikis } from "@/lib/data"
 import EditorDashboardClient from "./editor-dashboard-client"
 import AdminNavbar from "@/components/admin-navbar"
 import { getWikisFromDb } from "@/lib/server-data"
@@ -21,41 +19,10 @@ export default async function EditorDashboardPage() {
         })()
       : fileWikis
 
-  // Per-wiki budget: never let one slow / unreachable wiki DB hold up the
-  // whole dashboard.  We race each wiki's lesson load against a short timeout
-  // and fall back to 0 lessons if it exceeds the budget.  Combined with the
-  // shouldBypassDb cache in lib/db-fallback, the second visit after a failure
-  // returns instantly without even attempting the DB.
-  const PER_WIKI_BUDGET_MS = 2500
-
-  const withBudget = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
-    Promise.race<T>([
-      p,
-      new Promise<T>((resolve) =>
-        setTimeout(() => resolve(fallback), PER_WIKI_BUDGET_MS),
-      ),
-    ])
-
-  const summaries = await Promise.all(
-    wikis.map(async (wiki) => {
-      const kits = getKits(wiki.slug)
-      const kitSlugs = kits.length ? kits.map((kit) => kit.slug) : [wiki.slug]
-
-      // Parallel-load lesson counts for every kit, each with its own budget
-      const counts = await Promise.all(
-        kitSlugs.map((kitSlug) =>
-          withBudget(
-            loadLessonsForKit(kitSlug, wiki.slug)
-              .then((lessons) => lessons.length)
-              .catch(() => 0),
-            0,
-          ),
-        ),
-      )
-      const lessonCount = counts.reduce((sum, n) => sum + n, 0)
-      return { wiki, lessonCount }
-    }),
-  )
+  // Lesson counts are fetched client-side, per-tile, via /api/wikis/[slug]/lesson-count.
+  // This keeps the dashboard render fast regardless of how many wiki DBs are slow
+  // or unreachable — each tile shows its own loading state independently.
+  const summaries = wikis.map((wiki) => ({ wiki, lessonCount: null as number | null }))
 
   return (
     <div className="min-h-screen bg-[#eef2f1]">

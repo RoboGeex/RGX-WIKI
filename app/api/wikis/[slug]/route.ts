@@ -30,9 +30,32 @@ function isReadOnlyFsError(err: any): boolean {
 
 const wikiColumnsEnsured = new WeakSet<object>()
 
+/**
+ * Returns true if the given column exists on the Wiki table in the current DB.
+ *
+ * We use INFORMATION_SCHEMA rather than relying on `ALTER TABLE ... ADD COLUMN
+ * IF NOT EXISTS` because that syntax requires MySQL 8.0.29+, and production
+ * may be running on an older version where it raises a syntax error that
+ * `try/catch` would swallow — leaving the column missing and breaking later
+ * UPDATEs with "Unknown column" (error 1054).
+ */
+async function columnExists(prisma: any, column: string): Promise<boolean> {
+  const rows: any[] = await prisma.$queryRawUnsafe(
+    `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'Wiki'
+        AND COLUMN_NAME = ?`,
+    column,
+  )
+  const count = Number(rows?.[0]?.c ?? rows?.[0]?.C ?? 0)
+  return count > 0
+}
+
 async function ensureWikiColumns(): Promise<void> {
   const prisma: any = getPrisma()
   if (wikiColumnsEnsured.has(prisma)) return
+
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS Wiki (
       slug VARCHAR(191) NOT NULL,
@@ -49,13 +72,33 @@ async function ensureWikiColumns(): Promise<void> {
       PRIMARY KEY (slug)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   `)
-  for (const ddl of [
-    'ALTER TABLE Wiki ADD COLUMN IF NOT EXISTS isPublished BOOLEAN NOT NULL DEFAULT TRUE;',
-    'ALTER TABLE Wiki ADD COLUMN IF NOT EXISTS scheduledDeletionAt DATETIME(3) NULL;',
-  ]) {
-    try { await prisma.$executeRawUnsafe(ddl) } catch { /* already exists */ }
+
+  // Additive columns — check existence individually then add only if missing.
+  const additive: Array<{ name: string; ddl: string }> = [
+    { name: 'isPublished',          ddl: 'ALTER TABLE Wiki ADD COLUMN isPublished BOOLEAN NOT NULL DEFAULT TRUE' },
+    { name: 'scheduledDeletionAt',  ddl: 'ALTER TABLE Wiki ADD COLUMN scheduledDeletionAt DATETIME(3) NULL' },
+  ]
+
+  let allOk = true
+  for (const col of additive) {
+    try {
+      const exists = await columnExists(prisma, col.name)
+      if (!exists) {
+        await prisma.$executeRawUnsafe(col.ddl)
+      }
+    } catch (err: any) {
+      // Race condition: another request may have just added the same column.
+      // Re-check; if it's now present we're fine, otherwise surface the error
+      // so the caller knows the schema isn't ready (and we DON'T cache).
+      const present = await columnExists(prisma, col.name).catch(() => false)
+      if (!present) {
+        console.error(`[wiki route] Failed to add column "${col.name}":`, err?.message || err)
+        allOk = false
+      }
+    }
   }
-  wikiColumnsEnsured.add(prisma)
+
+  if (allOk) wikiColumnsEnsured.add(prisma)
 }
 
 async function readWikiFromFile(slug: string): Promise<any | null> {

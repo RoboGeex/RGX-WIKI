@@ -1,4 +1,4 @@
-export const HUB_DOMAIN = (process.env.NEXT_PUBLIC_HUB_DOMAIN || 'robogeex-wiki-gcp-183768683810.europe-west1.run.app').toLowerCase()
+export const HUB_DOMAIN = (process.env.NEXT_PUBLIC_HUB_DOMAIN || 'wikis.robogeex.com').toLowerCase()
 
 export function normalizeHost(host?: string | null) {
   if (!host) return ''
@@ -35,7 +35,12 @@ export function isCloudRunHost(host?: string | null) {
   return normalized.endsWith('.run.app') || normalized.endsWith('.a.run.app')
 }
 
+export function isVercelHost(host?: string | null) {
+  const normalized = normalizeHost(host)
+  return normalized.endsWith('.vercel.app')
+}
+
 export function isHubHost(host?: string | null) {
   const normalized = normalizeHost(host)
-  return normalized === HUB_DOMAIN || isLocalHost(normalized) || isCloudRunHost(normalized)
+  return normalized === HUB_DOMAIN || isLocalHost(normalized) || isCloudRunHost(normalized) || isVercelHost(normalized)
 }

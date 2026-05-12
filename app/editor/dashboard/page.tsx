@@ -27,8 +27,12 @@ export default async function EditorDashboardPage() {
       const kitSlugs = kits.length ? kits.map((kit) => kit.slug) : [wiki.slug]
       let lessonCount = 0
       for (const kitSlug of kitSlugs) {
-        const lessons = await loadLessonsForKit(kitSlug, wiki.slug)
-        lessonCount += lessons.length
+        try {
+          const lessons = await loadLessonsForKit(kitSlug, wiki.slug)
+          lessonCount += lessons.length
+        } catch {
+          // DB unreachable for this wiki — show 0 lessons rather than crashing the page
+        }
       }
       return { wiki, lessonCount }
     })

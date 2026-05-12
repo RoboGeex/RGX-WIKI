@@ -39,7 +39,14 @@ function toIsoDate(value: unknown): string {
 }
 
 export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Promise<Lesson[]> {
-  const fileLessons = await getLessons(kitSlug, { includeDrafts: true })
+  // getLessons() queries the DB when USE_DB=true — swallow DB errors so a
+  // single unreachable wiki database never crashes the whole caller.
+  let fileLessons: Lesson[] = []
+  try {
+    fileLessons = await getLessons(kitSlug, { includeDrafts: true })
+  } catch (e) {
+    console.warn(`[lesson-loader] getLessons failed for kit "${kitSlug}" (wiki "${wikiSlug}") — proceeding with empty list:`, e instanceof Error ? e.message : e)
+  }
   let dbLessons: Lesson[] = []
   let dbVersionRows: Lesson[] = []
   if (process.env.USE_DB === 'true') {

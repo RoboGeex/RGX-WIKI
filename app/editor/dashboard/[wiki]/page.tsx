@@ -1,13 +1,17 @@
 ﻿import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { getWiki, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { HUB_DOMAIN } from "@/lib/domains"
 import LessonsReorderList from "@/components/editor/LessonsReorderList"
 import WikiPublishToggle from "@/components/editor/WikiPublishToggle"
 import WikiSettingsPanel from "@/components/editor/WikiSettingsPanel"
+import WikiAccessGate from "@/components/editor/WikiAccessGate"
 import { getWikisFromDb } from "@/lib/server-data"
 import { getPrisma } from "@/lib/prisma-multi"
+import { findDeveloperById } from "@/lib/developers"
+import { canManageWiki } from "@/lib/assignments"
 
 export const dynamic = "force-dynamic"
 
@@ -26,6 +30,21 @@ export default async function EditorWikiDashboardPage({
   const dbWiki = dbWikis.find((item) => item.slug === wikiSlug)
   const wiki = dbWiki ? { ...(fileWiki || {}), ...dbWiki } : fileWiki
   if (!wiki) notFound()
+
+  // ── Server-side wiki access check ────────────────────────────────────────
+  // The login endpoint sets an HTTP-only cookie (rgx_dev_id) alongside the
+  // localStorage value, so we can verify permissions here before rendering.
+  // If the cookie is absent (old session pre-dating this check), the
+  // client-side EditorAuthGate handles the unauthenticated case gracefully.
+  const devId = cookies().get('rgx_dev_id')?.value
+  if (devId) {
+    const developer = await findDeveloperById(devId)
+    if (developer && !canManageWiki(developer, wikiSlug)) {
+      redirect('/editor/dashboard')
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const initialIsPublished = wiki.isPublished ?? true
 
   // Fetch scheduledDeletionAt from DB (column may not exist yet — gracefully falls back to null)
@@ -68,6 +87,9 @@ export default async function EditorWikiDashboardPage({
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12 space-y-8">
+      {/* Ensures the HTTP-only cookie is stamped for old sessions so the
+          server-side wiki access check fires correctly on refresh */}
+      <WikiAccessGate />
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Link href="/editor/dashboard" className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700">

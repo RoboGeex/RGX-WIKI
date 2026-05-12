@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       ok: true,
       developer: {
         id: dev.id,
@@ -26,6 +26,18 @@ export async function POST(request: Request) {
         lessonIds: dev.lessonIds || [],
       },
     })
+
+    // Set an HTTP-only cookie so server components can verify identity
+    // and enforce wiki-level access control without a client round-trip.
+    res.cookies.set('rgx_dev_id', String(dev.id), {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    })
+
+    return res
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Login failed' }, { status: 500 })
   }

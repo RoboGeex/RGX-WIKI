@@ -47,6 +47,18 @@ export default function SegmentEditorPage() {
           const data = await meRes.json()
           if (data.ok) {
             setDeveloper(data.developer)
+
+            // Wiki-level access guard — mirrors the server-side check on other
+            // editor pages.  Segment page is a client component so we enforce
+            // access here after confirming the developer's identity.
+            const dev = data.developer
+            const isSuperAdmin = dev?.role === 'superadmin'
+            const hasAccess =
+              isSuperAdmin || (dev?.wikiSlugs ?? []).includes(wikiSlug)
+            if (!hasAccess) {
+              window.location.href = '/editor/dashboard'
+              return
+            }
           }
         }
 

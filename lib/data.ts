@@ -413,7 +413,11 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
   }
 
   if (!shouldUseDb) {
-    throw new Error(`Lesson file fallback is disabled. Enable database access for wiki "${wikiSlug}".`)
+    const raw = loadJsonFile<any[]>(`lessons.${wikiSlug}.json`, [])
+    const rows: Lesson[] = raw.map((row) =>
+      mapLegacyLessonRow({ ...row, status: row.status || LESSON_STATUS.PUBLISHED })
+    )
+    return buildLessonsResult(rows)
   }
 
   if (shouldBypassDb(wikiSlug)) {

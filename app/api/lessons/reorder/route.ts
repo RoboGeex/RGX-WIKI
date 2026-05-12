@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { getWiki } from "@/lib/data"
+import { getWikisFromDb } from "@/lib/server-data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { findDeveloperById } from '@/lib/developers'
 import { canManageWiki } from '@/lib/assignments'
@@ -35,8 +36,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "wikiSlug and kitSlug are required" }, { status: 400 })
     }
 
-    if (!getWiki(wikiSlug)) {
-      return NextResponse.json({ error: "Unknown wiki" }, { status: 400 })
+    const wikiInFile = getWiki(wikiSlug)
+    if (!wikiInFile) {
+      let wikiInDb = false
+      try {
+        const dbWikis = await getWikisFromDb()
+        wikiInDb = dbWikis.some((w) => w.slug === wikiSlug)
+      } catch {
+        // ignore — file is the fallback
+      }
+      if (!wikiInDb) {
+        return NextResponse.json({ error: "Unknown wiki" }, { status: 400 })
+      }
     }
 
     const actorId = getActorIdFromRequest(req)

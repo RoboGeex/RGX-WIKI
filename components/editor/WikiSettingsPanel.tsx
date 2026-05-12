@@ -42,7 +42,20 @@ export default function WikiSettingsPanel({
 }: Props) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [isVisible, setIsVisible] = useState(false) // drives CSS transition
   const [devRole, setDevRole] = useState<string | null>(null)
+
+  // Trigger enter transition one frame after mounting, exit before unmounting
+  useEffect(() => {
+    if (!isOpen) return
+    const id = requestAnimationFrame(() => setIsVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [isOpen])
+
+  const handleClose = () => {
+    setIsVisible(false)
+    setTimeout(() => setIsOpen(false), 300) // match transition duration
+  }
 
   // Rename
   const [displayName, setDisplayName] = useState(initialDisplayName)
@@ -225,7 +238,7 @@ export default function WikiSettingsPanel({
       const data = await res.json()
       setScheduledDeletionAt(data.scheduledDeletionAt)
       setShowDeleteDialog(false)
-      setIsOpen(false)
+      handleClose()
     } catch (e: any) {
       setDeleteError(e.message)
     } finally {
@@ -307,14 +320,14 @@ export default function WikiSettingsPanel({
       {/* ── Right-side drawer ── */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
+          {/* Backdrop — fades in/out */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
-            onClick={() => setIsOpen(false)}
+            className={`absolute inset-0 bg-black/40 backdrop-blur-[1px] transition-opacity duration-300 ${isVisible ? "opacity-100" : "opacity-0"}`}
+            onClick={handleClose}
           />
 
-          {/* Panel */}
-          <div className="relative ml-auto flex h-full w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl">
+          {/* Panel — slides in from the right */}
+          <div className={`relative ml-auto flex h-full w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-300 ease-out ${isVisible ? "translate-x-0" : "translate-x-full"}`}>
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-4">
               <div>
@@ -322,7 +335,7 @@ export default function WikiSettingsPanel({
                 <p className="mt-0.5 font-mono text-xs text-gray-400">{wikiSlug}</p>
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={() => handleClose()}
                 className="rounded-lg p-1.5 transition hover:bg-gray-100"
               >
                 <X size={18} />

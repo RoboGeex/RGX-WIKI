@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
 import { getWiki } from '@/lib/data'
+import { getWikisFromDb } from '@/lib/server-data'
 import { getPrisma } from '@/lib/prisma-multi'
 import { canEditLesson, canManageWiki } from '@/lib/assignments'
 import { findDeveloperById } from '@/lib/developers'
@@ -1077,8 +1078,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
     }
 
-    if (!getWiki(lesson.wikiSlug)) {
-      return NextResponse.json({ error: 'Unknown wiki' }, { status: 400 })
+    // Validate the wiki exists — check file first (fast), then DB as fallback
+    // for wikis created via the API that haven't been written to wikis.json yet
+    // (e.g. on Cloud Run where the filesystem is read-only).
+    const wikiInFile = getWiki(lesson.wikiSlug)
+    if (!wikiInFile) {
+      let wikiInDb = false
+      try {
+        const dbWikis = await getWikisFromDb()
+        wikiInDb = dbWikis.some((w) => w.slug === lesson.wikiSlug)
+      } catch {
+        // DB unreachable — file check is the only signal; fall through to error below
+      }
+      if (!wikiInDb) {
+        return NextResponse.json({ error: 'Unknown wiki' }, { status: 400 })
+      }
     }
 
     const actorId = getActorIdFromRequest(req)

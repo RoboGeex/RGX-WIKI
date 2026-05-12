@@ -28,7 +28,14 @@ export function getDbBypassTtlMs() {
   return getSafeMs(process.env.DB_BYPASS_TTL_MS, 5000)
 }
 
-export function shouldBypassDb(wikiSlug?: string | null) {
+export function shouldBypassDb(wikiSlug?: string | null): boolean {
+  const key = normalizeKey(wikiSlug)
+  const state = getBypassState()
+  const until = state.get(key)
+  if (!until) return false
+  if (Date.now() < until) return true
+  // TTL expired — clean up so the next call retries the DB
+  state.delete(key)
   return false
 }
 

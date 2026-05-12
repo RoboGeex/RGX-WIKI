@@ -21,21 +21,40 @@ export default async function EditorDashboardPage() {
         })()
       : fileWikis
 
+  // Per-wiki budget: never let one slow / unreachable wiki DB hold up the
+  // whole dashboard.  We race each wiki's lesson load against a short timeout
+  // and fall back to 0 lessons if it exceeds the budget.  Combined with the
+  // shouldBypassDb cache in lib/db-fallback, the second visit after a failure
+  // returns instantly without even attempting the DB.
+  const PER_WIKI_BUDGET_MS = 2500
+
+  const withBudget = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
+    Promise.race<T>([
+      p,
+      new Promise<T>((resolve) =>
+        setTimeout(() => resolve(fallback), PER_WIKI_BUDGET_MS),
+      ),
+    ])
+
   const summaries = await Promise.all(
     wikis.map(async (wiki) => {
       const kits = getKits(wiki.slug)
       const kitSlugs = kits.length ? kits.map((kit) => kit.slug) : [wiki.slug]
-      let lessonCount = 0
-      for (const kitSlug of kitSlugs) {
-        try {
-          const lessons = await loadLessonsForKit(kitSlug, wiki.slug)
-          lessonCount += lessons.length
-        } catch {
-          // DB unreachable for this wiki — show 0 lessons rather than crashing the page
-        }
-      }
+
+      // Parallel-load lesson counts for every kit, each with its own budget
+      const counts = await Promise.all(
+        kitSlugs.map((kitSlug) =>
+          withBudget(
+            loadLessonsForKit(kitSlug, wiki.slug)
+              .then((lessons) => lessons.length)
+              .catch(() => 0),
+            0,
+          ),
+        ),
+      )
+      const lessonCount = counts.reduce((sum, n) => sum + n, 0)
       return { wiki, lessonCount }
-    })
+    }),
   )
 
   return (

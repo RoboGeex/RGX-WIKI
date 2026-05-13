@@ -94,3 +94,93 @@ model AccessCode {
 
   @@index([wikiSlug])
 }
+
+// --- Teacher/student access system ---
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String?
+  role               String   // "admin" | "teacher" | "student"
+  assignedWikiSlugs  Json?    // string[] — only used for teachers
+  disabledAt         DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions          Session[]
+  teacherLinks      EnrollmentLink[] @relation("TeacherLinks")
+  teacherEnrollments Enrollment[]    @relation("TeacherEnrollments")
+  studentEnrollments Enrollment[]    @relation("StudentEnrollments")
+  progress          LessonProgress[]
+
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([token])
+}
+
+model EnrollmentLink {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  teacherId   String
+  wikiSlug    String
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  disabledAt  DateTime?
+
+  teacher     User         @relation("TeacherLinks", fields: [teacherId], references: [id])
+  enrollments Enrollment[]
+
+  // Only one active link per (teacher, wiki) — enforced in app code,
+  // since "active" is a boolean and partial unique indexes aren't portable.
+  @@index([teacherId, wikiSlug])
+  @@index([token])
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  studentId  String
+  teacherId  String
+  linkId     String
+  wikiSlug   String
+  status     String   @default("active") // "active" | "removed" | "revoked"
+  joinedAt   DateTime @default(now())
+  removedAt  DateTime?
+
+  student User           @relation("StudentEnrollments", fields: [studentId], references: [id])
+  teacher User           @relation("TeacherEnrollments", fields: [teacherId], references: [id])
+  link    EnrollmentLink @relation(fields: [linkId], references: [id])
+
+  @@unique([studentId, wikiSlug, linkId])
+  @@index([teacherId, status])
+  @@index([studentId, status])
+  @@index([linkId])
+  @@index([wikiSlug])
+}
+
+model LessonProgress {
+  id           String    @id @default(cuid())
+  studentId    String
+  wikiSlug     String
+  lessonId     String
+  status       String    @default("in_progress") // "in_progress" | "completed"
+  lastViewedAt DateTime  @default(now())
+  completedAt  DateTime?
+
+  student User @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@index([studentId, wikiSlug])
+  @@index([lessonId])
+}

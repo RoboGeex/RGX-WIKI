@@ -12,6 +12,7 @@ import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
 import CodeBlock from '@/components/code-block'
 import PrevNextNav from '@/components/prev-next-nav'
+import LessonProgressTracker from '@/app/components/LessonProgressTracker'
 import { LessonImageSlider } from '@/components/lesson/ImageSlider'
 import Step from '@/components/step'
 import LessonToc from '@/components/lesson-toc'
@@ -874,6 +875,8 @@ export default async function LessonPage(
                     )}
                   </article>
                 )}
+
+                <LessonProgressTracker lessonId={lesson.id} wikiSlug={kit} />
 
                 <PrevNextNav
                   prevLesson={prevLesson}

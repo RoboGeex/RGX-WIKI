@@ -1,36 +1,27 @@
+import { redirect } from 'next/navigation'
+import { requireAdminAccess } from '@/lib/admin-auth'
 import AdminNavbar from '../../components/admin-navbar'
-import EditorAuthGate from '@/components/editor/EditorAuthGate'
-import { prisma } from '@/lib/prisma'
-import TeachersSection from './TeachersSection'
-
-async function getWikis() {
-  try {
-    return await prisma.wiki.findMany({
-      where: { isPublished: true },
-      orderBy: { displayName: 'asc' },
-      select: { slug: true, displayName: true },
-    })
-  } catch {
-    return []
-  }
-}
+import DashboardHome from './DashboardHome'
 
 export default async function DashboardPage() {
-  const wikis = await getWikis()
+  let isAdmin = false
+  try {
+    await requireAdminAccess()
+    isAdmin = true
+  } catch { /* not authorised */ }
+
+  if (!isAdmin) redirect('/login?redirect=/dashboard')
 
   return (
-    <EditorAuthGate>
-      <div className="min-h-screen bg-[#eef2f1]">
-        <AdminNavbar />
-        <div className="mx-auto max-w-5xl px-6 py-12 space-y-10 pt-20">
-          <header className="space-y-1">
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-600">Manage teachers and their wiki access.</p>
-          </header>
-
-          <TeachersSection wikis={wikis} />
+    <div className="min-h-screen bg-[#eef2f1]">
+      <AdminNavbar />
+      <div className="mx-auto max-w-5xl px-6 pt-24 pb-12 space-y-2">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Overview of your platform.</p>
         </div>
+        <DashboardHome />
       </div>
-    </EditorAuthGate>
+    </div>
   )
 }

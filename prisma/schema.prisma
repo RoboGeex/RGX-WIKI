@@ -102,9 +102,11 @@ model User {
   email         String   @unique
   passwordHash  String
   name          String?
-  role               String   // "admin" | "teacher" | "student"
-  assignedWikiSlugs  Json?    // string[] — only used for teachers
+  role               String    // "admin" | "teacher" | "student"
+  assignedWikiSlugs  Json?     // string[] — only used for teachers
   disabledAt         DateTime?
+  createdByName      String?   // display name of the admin who created this account
+  createdByEmail     String?   // email of the admin who created this account
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

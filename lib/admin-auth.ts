@@ -17,8 +17,12 @@ export async function requireAdminAccess() {
   // Fall back to developer cookie
   const devId = cookies().get('rgx_dev_id')?.value
   if (devId) {
-    const dev = await findDeveloperById(devId)
-    if (dev) return { source: 'developer' as const, dev }
+    try {
+      const dev = await findDeveloperById(devId)
+      if (dev) return { source: 'developer' as const, dev }
+    } catch {
+      // developer lookup failed — fall through
+    }
   }
 
   throw new AuthError('Admin access required', 403)

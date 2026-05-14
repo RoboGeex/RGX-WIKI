@@ -29,6 +29,7 @@ const RESERVED_APP_SEGMENTS = new Set([
   'login',
   'signup',
   'join',
+  'home',
   'teacher',
   'admin',
   '_next',

@@ -8,6 +8,8 @@ import type { Locale } from '@/lib/i18n'
 import { headers, cookies } from 'next/headers'
 import { isHubHost, normalizeHost } from '@/lib/domains'
 import { getPrisma } from '@/lib/prisma-multi'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
 import accessCodesData from '@/data/access-codes.json'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
 
@@ -86,6 +88,34 @@ export default async function KitLayout(
       // DB circuit breaker active. Same logic: only gate if static codes exist.
       shouldRequireAccess = configuredCodes.length > 0
       isValid = Boolean(accessCookieValue && configuredCodes.includes(accessCookieValue))
+    }
+
+    if (shouldRequireAccess && !isValid) {
+      // Bypass access-code gate for:
+      //  • admins (full access)
+      //  • teachers assigned to this wiki
+      //  • students with an active enrollment for this wiki
+      try {
+        const user = await getCurrentUser()
+        if (user) {
+          if (user.role === 'admin') {
+            isValid = true
+          } else if (user.role === 'teacher') {
+            const teacher = await prisma.user.findUnique({ where: { id: user.id } })
+            const assigned: string[] = Array.isArray(teacher?.assignedWikiSlugs)
+              ? (teacher.assignedWikiSlugs as string[])
+              : []
+            if (assigned.includes(wiki.slug)) isValid = true
+          } else if (user.role === 'student') {
+            const enrollment = await prisma.enrollment.findFirst({
+              where: { studentId: user.id, wikiSlug: wiki.slug, status: 'active' },
+            })
+            if (enrollment) isValid = true
+          }
+        }
+      } catch {
+        // bypass check failure → fall through to unlock page
+      }
     }
 
     if (shouldRequireAccess && !isValid) {

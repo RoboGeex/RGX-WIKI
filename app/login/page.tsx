@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams?.get('redirect') || '/'
+  const redirectParam = searchParams?.get('redirect') || ''
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,12 +27,37 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Login failed')
+
       const role = data.user?.role
-      const dest = redirect !== '/'
-        ? redirect
-        : role === 'admin' ? '/admin' : role === 'teacher' ? '/teacher' : '/'
-      router.push(dest)
-      router.refresh()
+
+      // Editors: persist developer ID in localStorage so EditorAuthGate passes
+      if (role === 'editor' && data.developerId) {
+        localStorage.setItem('rgx.devId', String(data.developerId))
+      }
+
+      // Route to the right destination.
+      // Block non-editors from /editor redirects, and block editors/admins from /home redirects.
+      const isEditorRole = role === 'editor' || role === 'admin'
+      const safeRedirect =
+        redirectParam &&
+        !(redirectParam.startsWith('/editor') && !isEditorRole) &&
+        !(redirectParam === '/home' && isEditorRole)
+          ? redirectParam
+          : null
+
+      let dest: string
+      if (safeRedirect) {
+        dest = safeRedirect
+      } else if (role === 'admin') {
+        dest = '/dashboard'
+      } else if (role === 'editor') {
+        dest = '/dashboard'   // developers go to the dashboard, not /editor
+      } else {
+        dest = '/home'
+      }
+
+      // Full page navigation so cookies are included in the very next request
+      window.location.href = dest
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -42,8 +68,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h1 className="text-2xl font-bold mb-1 text-gray-900">Sign in</h1>
-        <p className="text-sm text-gray-500 mb-6">Welcome back to the RoboGeex wiki.</p>
+
+        <div className="flex justify-center mb-6">
+          <Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={180} height={64} className="h-12 w-auto" />
+        </div>
+
+        <h1 className="text-2xl font-bold mb-1 text-gray-900 text-center">Sign in</h1>
+        <p className="text-sm text-gray-500 mb-6 text-center">Welcome back to RoboGeex Wiki.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -83,7 +114,10 @@ export default function LoginPage() {
 
         <p className="text-sm text-gray-500 mt-6 text-center">
           Don&apos;t have an account?{' '}
-          <Link href={`/signup${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-primary hover:underline">
+          <Link
+            href={`/signup${redirectParam ? `?redirect=${encodeURIComponent(redirectParam)}` : ''}`}
+            className="text-primary hover:underline"
+          >
             Sign up
           </Link>
         </p>

@@ -560,7 +560,7 @@ export function findPrevNextInList(
 }
 
 export async function getFirstLesson(kitSlug: string): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kitSlug)
+  const lessons = await getLessons(kitSlug, { metadataOnly: true })
   const wikiSlug = wikiSlugForKit(kitSlug)
   const wiki = getWiki(wikiSlug)
   
@@ -578,7 +578,7 @@ export async function getNextLesson(
   slug: string,
   opts?: { includeDrafts?: boolean }
 ): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kit, opts)
+  const lessons = await getLessons(kit, { ...opts, metadataOnly: true })
   const list = sortLessons(lessons)
   const idx = list.findIndex(l => l.slug === slug)
   if (idx >= 0 && idx < list.length - 1) return list[idx + 1]
@@ -589,7 +589,7 @@ export async function getPrevLesson(
   slug: string,
   opts?: { includeDrafts?: boolean }
 ): Promise<Lesson | undefined> {
-  const lessons = await getLessons(kit, opts)
+  const lessons = await getLessons(kit, { ...opts, metadataOnly: true })
   const list = sortLessons(lessons)
   const idx = list.findIndex(l => l.slug === slug)
   if (idx > 0) return list[idx - 1]

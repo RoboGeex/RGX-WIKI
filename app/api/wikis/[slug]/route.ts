@@ -320,7 +320,7 @@ export async function PATCH(
         .filter((item: unknown): item is string => typeof item === 'string')
         .map((item: string) => item.trim())
         .filter((item: string) => item.length > 0)
-      const dedupedTags = Array.from(new Set(cleanedTags))
+      const dedupedTags: string[] = Array.from(new Set<string>(cleanedTags))
       updates.tags = dedupedTags
       fileUpdates.tags = dedupedTags
     }

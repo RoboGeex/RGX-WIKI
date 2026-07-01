@@ -8,6 +8,17 @@ export async function GET() {
   try {
     await requireAdminAccess()
 
+    if (process.env.NODE_ENV !== 'production' && process.env.USE_DB !== 'true') {
+      return NextResponse.json({
+        teachers: 0,
+        students: 0,
+        wikis: 0,
+        activeSessions: 0,
+        admins: 0,
+        developerCount: 1,
+      })
+    }
+
     const [teachers, students, wikis, activeSessions, admins] = await Promise.all([
       prisma.user.count({ where: { role: 'teacher', disabledAt: null } }),
       prisma.user.count({ where: { role: 'student' } }),

@@ -9,6 +9,24 @@ export async function GET() {
   try {
     await requireAdminAccess()
 
+    if (process.env.NODE_ENV !== 'production' && process.env.USE_DB !== 'true') {
+      const now = new Date().toISOString()
+      return NextResponse.json({
+        admins: [],
+        developers: [{
+          source: 'developer',
+          id: process.env.LOCAL_DEV_ID || 'local-dev',
+          email: process.env.LOCAL_DEV_EMAIL || 'info@robogeex.com',
+          name: process.env.LOCAL_DEV_NAME || 'Local Developer',
+          disabledAt: null,
+          createdAt: now,
+          lastLoginAt: null,
+          activeSessions: null,
+          role: 'superadmin',
+        }],
+      })
+    }
+
     // ── New-system admins (User table, role=admin) ─────────────────────────
     const adminUsers = await prisma.user.findMany({
       where: { role: 'admin' },

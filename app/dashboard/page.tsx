@@ -3,23 +3,32 @@ import { requireAdminAccess } from '@/lib/admin-auth'
 import AdminNavbar from '../../components/admin-navbar'
 import DashboardHome from './DashboardHome'
 
+function getInitials(name: string | null | undefined, email: string) {
+  if (name) {
+    const parts = name.trim().split(/\s+/)
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase()
+  }
+  return email.slice(0, 2).toUpperCase()
+}
+
 export default async function DashboardPage() {
+  let userInitials = 'AD'
   let isAdmin = false
   try {
-    await requireAdminAccess()
+    const auth = await requireAdminAccess()
     isAdmin = true
+    if (auth.source === 'user') userInitials = getInitials(auth.user.name, auth.user.email)
+    else if (auth.source === 'developer') userInitials = getInitials(auth.dev.name ?? null, auth.dev.email ?? '')
   } catch { /* not authorised */ }
 
   if (!isAdmin) redirect('/login?redirect=/dashboard')
 
   return (
-    <div className="min-h-screen bg-[#eef2f1]">
-      <AdminNavbar />
-      <div className="mx-auto max-w-5xl px-6 pt-24 pb-12 space-y-2">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Overview of your platform.</p>
-        </div>
+    <div className="min-h-screen bg-[#f5f5f4]">
+      <AdminNavbar userInitials={userInitials} />
+      <div className="w-full px-6 pt-20 pb-12">
         <DashboardHome />
       </div>
     </div>

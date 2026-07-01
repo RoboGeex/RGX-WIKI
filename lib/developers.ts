@@ -11,6 +11,21 @@ type DbDeveloper = {
   lessonIds?: any
 }
 
+function isLocalNoDbMode() {
+  return process.env.NODE_ENV !== 'production' && process.env.USE_DB !== 'true'
+}
+
+function getLocalDeveloper(): DeveloperAssignment {
+  return {
+    id: process.env.LOCAL_DEV_ID || 'local-dev',
+    email: process.env.LOCAL_DEV_EMAIL || 'info@robogeex.com',
+    name: process.env.LOCAL_DEV_NAME || 'Local Developer',
+    role: 'superadmin',
+    wikiSlugs: [],
+    lessonIds: [],
+  }
+}
+
 function normalizeDbDeveloper(row: DbDeveloper): DeveloperAssignment {
   const wikiSlugs = Array.isArray(row.wikiSlugs)
     ? row.wikiSlugs
@@ -35,6 +50,13 @@ export async function findDeveloperByCredentials(email: string, password: string
   const normalizedPassword = (password || '').trim()
   if (!normalizedEmail || !normalizedPassword) return undefined
 
+  if (isLocalNoDbMode()) {
+    const localDev = getLocalDeveloper()
+    const expectedPassword = process.env.LOCAL_DEV_PASSWORD?.trim()
+    const passwordMatches = expectedPassword ? normalizedPassword === expectedPassword : true
+    return normalizedEmail === localDev.email?.toLowerCase() && passwordMatches ? localDev : undefined
+  }
+
   const prisma = getDevelopersPrisma()
   const row = await prisma.developer.findUnique({
     where: { email: normalizedEmail },
@@ -48,6 +70,11 @@ export async function findDeveloperByCredentials(email: string, password: string
 export async function findDeveloperById(id: string): Promise<DeveloperAssignment | undefined> {
   const trimmed = (id || '').trim()
   if (!trimmed) return undefined
+
+  if (isLocalNoDbMode()) {
+    const localDev = getLocalDeveloper()
+    return trimmed === localDev.id || trimmed.toLowerCase() === localDev.email?.toLowerCase() ? localDev : undefined
+  }
 
   const prisma = getDevelopersPrisma()
   const numericId = Number(trimmed)

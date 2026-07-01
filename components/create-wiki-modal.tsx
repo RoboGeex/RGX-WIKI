@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { X, Upload } from 'lucide-react'
+import { X, Upload, Plus, Tag } from 'lucide-react'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
 
 interface CreateWikiModalProps {
@@ -15,6 +15,11 @@ type DeveloperOption = {
   name?: string
   email: string
   role?: string
+}
+
+type CategoryOption = {
+  id: number
+  name: string
 }
 
 function slugifyClient(value: string) {
@@ -35,6 +40,12 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [developers, setDevelopers] = useState<DeveloperOption[]>([])
   const [assignedIds, setAssignedIds] = useState<string[]>([])
+  const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [isSuperadmin, setIsSuperadmin] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const [categoryError, setCategoryError] = useState<string | null>(null)
 
   const handlePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -55,7 +66,53 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
       .then((r) => (r.ok ? r.json() : []))
       .then((data: DeveloperOption[]) => setDevelopers(data))
       .catch(() => {})
+
+    fetch('/api/categories', { headers: applyDeveloperHeader() as HeadersInit })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: CategoryOption[]) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => {})
+
+    fetch('/api/developers/me', { headers: applyDeveloperHeader() as HeadersInit })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.developer?.role === 'superadmin') setIsSuperadmin(true)
+      })
+      .catch(() => {})
   }, [isOpen])
+
+  const handleCreateCategory = async () => {
+    const trimmed = newCategoryName.trim()
+    if (!trimmed) return
+    setCreatingCategory(true)
+    setCategoryError(null)
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: applyDeveloperHeader({ 'Content-Type': 'application/json' }) as HeadersInit,
+        body: JSON.stringify({ name: trimmed }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Failed to create category')
+      const created: CategoryOption | undefined = data?.category
+      if (created?.name) {
+        setCategories((prev) =>
+          prev.some((c) => c.name === created.name) ? prev : [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+        )
+        setSelectedTags((prev) => (prev.includes(created.name) ? prev : [...prev, created.name]))
+      }
+      setNewCategoryName('')
+    } catch (e: any) {
+      setCategoryError(e?.message || 'Failed to create category')
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+
+  const toggleTag = (name: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name],
+    )
+  }
 
   const effectiveSlug = (slugTouched ? slug : slugifyClient(name)).trim()
 
@@ -69,6 +126,7 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
       formData.append('name', name.trim())
       formData.append('slug', effectiveSlug)
       formData.append('grade', grade.trim())
+      formData.append('tags', JSON.stringify(selectedTags))
       if (picture) {
         formData.append('picture', picture)
       }
@@ -112,6 +170,11 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
     setPreview(null)
     setAssignedIds([])
     setDevelopers([])
+    setSelectedTags([])
+    setCategories([])
+    setNewCategoryName('')
+    setCategoryError(null)
+    setIsSuperadmin(false)
     onClose()
   }
 
@@ -119,7 +182,7 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Create New Wiki</h2>
@@ -133,69 +196,52 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
 
         <form onSubmit={handleSubmit}>
           <div className="flex gap-0">
-            {/* Left column — picture upload */}
-            <div className="w-64 shrink-0 flex flex-col items-center gap-4 px-8 py-6 border-r border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 self-start">
-                Wiki Picture
-              </label>
-              <div className="relative w-full">
-                <input
-                  id="picture"
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePictureChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <label
-                  htmlFor="picture"
-                  className="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors overflow-hidden"
-                >
-                  {preview ? (
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 px-4 text-center">
-                      <Upload size={28} className="text-gray-400" />
-                      <span className="text-sm text-gray-500">Click to upload image</span>
-                      <span className="text-xs text-gray-400">PNG, JPG up to 10MB</span>
-                    </div>
-                  )}
-                </label>
-              </div>
-              {picture && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPicture(null)
-                    setPreview(null)
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <X size={16} />
-                  Remove picture
-                </button>
-              )}
-            </div>
-
-            {/* Right column — form fields */}
-            <div className="flex-1 flex flex-col gap-5 px-8 py-6">
-              {/* Wiki Name */}
+            {/* Left column — picture upload + slug/grade/categories */}
+            <div className="w-96 shrink-0 flex flex-col gap-5 px-8 py-6 border-r border-gray-100">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Wiki Name *
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Wiki Picture
                 </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Arduino Basics, Robotics 101"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-                  required
-                />
+                <div className="relative w-full">
+                  <input
+                    id="picture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePictureChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <label
+                    htmlFor="picture"
+                    className="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors overflow-hidden"
+                  >
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 px-4 text-center">
+                        <Upload size={28} className="text-gray-400" />
+                        <span className="text-sm text-gray-500">Click to upload image</span>
+                        <span className="text-xs text-gray-400">PNG, JPG up to 10MB</span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+                {picture && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPicture(null)
+                      setPreview(null)
+                    }}
+                    className="mt-2 flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <X size={16} />
+                    Remove picture
+                  </button>
+                )}
               </div>
 
               {/* Wiki Slug */}
@@ -242,6 +288,98 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
                 </select>
               </div>
 
+              {/* Category Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Tag size={14} />
+                    Categories
+                  </span>
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Pick one or more tags to categorize this wiki.
+                </p>
+
+                {categories.length === 0 ? (
+                  <p className="text-xs text-gray-400 mb-2">
+                    No categories yet.
+                    {isSuperadmin ? ' Create one below.' : ' Ask a superadmin to create one.'}
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {categories.map((cat) => {
+                      const active = selectedTags.includes(cat.name)
+                      return (
+                        <button
+                          type="button"
+                          key={cat.id}
+                          onClick={() => toggleTag(cat.name)}
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+                            active
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-primary/40 hover:bg-primary/5'
+                          }`}
+                        >
+                          {cat.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {isSuperadmin && (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => {
+                        setNewCategoryName(e.target.value)
+                        setCategoryError(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleCreateCategory()
+                        }
+                      }}
+                      placeholder="New category name"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateCategory}
+                      disabled={!newCategoryName.trim() || creatingCategory}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus size={14} />
+                      {creatingCategory ? 'Adding…' : 'Add'}
+                    </button>
+                  </div>
+                )}
+                {categoryError && (
+                  <p className="mt-1 text-xs text-red-600">{categoryError}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Right column — name + team */}
+            <div className="flex-1 flex flex-col gap-5 px-8 py-6">
+              {/* Wiki Name */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Wiki Name *
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Arduino Basics, Robotics 101"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                  required
+                />
+              </div>
+
               {/* Team Assignment — only shown to superadmins (API returns [] otherwise) */}
               {developers.filter((d) => d.role !== 'superadmin').length > 0 && (
                 <div>
@@ -249,7 +387,7 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
                     Wiki Team
                     <span className="text-xs font-normal text-gray-400 ml-2">Who can manage this wiki</span>
                   </label>
-                  <div className="border border-gray-200 rounded-xl divide-y max-h-36 overflow-y-auto">
+                  <div className="border border-gray-200 rounded-xl divide-y max-h-[28rem] overflow-y-auto">
                     {developers
                       .filter((d) => d.role !== 'superadmin')
                       .map((dev) => (

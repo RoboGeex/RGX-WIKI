@@ -19,6 +19,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
+    if (process.env.NODE_ENV !== 'production' && process.env.USE_DB !== 'true') {
+      const dev = await findDeveloperByCredentials(email, password)
+      if (dev) {
+        const res = NextResponse.json({
+          ok: true,
+          user: { id: String(dev.id), email: dev.email, name: dev.name ?? null, role: 'editor' },
+          developerId: String(dev.id),
+        })
+        res.cookies.set('rgx_dev_id', String(dev.id), COOKIE_OPTS())
+        return res
+      }
+      return NextResponse.json({ error: 'Invalid local developer email or password' }, { status: 401 })
+    }
+
     // ── 1. Try the new User table (admin / teacher / student) ──────────────
     const user = await authenticate(email, password)
     if (user) {

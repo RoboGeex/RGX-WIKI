@@ -114,6 +114,7 @@ export default async function EditorWikiDashboardPage({
               initialDisplayName={wiki.displayName || wiki.slug}
               initialPicture={(wiki as any).picture || undefined}
               initialScheduledDeletionAt={scheduledDeletionAt}
+              initialTags={(wiki as any).tags || []}
             />
             <WikiPublishToggle wikiSlug={wiki.slug} initialIsPublished={initialIsPublished} />
           </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Locale } from '@/lib/i18n'
+import { t, type Locale } from '@/lib/i18n'
 
 type TocEntry = {
   id: string
@@ -121,16 +121,16 @@ export default function LessonToc({ entries, lessonTitle, locale = 'en' }: Lesso
     >
       {lessonTitle && (
         <div className={`min-w-0 rounded-2xl bg-primary/15 text-primary px-4 py-3 mb-4 space-y-1 ${isArabic ? 'text-right' : 'text-left'}`}>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/70">Lesson</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/70">{t('lessonPanelLabel', locale)}</div>
           <div className="min-w-0 break-words text-sm font-semibold leading-snug text-primary [overflow-wrap:anywhere]">
             {lessonTitle}
           </div>
         </div>
       )}
 
-      <div className="text-xs uppercase font-semibold tracking-wide text-gray-500 mb-3">In this lesson</div>
+      <div className="text-xs uppercase font-semibold tracking-wide text-gray-500 mb-3">{t('onThisLesson', locale)}</div>
       {tocEntries.length === 0 && (
-        <div className="text-xs text-gray-400">Headings will appear here as you add content.</div>
+        <div className="text-xs text-gray-400">{t('headingsWillAppear', locale)}</div>
       )}
       <ul className="space-y-1">
         {tocEntries.map((entry) => (

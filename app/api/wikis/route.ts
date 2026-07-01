@@ -23,6 +23,7 @@ type WikiRow = {
   picture: string | null
   isPublished: number | boolean | null
   domains: unknown
+  tags: unknown
   defaultLocale: string | null
   defaultLessonSlug: string | null
   resourcesUrl: string | null
@@ -46,6 +47,23 @@ function parseDomains(value: unknown): string[] {
   return []
 }
 
+function parseStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string')
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string')
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return []
+}
+
 function normalizeWikiRow(row: WikiRow) {
   return {
     slug: row.slug,
@@ -54,6 +72,7 @@ function normalizeWikiRow(row: WikiRow) {
     picture: row.picture || '',
     isPublished: row.isPublished == null ? true : Boolean(row.isPublished),
     domains: parseDomains(row.domains),
+    tags: parseStringArray(row.tags),
     defaultLocale: row.defaultLocale || 'en',
     defaultLessonSlug: row.defaultLessonSlug || 'getting-started',
     resourcesUrl: row.resourcesUrl || '/resources',
@@ -76,6 +95,7 @@ async function ensureWikiTable(): Promise<void> {
       picture TEXT NULL,
       isPublished BOOLEAN NOT NULL DEFAULT TRUE,
       domains JSON NULL,
+      tags JSON NULL,
       defaultLocale VARCHAR(16) NULL,
       defaultLessonSlug VARCHAR(191) NULL,
       resourcesUrl VARCHAR(255) NULL,
@@ -92,6 +112,14 @@ async function ensureWikiTable(): Promise<void> {
   } catch {
     // Column might already exist or server may not support IF NOT EXISTS.
   }
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE Wiki
+      ADD COLUMN IF NOT EXISTS tags JSON NULL;
+    `)
+  } catch {
+    // Column might already exist or server may not support IF NOT EXISTS.
+  }
   wikiTableEnsured.add(prisma)
 }
 
@@ -99,7 +127,7 @@ async function readWikisFromDb(): Promise<any[]> {
   await ensureWikiTable()
   const prisma: any = getPrisma()
   const rows = (await prisma.$queryRawUnsafe(`
-    SELECT slug, displayName, grade, picture, isPublished, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
+    SELECT slug, displayName, grade, picture, isPublished, domains, tags, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
     FROM Wiki
     ORDER BY createdAt ASC
   `)) as WikiRow[]
@@ -111,7 +139,7 @@ async function saveWikiToDb(wiki: any): Promise<void> {
   const prisma: any = getPrisma()
   await prisma.$executeRaw`
     INSERT INTO Wiki (
-      slug, displayName, grade, picture, isPublished, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
+      slug, displayName, grade, picture, isPublished, domains, tags, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
     ) VALUES (
       ${wiki.slug},
       ${wiki.displayName},
@@ -119,6 +147,7 @@ async function saveWikiToDb(wiki: any): Promise<void> {
       ${wiki.picture || null},
       ${wiki.isPublished == null ? true : Boolean(wiki.isPublished)},
       ${JSON.stringify(wiki.domains || [])},
+      ${JSON.stringify(wiki.tags || [])},
       ${wiki.defaultLocale || 'en'},
       ${wiki.defaultLessonSlug || 'getting-started'},
       ${wiki.resourcesUrl || '/resources'},
@@ -130,6 +159,7 @@ async function saveWikiToDb(wiki: any): Promise<void> {
       picture = VALUES(picture),
       isPublished = VALUES(isPublished),
       domains = VALUES(domains),
+      tags = VALUES(tags),
       defaultLocale = VALUES(defaultLocale),
       defaultLessonSlug = VALUES(defaultLessonSlug),
       resourcesUrl = VALUES(resourcesUrl)
@@ -479,6 +509,21 @@ export async function POST(req: Request) {
     const grade = form.get('grade') as string
     const picture = form.get('picture') as File | null
     const slugInput = (form.get('slug') as string | null)?.trim() || ''
+    const tagsRaw = form.get('tags')
+    let tags: string[] = []
+    if (typeof tagsRaw === 'string' && tagsRaw.trim()) {
+      try {
+        const parsed = JSON.parse(tagsRaw)
+        if (Array.isArray(parsed)) {
+          tags = parsed
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean)
+        }
+      } catch {
+        // ignore — keep tags empty
+      }
+    }
 
     if (!name || !grade) {
       return NextResponse.json({ error: 'Name and grade are required' }, { status: 400 })
@@ -520,6 +565,7 @@ export async function POST(req: Request) {
       picture: pictureUrl,
       isPublished: true,
       domains: [],
+      tags,
       defaultLocale: 'en',
       defaultLessonSlug: 'getting-started',
       resourcesUrl: '/resources',

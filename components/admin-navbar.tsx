@@ -1,86 +1,82 @@
-"use client";
+"use client"
+
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
-import { Layout, Edit3, LogOut } from 'lucide-react'
-import { clearDeveloperId } from '@/components/editor/dev-identity'
-// Note: We can't import server-side functions in client components
+import { usePathname } from 'next/navigation'
+import { Search, Bell } from 'lucide-react'
 
 interface AdminNavbarProps {
-  currentWikiSlug?: string
-  currentKitSlug?: string
+  userInitials?: string
 }
 
-export default function AdminNavbar({ currentWikiSlug, currentKitSlug }: AdminNavbarProps) {
-  const pathname = usePathname()
-  const router = useRouter()
+const NAV = [
+  { label: 'Dashboard', href: '/dashboard', match: (p: string) => p === '/dashboard' },
+  { label: 'Wikis',     href: '/editor',    match: (p: string) => p.startsWith('/editor') },
+  { label: 'Students',  href: '/dashboard/students', match: (p: string) => p.startsWith('/dashboard/students') },
+  { label: 'Teachers',  href: '/dashboard/teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
+  { label: 'Settings',  href: '/dashboard', match: () => false },
+]
 
-  const isDashboard = pathname === '/dashboard'
-  const isEditor = pathname?.startsWith('/editor') ?? false
+export default function AdminNavbar({ userInitials = 'AD' }: AdminNavbarProps) {
+  const pathname = usePathname() ?? ''
 
-  const handleLogout = () => {
-    clearDeveloperId()
-    if (typeof window !== 'undefined') {
-      window.location.href = '/editor'
-    } else {
-      router.push('/editor')
-      router.refresh()
-    }
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    window.location.href = '/login'
   }
 
   return (
-    <nav className="bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur">
-      <div className="relative max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo - Left */}
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Image 
-            src="/images/robogeex-logo.png" 
-            alt="RoboGeex Academy" 
-            width={184} 
-            height={64} 
-            priority 
-            className="h-12 w-auto"
+    <nav className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
+      <div className="w-full px-6 h-16 flex items-center gap-4">
+
+        {/* Logo */}
+        <Link href="/dashboard" className="flex items-center gap-2 shrink-0 mr-2">
+          <Image
+            src="/images/robogeex-logo.svg"
+            alt="RoboGeex Academy"
+            width={160}
+            height={45}
+            priority
+            className="h-14 w-auto"
           />
-          <span className="sr-only">RoboGeex Academy</span>
         </Link>
 
-        {/* Navigation Buttons - Right */}
-        <div className="flex items-center gap-2">
-          {/* Dashboard Button */}
-          <Link
-            href="/dashboard"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors ${
-              isDashboard
-                ? 'text-primary bg-primary/10 border border-primary/20'
-                : 'text-white/80 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            <Layout size={16} />
-            <span className="text-sm font-medium">Dashboard</span>
-          </Link>
+        {/* Nav tabs */}
+        <div className="flex items-center gap-0.5">
+          {NAV.map(item => {
+            const active = item.match(pathname)
+            return (
+              <Link key={item.label} href={item.href}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                  active
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}>
+                {item.label}
+              </Link>
+            )
+          })}
+        </div>
 
-          {/* Editor Button */}
-          <Link
-            href="/editor"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors ${
-              isEditor
-                ? 'text-primary bg-primary/10 border border-primary/20'
-                : 'text-white/80 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            <Edit3 size={16} />
-            <span className="text-sm font-medium">Editor</span>
-          </Link>
-
+        {/* Right */}
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-400 cursor-pointer hover:border-gray-300 transition-colors">
+            <Search size={13} />
+            <span className="hidden sm:inline">Search</span>
+            <kbd className="hidden sm:inline text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded ml-1">⌘K</kbd>
+          </div>
+          <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+            <Bell size={17} />
+          </button>
           <button
-            type="button"
             onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xs font-bold shrink-0"
+            title="Sign out"
           >
-            <LogOut size={16} />
-            <span className="text-sm font-medium">Log out</span>
+            {userInitials}
           </button>
         </div>
+
       </div>
     </nav>
   )

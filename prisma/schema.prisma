@@ -20,6 +20,7 @@ model Wiki {
   picture           String?  @db.Text
   isPublished       Boolean  @default(true)
   domains           Json?
+  tags              Json?
   defaultLocale     String?  @default("en")
   defaultLessonSlug String?  @default("getting-started")
   resourcesUrl      String?  @default("/resources")
@@ -27,6 +28,14 @@ model Wiki {
   updatedAt         DateTime @updatedAt
 
   @@index([slug])
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Lesson {

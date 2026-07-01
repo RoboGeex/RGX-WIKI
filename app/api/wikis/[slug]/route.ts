@@ -77,6 +77,7 @@ async function ensureWikiColumns(): Promise<void> {
   const additive: Array<{ name: string; ddl: string }> = [
     { name: 'isPublished',          ddl: 'ALTER TABLE Wiki ADD COLUMN isPublished BOOLEAN NOT NULL DEFAULT TRUE' },
     { name: 'scheduledDeletionAt',  ddl: 'ALTER TABLE Wiki ADD COLUMN scheduledDeletionAt DATETIME(3) NULL' },
+    { name: 'tags',                 ddl: 'ALTER TABLE Wiki ADD COLUMN tags JSON NULL' },
   ]
 
   let allOk = true
@@ -133,6 +134,7 @@ type WikiUpdates = {
   displayName?: string
   picture?: string
   scheduledDeletionAt?: Date | null
+  tags?: string[]
   /** New primary-key value — triggers a cascading rename of all lesson rows too */
   newSlug?: string
 }
@@ -162,6 +164,13 @@ async function applyWikiUpdates(slug: string, updates: WikiUpdates): Promise<num
     affected = Math.max(
       affected,
       Number(await prisma.$executeRaw`UPDATE Wiki SET picture = ${updates.picture} WHERE slug = ${slug}`),
+    )
+  }
+  if (updates.tags !== undefined) {
+    const tagsJson = JSON.stringify(updates.tags)
+    affected = Math.max(
+      affected,
+      Number(await prisma.$executeRawUnsafe('UPDATE Wiki SET tags = ? WHERE slug = ?', tagsJson, slug)),
     )
   }
   if ('scheduledDeletionAt' in updates) {
@@ -200,7 +209,7 @@ async function applyWikiUpdates(slug: string, updates: WikiUpdates): Promise<num
   await prisma.$executeRaw`
     INSERT INTO Wiki (
       slug, displayName, grade, picture, isPublished,
-      domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
+      domains, tags, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
     ) VALUES (
       ${fileWiki.slug},
       ${updates.displayName ?? fileWiki.displayName ?? fileWiki.slug},
@@ -208,6 +217,7 @@ async function applyWikiUpdates(slug: string, updates: WikiUpdates): Promise<num
       ${updates.picture ?? fileWiki.picture ?? null},
       ${updates.isPublished ?? fileWiki.isPublished ?? true},
       ${JSON.stringify(fileWiki.domains || [])},
+      ${JSON.stringify(updates.tags ?? fileWiki.tags ?? [])},
       ${fileWiki.defaultLocale ?? 'en'},
       ${fileWiki.defaultLessonSlug ?? 'getting-started'},
       ${fileWiki.resourcesUrl ?? '/resources'},
@@ -219,6 +229,7 @@ async function applyWikiUpdates(slug: string, updates: WikiUpdates): Promise<num
       picture     = VALUES(picture),
       isPublished = VALUES(isPublished),
       domains     = VALUES(domains),
+      tags        = VALUES(tags),
       defaultLocale      = VALUES(defaultLocale),
       defaultLessonSlug  = VALUES(defaultLessonSlug),
       resourcesUrl       = VALUES(resourcesUrl)
@@ -303,6 +314,15 @@ export async function PATCH(
     if (typeof body.displayName === 'string' && body.displayName.trim()) {
       updates.displayName = body.displayName.trim()
       fileUpdates.displayName = updates.displayName
+    }
+    if (Array.isArray(body.tags)) {
+      const cleanedTags = body.tags
+        .filter((item: unknown): item is string => typeof item === 'string')
+        .map((item: string) => item.trim())
+        .filter((item: string) => item.length > 0)
+      const dedupedTags = Array.from(new Set(cleanedTags))
+      updates.tags = dedupedTags
+      fileUpdates.tags = dedupedTags
     }
 
     // ── Slug rename (superadmin only) ────────────────────────────────────────

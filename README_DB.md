@@ -5,7 +5,7 @@ Env variables
 - `USE_DB`: set to `true` to use DB for lessons API and server pages
 - `USE_SHARED_DB`: optional. Set to `true` when all wikis live in one shared database and the app should ignore wiki-specific `DATABASE_URL_<WIKI>` variables.
 - `STORE_MEDIA_IN_DB`: set to `true` to store uploaded binary files in DB (otherwise files go to `public/uploads` and only URLs are stored). Ignored when `UPLOAD_STRATEGY=sftp`.
-- `GCS_ASSET_BUCKET`: optional. If set, `/api/upload/{id}` first reads from this Cloud Storage bucket, then falls back to `Asset.data`.
+- `GCS_ASSET_BUCKET`: optional. If set, `/api/upload/{id}` reads media from this Cloud Storage bucket.
 - `GCS_ASSET_PREFIX`: optional Cloud Storage object prefix for migrated assets (default: `wiki-assets`).
 - `UPLOAD_STRATEGY`: optional. Set to `sftp` to push uploads to an external SFTP destination instead of the local filesystem.
 - `SFTP_HOST`, `SFTP_USERNAME`, `SFTP_BASE_URL`: required when `UPLOAD_STRATEGY=sftp`. Provide either `SFTP_PASSWORD` or `SFTP_PRIVATE_KEY` (with `\n` escaped) and optionally `SFTP_PASSPHRASE`, `SFTP_PORT`, `SFTP_REMOTE_DIR`.
@@ -26,7 +26,8 @@ Behavior
 - To test gradual migration for one wiki (example: `3d-design-using-tinkercad`) while keeping lesson links unchanged:
   - `npm run migrate:assets:gcs -- --wiki=3d-design-using-tinkercad --bucket=<your-bucket> --dry-run=true`
   - `npm run migrate:assets:gcs -- --wiki=3d-design-using-tinkercad --bucket=<your-bucket>`
-  - Optional after verification: add `--clear-db-data=true` to remove blob payloads from `Asset.data`.
+  - Optional after verification: clear legacy blob payloads with `npm run clear:asset-blobs -- --confirm=true`.
+  - If you have a backup and want to remove the legacy column entirely, run `npm run clear:asset-blobs -- --confirm=true --drop-column=true`.
 
 SiteGround notes
 - Ensure your app runs with a persistent Node process (not serverless) if you use filesystem uploads.

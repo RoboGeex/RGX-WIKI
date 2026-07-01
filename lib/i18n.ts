@@ -38,7 +38,10 @@ export const translations = {
     resources: 'Resources',
     noLessonsYet: 'No lessons yet.',
     onThisPage: 'On this page',
+    lessonPanelLabel: 'Lesson',
+    onThisLesson: 'On this lesson',
     noHeadingsYet: 'No headings yet.',
+    headingsWillAppear: 'Headings will appear here as you add content.',
     allLessons: 'All lessons',
 
     // Unlock
@@ -99,7 +102,10 @@ export const translations = {
     resources: 'الموارد',
     noLessonsYet: 'لا توجد دروس بعد.',
     onThisPage: 'في هذه الصفحة',
+    lessonPanelLabel: 'الدرس',
+    onThisLesson: 'في هذا الدرس',
     noHeadingsYet: 'لا توجد عناوين بعد.',
+    headingsWillAppear: 'ستظهر العناوين هنا عند إضافة المحتوى.',
     allLessons: 'جميع الدروس',
 
     // Unlock

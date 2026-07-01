@@ -5,9 +5,11 @@ import {
   AlertTriangle,
   Check,
   Pencil,
+  Plus,
   RotateCcw,
   Save,
   Settings,
+  Tag,
   Trash2,
   Upload,
   Users,
@@ -25,11 +27,17 @@ type Developer = {
   role?: string
 }
 
+type CategoryOption = {
+  id: number
+  name: string
+}
+
 type Props = {
   wikiSlug: string
   initialDisplayName: string
   initialPicture?: string
   initialScheduledDeletionAt?: string | null
+  initialTags?: string[]
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -39,6 +47,7 @@ export default function WikiSettingsPanel({
   initialDisplayName,
   initialPicture,
   initialScheduledDeletionAt,
+  initialTags,
 }: Props) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -86,6 +95,17 @@ export default function WikiSettingsPanel({
   const [teamSuccess, setTeamSuccess] = useState(false)
   const [teamError, setTeamError] = useState<string | null>(null)
 
+  // Tags / Categories
+  const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialTags || [])
+  const [loadingCategories, setLoadingCategories] = useState(false)
+  const [savingTags, setSavingTags] = useState(false)
+  const [tagsSuccess, setTagsSuccess] = useState(false)
+  const [tagsError, setTagsError] = useState<string | null>(null)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const [categoryError, setCategoryError] = useState<string | null>(null)
+
   // Delete
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
@@ -107,6 +127,87 @@ export default function WikiSettingsPanel({
       })
       .catch(() => {})
   }, [isOpen])
+
+  // ── Load categories when panel opens ───────────────────────────────────────
+
+  useEffect(() => {
+    if (!isOpen) return
+    setLoadingCategories(true)
+    fetch('/api/categories', { headers: applyDeveloperHeader() as HeadersInit })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: CategoryOption[]) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoadingCategories(false))
+  }, [isOpen])
+
+  // ── Tag handlers ───────────────────────────────────────────────────────────
+
+  const toggleTag = (name: string) => {
+    setTagsSuccess(false)
+    setSelectedTags((prev) =>
+      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name],
+    )
+  }
+
+  const handleSaveTags = async () => {
+    setSavingTags(true)
+    setTagsError(null)
+    setTagsSuccess(false)
+    try {
+      const res = await fetch(`/api/wikis/${wikiSlug}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(applyDeveloperHeader() as Record<string, string>),
+        },
+        body: JSON.stringify({ tags: selectedTags }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error || 'Failed to save tags')
+      }
+      setTagsSuccess(true)
+      setTimeout(() => setTagsSuccess(false), 3000)
+      router.refresh()
+    } catch (e: any) {
+      setTagsError(e.message)
+    } finally {
+      setSavingTags(false)
+    }
+  }
+
+  const handleCreateCategory = async () => {
+    const trimmed = newCategoryName.trim()
+    if (!trimmed) return
+    setCreatingCategory(true)
+    setCategoryError(null)
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(applyDeveloperHeader() as Record<string, string>),
+        },
+        body: JSON.stringify({ name: trimmed }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Failed to create category')
+      const created: CategoryOption | undefined = data?.category
+      if (created?.name) {
+        setCategories((prev) =>
+          prev.some((c) => c.name === created.name)
+            ? prev
+            : [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+        )
+        setSelectedTags((prev) => (prev.includes(created.name) ? prev : [...prev, created.name]))
+      }
+      setNewCategoryName('')
+    } catch (e: any) {
+      setCategoryError(e?.message || 'Failed to create category')
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
 
   // ── Load team when panel opens as superadmin ───────────────────────────────
 
@@ -552,6 +653,125 @@ export default function WikiSettingsPanel({
                     <p className="text-xs text-red-600">{pictureError}</p>
                   )}
                 </div>
+              </section>
+
+              {/* ── Tags / Categories ── */}
+              <section>
+                <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Tag size={14} />
+                  Categories
+                </h3>
+                <p className="mb-3 text-xs text-gray-400">
+                  Tags used to group this wiki on landing pages and search.
+                </p>
+
+                {loadingCategories ? (
+                  <p className="text-xs text-gray-500">Loading…</p>
+                ) : (
+                  <>
+                    {categories.length === 0 ? (
+                      <p className="text-xs text-gray-400">
+                        No categories yet.
+                        {devRole === 'superadmin' ? ' Create one below.' : ' Ask a superadmin to create one.'}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {categories.map((cat) => {
+                          const active = selectedTags.includes(cat.name)
+                          return (
+                            <button
+                              type="button"
+                              key={cat.id}
+                              onClick={() => toggleTag(cat.name)}
+                              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                                active
+                                  ? 'border-primary bg-primary text-white'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-primary/40 hover:bg-primary/5'
+                              }`}
+                            >
+                              {cat.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Surface tags the wiki has that aren't in the master list (e.g. category later deleted) */}
+                    {selectedTags
+                      .filter((t) => !categories.some((c) => c.name === t))
+                      .map((orphan) => (
+                        <span
+                          key={orphan}
+                          className="ml-2 mt-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-700"
+                        >
+                          {orphan}
+                          <button
+                            type="button"
+                            onClick={() => toggleTag(orphan)}
+                            className="ml-1 text-amber-700 hover:text-amber-900"
+                            aria-label={`Remove ${orphan}`}
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      ))}
+
+                    {devRole === 'superadmin' && (
+                      <div className="mt-3 flex gap-2">
+                        <input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => {
+                            setNewCategoryName(e.target.value)
+                            setCategoryError(null)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleCreateCategory()
+                            }
+                          }}
+                          placeholder="New category name"
+                          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateCategory}
+                          disabled={!newCategoryName.trim() || creatingCategory}
+                          className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Plus size={13} />
+                          {creatingCategory ? 'Adding…' : 'Add'}
+                        </button>
+                      </div>
+                    )}
+                    {categoryError && (
+                      <p className="mt-1.5 text-xs text-red-600">{categoryError}</p>
+                    )}
+
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveTags}
+                        disabled={savingTags}
+                        className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {savingTags ? (
+                          'Saving…'
+                        ) : tagsSuccess ? (
+                          <>
+                            <Check size={14} /> Saved
+                          </>
+                        ) : (
+                          <>
+                            <Save size={14} /> Save Tags
+                          </>
+                        )}
+                      </button>
+                      {tagsError && <span className="text-xs text-red-600">{tagsError}</span>}
+                    </div>
+                  </>
+                )}
               </section>
 
               {/* ── Team (superadmin only) ── */}

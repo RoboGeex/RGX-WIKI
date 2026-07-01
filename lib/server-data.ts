@@ -235,6 +235,7 @@ type WikiRow = {
   picture: string | null
   isPublished: number | boolean | null
   domains: unknown
+  tags: unknown
   defaultLocale: string | null
   defaultLessonSlug: string | null
   resourcesUrl: string | null
@@ -258,6 +259,10 @@ function parseWikiDomains(value: unknown): string[] {
   return []
 }
 
+function parseWikiTags(value: unknown): string[] {
+  return parseWikiDomains(value)
+}
+
 const wikiTableEnsured = new WeakSet<object>()
 
 async function ensureWikiTableOnce(prisma: any): Promise<void> {
@@ -270,6 +275,7 @@ async function ensureWikiTableOnce(prisma: any): Promise<void> {
       picture TEXT NULL,
       isPublished BOOLEAN NOT NULL DEFAULT TRUE,
       domains JSON NULL,
+      tags JSON NULL,
       defaultLocale VARCHAR(16) NULL,
       defaultLessonSlug VARCHAR(191) NULL,
       resourcesUrl VARCHAR(255) NULL,
@@ -286,6 +292,14 @@ async function ensureWikiTableOnce(prisma: any): Promise<void> {
   } catch {
     // Column might already exist or server may not support IF NOT EXISTS.
   }
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE Wiki
+      ADD COLUMN IF NOT EXISTS tags JSON NULL;
+    `)
+  } catch {
+    // Column might already exist or server may not support IF NOT EXISTS.
+  }
   wikiTableEnsured.add(prisma)
 }
 
@@ -298,7 +312,7 @@ export async function getWikisFromDb(): Promise<Wiki[]> {
     const prisma: any = getPrisma()
     await ensureWikiTableOnce(prisma)
     const rows = (await prisma.$queryRawUnsafe(`
-      SELECT slug, displayName, grade, picture, isPublished, domains, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
+      SELECT slug, displayName, grade, picture, isPublished, domains, tags, defaultLocale, defaultLessonSlug, resourcesUrl, createdAt
       FROM Wiki
       ORDER BY createdAt ASC
     `)) as WikiRow[]
@@ -310,6 +324,7 @@ export async function getWikisFromDb(): Promise<Wiki[]> {
       picture: row.picture || '',
       isPublished: row.isPublished == null ? true : Boolean(row.isPublished),
       domains: parseWikiDomains(row.domains),
+      tags: parseWikiTags(row.tags),
       defaultLocale: row.defaultLocale || 'en',
       defaultLessonSlug: row.defaultLessonSlug || 'getting-started',
       resourcesUrl: row.resourcesUrl || '/resources',

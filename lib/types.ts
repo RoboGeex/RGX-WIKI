@@ -2,6 +2,7 @@ export interface Wiki {
   slug: string;
   displayName: string;
   domains?: string[];
+  tags?: string[];
   grade?: string;
   picture?: string;
   isPublished?: boolean;

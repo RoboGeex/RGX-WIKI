@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { SESSION_COOKIE, clearSessionCookie, destroySession } from '@/lib/auth'
 
 export async function POST() {
-  const token = cookies().get(SESSION_COOKIE)?.value
-  if (token) await destroySession(token)
-  clearSessionCookie()
-  return NextResponse.json({ ok: true })
+  const res = NextResponse.json({ ok: true })
+  res.cookies.set('rgx_session', '', { maxAge: 0, path: '/' })
+  res.cookies.set('rgx_dev_id', '', { maxAge: 0, path: '/' })
+  return res
 }

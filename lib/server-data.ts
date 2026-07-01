@@ -29,6 +29,55 @@ function mapLegacyLessonRow(row: any): Lesson {
   } as Lesson
 }
 
+const lessonListSelect = {
+  id: true,
+  lessonKey: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  activeEditorId: true,
+  lockedUntil: true,
+} as const
+
+const legacyLessonListSelect = {
+  id: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  activeEditorId: true,
+  lockedUntil: true,
+} as const
+
 function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], publishedOnly?: boolean): Lesson[] {
   if (publishedOnly) return collapsed
 
@@ -85,6 +134,7 @@ export async function getLessonsFromDb(
           }
         : (opts?.publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : undefined),
       orderBy: [{ order: 'asc' }, { version: 'desc' }],
+      select: lessonListSelect,
     })
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
@@ -96,30 +146,7 @@ export async function getLessonsFromDb(
           }
         : (opts?.publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : undefined),
       orderBy: [{ order: 'asc' }, { version: 'desc' }],
-      select: {
-        id: true,
-        order: true,
-        slug: true,
-        wikiSlug: true,
-        title_en: true,
-        title_ar: true,
-        coverImage: true,
-        ownerId: true,
-        lastModifiedBy: true,
-        status: true,
-        publishedAt: true,
-        duration_min: true,
-        difficulty: true,
-        prerequisites_en: true,
-        prerequisites_ar: true,
-        materials: true,
-        body: true,
-        createdAt: true,
-        updatedAt: true,
-        version: true,
-        activeEditorId: true,
-        lockedUntil: true,
-      },
+      select: legacyLessonListSelect,
     })
     rows = legacyRows.map(mapLegacyLessonRow)
   }
@@ -139,36 +166,14 @@ export async function getLessonVersionRowsFromDb(wikiSlug?: string): Promise<Les
     return await prisma.lesson.findMany({
       where: wikiSlug ? { wikiSlug } : undefined,
       orderBy: [{ order: 'asc' }, { version: 'desc' }],
+      select: lessonListSelect,
     })
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
     const legacyRows = await prisma.lesson.findMany({
       where: wikiSlug ? { wikiSlug } : undefined,
       orderBy: [{ order: 'asc' }, { version: 'desc' }],
-      select: {
-        id: true,
-        order: true,
-        slug: true,
-        wikiSlug: true,
-        title_en: true,
-        title_ar: true,
-        coverImage: true,
-        ownerId: true,
-        lastModifiedBy: true,
-        status: true,
-        publishedAt: true,
-        duration_min: true,
-        difficulty: true,
-        prerequisites_en: true,
-        prerequisites_ar: true,
-        materials: true,
-        body: true,
-        createdAt: true,
-        updatedAt: true,
-        version: true,
-        activeEditorId: true,
-        lockedUntil: true,
-      },
+      select: legacyLessonListSelect,
     })
     return legacyRows.map(mapLegacyLessonRow)
   }

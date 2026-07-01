@@ -252,6 +252,55 @@ const legacyLessonReadSelect = {
   updatedAt: true,
 } as const
 
+const lessonListSelect = {
+  id: true,
+  lessonKey: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  activeEditorId: true,
+  lockedUntil: true,
+} as const
+
+const legacyLessonListSelect = {
+  id: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  activeEditorId: true,
+  lockedUntil: true,
+} as const
+
 function mapLegacyLessonRow<T extends Record<string, any>>(row: T): T & { lessonKey: string } {
   const normalizedLessonKey =
     typeof row.lessonKey === 'string' && row.lessonKey.trim()
@@ -1690,6 +1739,7 @@ export async function GET(req: Request) {
               ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
             },
             orderBy: [{ order: 'asc' }, { version: 'desc' }],
+            select: lessonListSelect,
           })
         )
       } catch (error: any) {
@@ -1701,7 +1751,7 @@ export async function GET(req: Request) {
               ...(publishedOnly ? { status: LESSON_STATUS.PUBLISHED } : {}),
             },
             orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
-            select: legacyLessonReadSelect,
+            select: legacyLessonListSelect,
           })
         )
         lessons = legacyRows.map(mapLegacyLessonRow)

@@ -6,7 +6,7 @@ import {
   getLessons,
 } from '@/lib/data'
 import { stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
-import { getWikisFromDb } from '@/lib/server-data'
+import { getLessonBySlug, getWikisFromDb } from '@/lib/server-data'
 import type { Locale } from '@/lib/i18n'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
@@ -55,13 +55,16 @@ export default async function LessonPage(
   }
   if (!kitData) notFound()
 
-  const allLessons = await getLessons(kit, { includeDrafts: preview || Boolean(previewId) })
+  const allLessons = await getLessons(kit, {
+    includeDrafts: preview || Boolean(previewId),
+    metadataOnly: true,
+  })
 
-  const lesson = preview && previewId
+  const lessonMeta = preview && previewId
     ? allLessons.find((item) => item.id === previewId) || findLessonInList(allLessons, lessonSlug)
     : findLessonInList(allLessons, lessonSlug)
 
-  if (!lesson) {
+  if (!lessonMeta) {
     const sorted = allLessons.slice().sort((a, b) => (a.order || 0) - (b.order || 0))
     const firstLesson = sorted[0]
     if (firstLesson?.slug) {
@@ -69,6 +72,11 @@ export default async function LessonPage(
     }
     notFound()
   }
+
+  const fullLesson = preview && previewId
+    ? undefined
+    : await getLessonBySlug(lessonMeta.slug || lessonSlug, kitData.wikiSlug)
+  const lesson = fullLesson || lessonMeta
   const currentSlug = stripLegacyDraftSuffix(lesson.slug || '')
   const currentKey = stripLegacyDraftSuffix(lesson.lessonKey || '')
   

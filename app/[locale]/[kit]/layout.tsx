@@ -125,7 +125,7 @@ export default async function KitLayout(
     }
   }
 
-  const lessons = await getLessons(kit)
+  const lessons = await getLessons(kit, { metadataOnly: true })
   const hostHeader = headers().get('host')
   const host = normalizeHost(hostHeader)
   const isHubDomain = isHubHost(host)

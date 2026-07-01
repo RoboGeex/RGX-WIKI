@@ -34,6 +34,52 @@ const legacyLessonReadSelect = {
   updatedAt: true,
 } as const
 
+const lessonListSelect = {
+  id: true,
+  lessonKey: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  activeEditorId: true,
+  lockedUntil: true,
+} as const
+
+const legacyLessonListSelect = {
+  id: true,
+  order: true,
+  slug: true,
+  wikiSlug: true,
+  title_en: true,
+  title_ar: true,
+  coverImage: true,
+  ownerId: true,
+  lastModifiedBy: true,
+  status: true,
+  publishedAt: true,
+  duration_min: true,
+  difficulty: true,
+  prerequisites_en: true,
+  prerequisites_ar: true,
+  materials: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
+
 function isLegacyLessonSchemaError(error: any): boolean {
   const message = typeof error?.message === 'string' ? error.message : ''
   const lowerMessage = message.toLowerCase()
@@ -393,7 +439,7 @@ export function getKit(slug: string, wikiSlug?: string) {
   return undefined;
 }
 
-export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boolean }): Promise<Lesson[]> {
+export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boolean; metadataOnly?: boolean }): Promise<Lesson[]> {
   const normKit = normalizeSlug(kitSlug)
   const wikiSlug = wikiSlugForKit(normKit)
   const includeDrafts = opts?.includeDrafts === true
@@ -436,6 +482,7 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
             ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
           },
           orderBy: [{ order: 'asc' }, { version: 'desc' }],
+          ...(opts?.metadataOnly ? { select: lessonListSelect } : {}),
         })
       )
     } catch (error: any) {
@@ -447,7 +494,7 @@ export async function getLessons(kitSlug: string, opts?: { includeDrafts?: boole
             ...(includeDrafts ? {} : { status: LESSON_STATUS.PUBLISHED }),
           },
           orderBy: [{ order: 'asc' }, { updatedAt: 'desc' }],
-          select: legacyLessonReadSelect,
+          select: opts?.metadataOnly ? legacyLessonListSelect : legacyLessonReadSelect,
         })
       )
       rows = legacyRows.map(mapLegacyLessonRow)

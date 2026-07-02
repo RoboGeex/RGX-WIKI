@@ -14,7 +14,11 @@ type VersionedLessonLike = {
   publishedAt?: Date | string | null
 }
 
-const LEGACY_DRAFT_SUFFIX = '--draft'
+// ensureUniqueLegacySlug/ensureUniqueRowId append a numeric counter after the
+// draft suffix (e.g. "--draft-1") when a slug/id is already taken. That
+// counter must be stripped too, or the bumped row is treated as belonging to
+// a whole new lesson family instead of the one it's actually a draft of.
+const LEGACY_DRAFT_SUFFIX_RE = /--draft(-\d+)?$/
 
 export const LESSON_STATUS = {
   DRAFT: 'draft',
@@ -34,10 +38,7 @@ export function normalizeLessonStatus(status?: string | null): LessonStatus {
 export function getLessonKey<T extends VersionedLessonLike>(lesson: T): string {
   const key = typeof lesson.lessonKey === 'string' ? lesson.lessonKey.trim() : ''
   if (key) return key
-  if (lesson.id.endsWith('--draft')) {
-    return lesson.id.slice(0, lesson.id.length - '--draft'.length)
-  }
-  return lesson.id
+  return lesson.id.replace(LEGACY_DRAFT_SUFFIX_RE, '') || lesson.id
 }
 
 function toTimestamp(value: Date | string | null | undefined): number {
@@ -129,9 +130,7 @@ function stableSerialize(value: unknown): string {
 
 function normalizeLessonForComparison(lesson: any) {
   const rawSlug = String(lesson?.slug || '')
-  const comparableSlug = rawSlug.endsWith(LEGACY_DRAFT_SUFFIX)
-    ? rawSlug.slice(0, rawSlug.length - LEGACY_DRAFT_SUFFIX.length)
-    : rawSlug
+  const comparableSlug = rawSlug.replace(LEGACY_DRAFT_SUFFIX_RE, '')
   return {
     order: Number.isFinite(lesson?.order) ? Number(lesson.order) : 0,
     slug: comparableSlug,

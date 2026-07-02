@@ -24,6 +24,7 @@ function isLessonKeyUnsupportedError(error: any): boolean {
 }
 
 const LEGACY_DRAFT_SUFFIX = '--draft'
+const LEGACY_DRAFT_SUFFIX_RE = /--draft(-\d+)?$/
 
 const legacyLessonSelect = {
   id: true,
@@ -52,10 +53,7 @@ const legacyLessonSelect = {
 
 function stripLegacyDraftSuffix(value: string | undefined | null): string {
   const normalized = (value || '').trim()
-  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {
-    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
-  }
-  return normalized
+  return normalized.replace(LEGACY_DRAFT_SUFFIX_RE, '')
 }
 
 function toLegacyDraftValue(value: string | undefined | null): string {

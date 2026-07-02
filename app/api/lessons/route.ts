@@ -129,18 +129,20 @@ function normalizeStatus(value: string | undefined | null, isAdmin: boolean): st
 }
 
 const LEGACY_DRAFT_SUFFIX = '--draft'
+// ensureUniqueLegacySlug/ensureUniqueRowId append a numeric counter after the
+// draft suffix (e.g. "--draft-1") when a slug/id is already taken. That
+// counter must be recognized too, or the bumped row can never be matched
+// back to its lesson family on a later save/lock/lookup.
+const LEGACY_DRAFT_SUFFIX_RE = /--draft(-\d+)?$/
 
 function isLegacyDraftValue(value: string | undefined | null): boolean {
   const normalized = (value || '').trim()
-  return Boolean(normalized && normalized.endsWith(LEGACY_DRAFT_SUFFIX))
+  return Boolean(normalized && LEGACY_DRAFT_SUFFIX_RE.test(normalized))
 }
 
 function stripLegacyDraftSuffix(value: string | undefined | null): string {
   const normalized = (value || '').trim()
-  if (normalized.endsWith(LEGACY_DRAFT_SUFFIX)) {
-    return normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
-  }
-  return normalized
+  return normalized.replace(LEGACY_DRAFT_SUFFIX_RE, '')
 }
 
 function toLegacyDraftValue(baseValue: string): string {

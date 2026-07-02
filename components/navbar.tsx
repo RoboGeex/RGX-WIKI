@@ -8,7 +8,7 @@ import { Locale, t } from '../lib/i18n'
 import { setStoredLocale } from '../lib/unlock'
 import SearchPanel from './search-panel'
 import type { Lesson } from '../lib/types'
-import { buildDefaultLessonHref, buildKitHomeHref, buildLessonHref, buildResourcesHref, stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
+import { buildDefaultLessonHref, buildKitHomeHref, buildLessonHref, buildResourcesHref, stripLegacyDraftSuffix, isSpecialLessonSlug, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
 
 interface Props {
   locale: Locale
@@ -56,10 +56,7 @@ export default function Navbar({
 
   const sortedLessons = useMemo(() => {
     return lessons
-      .filter((lesson) => {
-        const root = stripLegacyDraftSuffix(lesson.slug || '')
-        return root !== DEFAULT_LESSON_SLUG && root !== RESOURCES_LESSON_SLUG
-      })
+      .filter((lesson) => !isSpecialLessonSlug(lesson))
       .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
   }, [lessons])
 
@@ -138,8 +135,7 @@ export default function Navbar({
                   {(() => {
                     let displayIdx = 0;
                     return sortedLessons.map((lesson) => {
-                      const root = stripLegacyDraftSuffix(lesson.slug || '');
-                      const isSpecial = root === DEFAULT_LESSON_SLUG || root === RESOURCES_LESSON_SLUG;
+                      const isSpecial = isSpecialLessonSlug(lesson);
                       if (!isSpecial) displayIdx++;
                       
                       const isActive = pathname?.endsWith(`/${lesson.slug}`) || pathname?.endsWith(`/${lesson.slug}--draft`);

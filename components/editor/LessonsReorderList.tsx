@@ -71,13 +71,11 @@ function ordersMatch(a: LessonSummary[], b: LessonSummary[]): boolean {
   return true
 }
 
-const LEGACY_DRAFT_SUFFIX = '--draft'
+const LEGACY_DRAFT_SUFFIX_RE = /--draft(-\d+)?$/
 
 function stripLegacyDraftSuffix(value?: string) {
   const normalized = (value || '').trim()
-  return normalized.endsWith(LEGACY_DRAFT_SUFFIX)
-    ? normalized.slice(0, normalized.length - LEGACY_DRAFT_SUFFIX.length)
-    : normalized
+  return normalized.replace(LEGACY_DRAFT_SUFFIX_RE, '')
 }
 
 function getLessonFamilyKey(lesson: LessonSummary) {

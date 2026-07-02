@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     }
 
     const LEGACY_DRAFT_SUFFIX = '--draft'
-    const getRootSlug = (s: string) => s.endsWith(LEGACY_DRAFT_SUFFIX) ? s.slice(0, -LEGACY_DRAFT_SUFFIX.length) : s
+    const getRootSlug = (s: string) => s.replace(/--draft(-\d+)?$/, '')
 
     // Build map for quick lookup
     const lessonsBySlug = new Map(allLessons.map(lesson => [lesson.slug, lesson]))

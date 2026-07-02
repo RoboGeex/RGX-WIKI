@@ -55,9 +55,12 @@ export default async function LessonPage(
   }
   if (!kitData) notFound()
 
+  const wantsFullBody = preview || Boolean(previewId)
   const allLessons = await getLessons(kit, {
-    includeDrafts: preview || Boolean(previewId),
-    metadataOnly: true,
+    includeDrafts: wantsFullBody,
+    // Preview must render draft content, which requires the lesson body —
+    // metadataOnly strips it out, so only use it outside of preview mode.
+    metadataOnly: !wantsFullBody,
   })
 
   const lessonMeta = preview && previewId

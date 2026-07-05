@@ -72,14 +72,28 @@ async function readAllRows(prisma: any, wikiSlug: string): Promise<{ rows: Repai
   }
 }
 
+// Developer login sets an httpOnly `rgx_dev_id` cookie for every developer
+// role, but only mirrors it into localStorage (`rgx.devId`, read by the
+// x-developer-id header) for the `editor` role. A superadmin therefore has
+// the cookie but no header, so resolve the actor from either source — the
+// cookie is sent automatically with a same-origin fetch, no manual header
+// needed.
+function getActorId(req: Request): string | undefined {
+  const fromHeader = getActorIdFromRequest(req)
+  if (fromHeader) return fromHeader
+  const cookieHeader = (req.headers.get('cookie') || '')
+  const match = cookieHeader.match(/(?:^|;\s*)rgx_dev_id=([^;]+)/)
+  return match ? decodeURIComponent(match[1]).trim() || undefined : undefined
+}
+
 async function requireSuperadmin(req: Request) {
-  const actorId = getActorIdFromRequest(req)
+  const actorId = getActorId(req)
   const developer = actorId ? await findDeveloperById(actorId) : undefined
   if (!developer) {
-    return { error: NextResponse.json({ error: 'Unauthorized: missing or unknown x-developer-id header.' }, { status: 401 }) }
+    return { error: NextResponse.json({ error: 'Unauthorized: no developer session found. Log in as a superadmin on this site first.' }, { status: 401 }) }
   }
   if (developer.role !== 'superadmin') {
-    return { error: NextResponse.json({ error: 'Forbidden: superadmin role required.' }, { status: 403 }) }
+    return { error: NextResponse.json({ error: `Forbidden: superadmin role required (you are "${developer.role || 'unknown'}").` }, { status: 403 }) }
   }
   return { developer }
 }

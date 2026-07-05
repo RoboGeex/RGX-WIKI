@@ -186,22 +186,35 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
   const prisma: any = getPrisma(wikiSlug)
   let matched: any
   try {
-    matched = await prisma.lesson.findFirst({
-      where: {
-        ...(wikiSlug ? { wikiSlug } : {}),
-        OR: [{ slug }, { id: slug }, { lessonKey: slug }],
-      },
-      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-    })
+    const exact = await prisma.lesson.findUnique({ where: { id: slug } })
+    if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
+      matched = exact
+    } else {
+      const matchedMeta = await prisma.lesson.findFirst({
+        where: {
+          ...(wikiSlug ? { wikiSlug } : {}),
+          OR: [{ slug }, { lessonKey: slug }],
+        },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+        select: { id: true, lessonKey: true, slug: true },
+      })
+      matched = matchedMeta
+    }
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
-    matched = await prisma.lesson.findFirst({
-      where: {
-        ...(wikiSlug ? { wikiSlug } : {}),
-        OR: [{ slug }, { id: slug }],
-      },
-      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-    })
+    const exact = await prisma.lesson.findUnique({ where: { id: slug } })
+    if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
+      matched = exact
+    } else {
+      matched = await prisma.lesson.findFirst({
+        where: {
+          ...(wikiSlug ? { wikiSlug } : {}),
+          slug,
+        },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+        select: { id: true, slug: true },
+      })
+    }
   }
   if (!matched) return undefined
 
@@ -220,14 +233,17 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
     return undefined
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
-    const published = await prisma.lesson.findFirst({
+    const publishedMeta = await prisma.lesson.findFirst({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
         OR: [{ slug }, { id: slug }],
         status: LESSON_STATUS.PUBLISHED,
       },
       orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+      select: { id: true },
     })
+    if (!publishedMeta?.id) return undefined
+    const published = await prisma.lesson.findUnique({ where: { id: publishedMeta.id } })
     return published as Lesson | undefined
   }
 }

@@ -88,13 +88,19 @@ export async function POST(req: Request) {
 
     let matched: any
     try {
-      matched = await prisma.lesson.findFirst({
-        where: {
-          wikiSlug,
-          OR: [{ id: lessonId }, { slug: lessonId }, { lessonKey: lessonId }],
-        },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-      })
+      const exact = await prisma.lesson.findUnique({ where: { id: lessonId } })
+      if (exact && exact.wikiSlug === wikiSlug) {
+        matched = exact
+      } else {
+        matched = await prisma.lesson.findFirst({
+          where: {
+            wikiSlug,
+            OR: [{ slug: lessonId }, { lessonKey: lessonId }],
+          },
+          orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+          select: { id: true, lessonKey: true },
+        })
+      }
     } catch (error: any) {
       if (!isLessonKeyUnsupportedError(error)) throw error
       const row = await prisma.lesson.findFirst({
@@ -220,14 +226,19 @@ export async function DELETE(req: Request) {
 
     let matched: any
     try {
-      matched = await prisma.lesson.findFirst({
-        where: {
-          wikiSlug,
-          OR: [{ id: lessonId }, { slug: lessonId }, { lessonKey: lessonId }],
-        },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-        select: { id: true, lessonKey: true },
-      })
+      const exact = await prisma.lesson.findUnique({ where: { id: lessonId } })
+      if (exact && exact.wikiSlug === wikiSlug) {
+        matched = exact
+      } else {
+        matched = await prisma.lesson.findFirst({
+          where: {
+            wikiSlug,
+            OR: [{ slug: lessonId }, { lessonKey: lessonId }],
+          },
+          orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+          select: { id: true, lessonKey: true },
+        })
+      }
     } catch (error: any) {
       if (!isLessonKeyUnsupportedError(error)) throw error
       const row = await prisma.lesson.findFirst({

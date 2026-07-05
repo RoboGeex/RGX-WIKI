@@ -139,13 +139,21 @@ function hasUsableLessonBody(row: any): boolean {
 
 async function findLessonMatch(prisma: any, wikiSlug: string | undefined, identifier: string) {
   try {
-    return await prisma.lesson.findFirst({
+    const exact = await prisma.lesson.findUnique({ where: { id: identifier } })
+    if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
+      return exact
+    }
+
+    const matched = await prisma.lesson.findFirst({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
-        OR: [{ id: identifier }, { slug: identifier }, { lessonKey: identifier }],
+        OR: [{ slug: identifier }, { lessonKey: identifier }],
       },
       orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+      select: { id: true },
     })
+    if (!matched?.id) return null
+    return prisma.lesson.findUnique({ where: { id: matched.id } })
   } catch (error: any) {
     if (!isLegacyLessonReadSchemaError(error)) throw error
     const row = await prisma.lesson.findFirst({

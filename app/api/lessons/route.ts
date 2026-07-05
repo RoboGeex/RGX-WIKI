@@ -733,13 +733,19 @@ async function resolveLessonFamilyInDb(prisma: any, lesson: NewLesson, forceNew:
   let matched: any | undefined
   for (const candidate of candidates) {
     try {
-      matched = await prisma.lesson.findFirst({
-        where: {
-          wikiSlug,
-          OR: [{ id: candidate }, { lessonKey: candidate }, { slug: candidate }],
-        },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-      })
+      const exact = await prisma.lesson.findUnique({ where: { id: candidate } })
+      if (exact && exact.wikiSlug === wikiSlug) {
+        matched = exact
+      } else {
+        matched = await prisma.lesson.findFirst({
+          where: {
+            wikiSlug,
+            OR: [{ lessonKey: candidate }, { slug: candidate }],
+          },
+          orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
+          select: { id: true, lessonKey: true, slug: true },
+        })
+      }
     } catch (error: any) {
       if (!isLessonKeyUnsupportedError(error)) throw error
       const row = await prisma.lesson.findFirst({

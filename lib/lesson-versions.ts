@@ -163,15 +163,11 @@ export function hasUnpublishedLessonChanges(
   if (!draft || !published) return false
   if (hasLessonContentChanges(draft, published)) return true
 
-  const draftVersion = getVersion((draft as VersionedLessonLike).version)
-  const publishedVersion = getVersion((published as VersionedLessonLike).version)
-  if (draftVersion > publishedVersion) return true
-
   const draftUpdatedAt = toTimestamp((draft as VersionedLessonLike).updatedAt)
   const publishedAt =
     toTimestamp((published as VersionedLessonLike).publishedAt) ||
     toTimestamp((published as VersionedLessonLike).updatedAt)
-  return draftUpdatedAt > publishedAt
+  return Boolean(draftUpdatedAt && publishedAt && draftUpdatedAt - publishedAt > 2000)
 }
 
 export function collapseLessonsForEditor<T extends VersionedLessonLike>(rows: T[]): T[] {

@@ -3,7 +3,7 @@ import { getPrisma } from '@/lib/prisma-multi'
 import { findDeveloperById } from '@/lib/developers'
 import { canDeleteLesson, canManageWiki } from '@/lib/assignments'
 import { POST as saveLesson } from '@/app/api/lessons/route'
-import { hasLessonContentChanges, pickEditableVersion, pickLatestDraft, pickLatestPublished, sortVersionRowsDesc } from '@/lib/lesson-versions'
+import { hasUnpublishedLessonChanges, pickEditableVersion, pickLatestDraft, pickLatestPublished, sortVersionRowsDesc } from '@/lib/lesson-versions'
 
 function getActorIdFromRequest(req: Request): string | undefined {
   const headers = (req as any)?.headers as Headers | undefined
@@ -195,9 +195,7 @@ export async function GET(
     const hasUnpublishedChanges =
       canManage &&
       hasPublishedSnapshot &&
-      Boolean(latestDraft) &&
-      String((selected as any)?.status || '').toLowerCase() === 'draft' &&
-      hasLessonContentChanges(latestDraft, latestPublished)
+      hasUnpublishedLessonChanges(latestDraft, latestPublished)
     return NextResponse.json({
       ...selected,
       status: hasPublishedSnapshot ? 'published' : (selected as any)?.status,

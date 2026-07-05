@@ -244,25 +244,36 @@ export async function getPreviewLesson(idOrSlug: string, wikiSlug?: string): Pro
 
   const prisma: any = getPrisma(wikiSlug)
   const order = [{ version: 'desc' as const }, { updatedAt: 'desc' as const }]
+  const exact = await prisma.lesson.findUnique({ where: { id: key } })
+  if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
+    return exact as Lesson
+  }
+
   try {
     const matched = await prisma.lesson.findFirst({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
-        OR: [{ id: key }, { slug: key }, { lessonKey: key }],
+        OR: [{ slug: key }, { lessonKey: key }],
       },
       orderBy: order,
+      select: { id: true },
     })
-    return (matched as Lesson) || undefined
+    if (!matched?.id) return undefined
+    const full = await prisma.lesson.findUnique({ where: { id: matched.id } })
+    return (full as Lesson) || undefined
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
     const matched = await prisma.lesson.findFirst({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
-        OR: [{ id: key }, { slug: key }],
+        slug: key,
       },
       orderBy: order,
+      select: { id: true },
     })
-    return (matched as Lesson) || undefined
+    if (!matched?.id) return undefined
+    const full = await prisma.lesson.findUnique({ where: { id: matched.id } })
+    return (full as Lesson) || undefined
   }
 }
 

@@ -77,7 +77,10 @@ async function main() {
       db: { url: dbUrl },
     },
   })
-  const storage = new Storage()
+  const inlineJson = (process.env.GCS_SERVICE_ACCOUNT_JSON || '').trim()
+  const storage = inlineJson
+    ? new Storage({ credentials: JSON.parse(inlineJson) })
+    : new Storage()
   const bucket = storage.bucket(bucketName)
 
   const stats = {
@@ -88,33 +91,30 @@ async function main() {
     failed: 0,
   }
 
-  const where = {
-    data: { not: null },
-  }
-
-  const total = await prisma.asset.count({ where })
+  const totalRows = await prisma.$queryRaw`
+    SELECT COUNT(*) AS count
+    FROM Asset
+    WHERE data IS NOT NULL
+  `
+  const total = Number(totalRows?.[0]?.count || 0)
   console.log(`[migrate-assets-to-gcs] single-db total_with_blob=${total} batch=${batchSize} dry_run=${dryRun}`)
 
   let cursor = 0
   let reachedLimit = false
 
   while (!reachedLimit) {
-    const rows = await prisma.asset.findMany({
-      where: {
-        ...where,
-        id: { gt: cursor },
-      },
-      select: {
-        id: true,
-        wikiSlug: true,
-        filename: true,
-        mimeType: true,
-        size: true,
-        data: true,
-      },
-      orderBy: { id: 'asc' },
-      take: batchSize,
-    })
+    const rows = await prisma.$queryRawUnsafe(
+      `
+        SELECT id, wikiSlug, filename, mimeType, size, data
+        FROM Asset
+        WHERE data IS NOT NULL
+          AND id > ?
+        ORDER BY id ASC
+        LIMIT ?
+      `,
+      cursor,
+      batchSize,
+    )
 
     if (rows.length === 0) break
 
@@ -139,20 +139,21 @@ async function main() {
         if (exists && !overwrite) {
           stats.skippedExisting += 1
           if (clearDbData && !dryRun) {
-            await prisma.asset.update({ where: { id: row.id }, data: { data: null } })
+            await prisma.$executeRaw`UPDATE Asset SET data = NULL WHERE id = ${row.id}`
             stats.clearedDb += 1
           }
           continue
         }
 
         if (!dryRun) {
+          const assetWikiSlug = row.wikiSlug || 'default'
           const buffer = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data || [])
           await file.save(buffer, {
             resumable: false,
             contentType: row.mimeType || 'application/octet-stream',
             metadata: {
               metadata: {
-                wikiSlug,
+                wikiSlug: assetWikiSlug,
                 assetId: String(row.id),
                 originalFilename: row.filename || '',
                 source: 'asset-table',
@@ -161,7 +162,7 @@ async function main() {
           })
 
           if (clearDbData) {
-            await prisma.asset.update({ where: { id: row.id }, data: { data: null } })
+            await prisma.$executeRaw`UPDATE Asset SET data = NULL WHERE id = ${row.id}`
             stats.clearedDb += 1
           }
         }

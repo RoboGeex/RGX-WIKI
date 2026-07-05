@@ -119,3 +119,36 @@ export async function readAssetFromGcs(input: {
 
   return null
 }
+
+export async function readAssetFromGcsByIdPrefix(input: {
+  wikiSlug?: string
+  assetId: number
+}): Promise<{ body: Buffer; contentType?: string } | null> {
+  const bucketName = getGcsAssetBucket()
+  if (!bucketName) return null
+
+  const prefix = (process.env.GCS_ASSET_PREFIX || 'wiki-assets').trim().replace(/^\/+|\/+$/g, '')
+  const wikiSegment = sanitizeWikiSlug(input.wikiSlug)
+  const objectPrefix = `${prefix}/${wikiSegment}/${input.assetId}-`
+  const bucket = getStorageClient().bucket(bucketName)
+
+  try {
+    const [files] = await bucket.getFiles({ prefix: objectPrefix, maxResults: 1 })
+    const file = files[0]
+    if (!file) return null
+
+    const [body] = await file.download()
+    const [metadata] = await file.getMetadata()
+    return {
+      body,
+      contentType: metadata.contentType,
+    }
+  } catch (error: any) {
+    if (isNotFoundError(error)) return null
+    console.error(
+      `[gcs-assets] Failed reading gs://${bucketName}/${objectPrefix}* for asset ${input.assetId}:`,
+      error,
+    )
+    return null
+  }
+}

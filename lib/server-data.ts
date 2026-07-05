@@ -1,7 +1,7 @@
 // Server-only helpers to fetch from DB when USE_DB=true
 import type { Lesson, Wiki } from '@/lib/types'
 import { getPrisma } from '@/lib/prisma-multi'
-import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, getLessonKey, groupLessonsByKey, hasUnpublishedLessonChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
+import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, getLessonKey, groupLessonsByKey, hasUnpublishedLessonChanges, pickLatestDraft, pickLatestPublished, sortVersionRowsDesc } from '@/lib/lesson-versions'
 
 function isLessonKeyUnsupportedError(error: any): boolean {
   const message = typeof error?.message === 'string' ? error.message : ''
@@ -190,15 +190,14 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
     if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
       matched = exact
     } else {
-      const matchedMeta = await prisma.lesson.findFirst({
+      const matchedRows = await prisma.lesson.findMany({
         where: {
           ...(wikiSlug ? { wikiSlug } : {}),
           OR: [{ slug }, { lessonKey: slug }],
         },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-        select: { id: true, lessonKey: true, slug: true },
+        select: { id: true, lessonKey: true, slug: true, version: true, updatedAt: true, createdAt: true },
       })
-      matched = matchedMeta
+      matched = sortVersionRowsDesc(matchedRows)[0]
     }
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
@@ -206,14 +205,14 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
     if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
       matched = exact
     } else {
-      matched = await prisma.lesson.findFirst({
+      const matchedRows = await prisma.lesson.findMany({
         where: {
           ...(wikiSlug ? { wikiSlug } : {}),
           slug,
         },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-        select: { id: true, slug: true },
+        select: { id: true, slug: true, updatedAt: true, createdAt: true },
       })
+      matched = sortVersionRowsDesc(matchedRows)[0]
     }
   }
   if (!matched) return undefined
@@ -226,22 +225,21 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
         lessonKey,
         status: LESSON_STATUS.PUBLISHED,
       },
-      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
     })
     const published = collapseLessonsForPublic(rows as Lesson[])[0]
     if (published) return published as Lesson
     return undefined
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
-    const publishedMeta = await prisma.lesson.findFirst({
+    const publishedRows = await prisma.lesson.findMany({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
         OR: [{ slug }, { id: slug }],
         status: LESSON_STATUS.PUBLISHED,
       },
-      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-      select: { id: true },
+      select: { id: true, updatedAt: true, createdAt: true },
     })
+    const publishedMeta = sortVersionRowsDesc(publishedRows)[0]
     if (!publishedMeta?.id) return undefined
     const published = await prisma.lesson.findUnique({ where: { id: publishedMeta.id } })
     return published as Lesson | undefined
@@ -258,34 +256,33 @@ export async function getPreviewLesson(idOrSlug: string, wikiSlug?: string): Pro
   if (!key) return undefined
 
   const prisma: any = getPrisma(wikiSlug)
-  const order = [{ version: 'desc' as const }, { updatedAt: 'desc' as const }]
   const exact = await prisma.lesson.findUnique({ where: { id: key } })
   if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
     return exact as Lesson
   }
 
   try {
-    const matched = await prisma.lesson.findFirst({
+    const matches = await prisma.lesson.findMany({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
         OR: [{ slug: key }, { lessonKey: key }],
       },
-      orderBy: order,
-      select: { id: true },
+      select: { id: true, version: true, updatedAt: true, createdAt: true },
     })
+    const matched = sortVersionRowsDesc(matches)[0]
     if (!matched?.id) return undefined
     const full = await prisma.lesson.findUnique({ where: { id: matched.id } })
     return (full as Lesson) || undefined
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
-    const matched = await prisma.lesson.findFirst({
+    const matches = await prisma.lesson.findMany({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
         slug: key,
       },
-      orderBy: order,
-      select: { id: true },
+      select: { id: true, updatedAt: true, createdAt: true },
     })
+    const matched = sortVersionRowsDesc(matches)[0]
     if (!matched?.id) return undefined
     const full = await prisma.lesson.findUnique({ where: { id: matched.id } })
     return (full as Lesson) || undefined

@@ -144,26 +144,26 @@ async function findLessonMatch(prisma: any, wikiSlug: string | undefined, identi
       return exact
     }
 
-    const matched = await prisma.lesson.findFirst({
+    const matches = await prisma.lesson.findMany({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
         OR: [{ slug: identifier }, { lessonKey: identifier }],
       },
-      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-      select: { id: true },
+      select: { id: true, version: true, updatedAt: true, createdAt: true },
     })
+    const matched = sortVersionRowsDesc(matches)[0]
     if (!matched?.id) return null
     return prisma.lesson.findUnique({ where: { id: matched.id } })
   } catch (error: any) {
     if (!isLegacyLessonReadSchemaError(error)) throw error
-    const row = await prisma.lesson.findFirst({
+    const rows = await prisma.lesson.findMany({
       where: {
         ...(wikiSlug ? { wikiSlug } : {}),
         OR: [{ id: identifier }, { slug: identifier }],
       },
-      orderBy: [{ updatedAt: 'desc' }],
       select: legacyLessonReadSelect,
     })
+    const row = sortVersionRowsDesc(rows.map(mapLegacyLessonRow))[0]
     return row ? mapLegacyLessonRow(row) : row
   }
 }
@@ -197,8 +197,8 @@ export async function GET(
     try {
       familyRows = await prisma.lesson.findMany({
         where: { wikiSlug: matched.wikiSlug, lessonKey },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
       })
+      familyRows = sortVersionRowsDesc(familyRows)
     } catch (error: any) {
       if (!isLegacyLessonReadSchemaError(error)) throw error
       const baseId = stripLegacyDraftSuffix((matched as any)?.id)
@@ -211,10 +211,9 @@ export async function GET(
             ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
           ],
         },
-        orderBy: [{ updatedAt: 'desc' }],
         select: legacyLessonReadSelect,
       })
-      familyRows = legacyRows.map(mapLegacyLessonRow)
+      familyRows = sortVersionRowsDesc(legacyRows.map(mapLegacyLessonRow))
     }
     if (!Array.isArray(familyRows) || familyRows.length === 0) {
       familyRows = [matched]
@@ -309,8 +308,8 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     try {
       familyRows = await prisma.lesson.findMany({
         where: { wikiSlug: existing.wikiSlug, lessonKey },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
       })
+      familyRows = sortVersionRowsDesc(familyRows)
     } catch (error: any) {
       if (!isLegacyLessonReadSchemaError(error)) throw error
       const baseId = stripLegacyDraftSuffix((existing as any)?.id)
@@ -323,10 +322,9 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
             ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
           ],
         },
-        orderBy: [{ updatedAt: 'desc' }],
         select: legacyLessonReadSelect,
       })
-      familyRows = legacyRows.map(mapLegacyLessonRow)
+      familyRows = sortVersionRowsDesc(legacyRows.map(mapLegacyLessonRow))
     }
     if (!Array.isArray(familyRows) || familyRows.length === 0) {
       familyRows = [existing]

@@ -3,7 +3,7 @@ import { getPrisma } from '@/lib/prisma-multi'
 import { getActorIdFromRequest } from '@/lib/api-auth'
 import { findDeveloperById } from '@/lib/developers'
 import { canManageWiki, canEditLesson } from '@/lib/assignments'
-import { pickEditableVersion } from '@/lib/lesson-versions'
+import { pickEditableVersion, sortVersionRowsDesc } from '@/lib/lesson-versions'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,25 +92,25 @@ export async function POST(req: Request) {
       if (exact && exact.wikiSlug === wikiSlug) {
         matched = exact
       } else {
-        matched = await prisma.lesson.findFirst({
+        const matches = await prisma.lesson.findMany({
           where: {
             wikiSlug,
             OR: [{ slug: lessonId }, { lessonKey: lessonId }],
           },
-          orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-          select: { id: true, lessonKey: true },
+          select: { id: true, lessonKey: true, version: true, updatedAt: true, createdAt: true },
         })
+        matched = sortVersionRowsDesc(matches)[0]
       }
     } catch (error: any) {
       if (!isLessonKeyUnsupportedError(error)) throw error
-      const row = await prisma.lesson.findFirst({
+      const rows = await prisma.lesson.findMany({
         where: {
           wikiSlug,
           OR: [{ id: lessonId }, { slug: lessonId }],
         },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
         select: legacyLessonSelect,
       })
+      const row = sortVersionRowsDesc(rows.map(mapLegacyLessonRow))[0]
       matched = row ? mapLegacyLessonRow(row) : row
     }
 
@@ -122,8 +122,8 @@ export async function POST(req: Request) {
     try {
       familyRows = await prisma.lesson.findMany({
         where: { wikiSlug, lessonKey: matched.lessonKey || matched.id },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
       })
+      familyRows = sortVersionRowsDesc(familyRows)
     } catch (error: any) {
       if (!isLessonKeyUnsupportedError(error)) throw error
       const baseId = stripLegacyDraftSuffix((matched as any)?.id)
@@ -136,10 +136,9 @@ export async function POST(req: Request) {
             ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
           ],
         },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
         select: legacyLessonSelect,
       })
-      familyRows = legacyRows.map(mapLegacyLessonRow)
+      familyRows = sortVersionRowsDesc(legacyRows.map(mapLegacyLessonRow))
     }
     if (!Array.isArray(familyRows) || familyRows.length === 0) {
       familyRows = [matched]
@@ -230,25 +229,25 @@ export async function DELETE(req: Request) {
       if (exact && exact.wikiSlug === wikiSlug) {
         matched = exact
       } else {
-        matched = await prisma.lesson.findFirst({
+        const matches = await prisma.lesson.findMany({
           where: {
             wikiSlug,
             OR: [{ slug: lessonId }, { lessonKey: lessonId }],
           },
-          orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-          select: { id: true, lessonKey: true },
+          select: { id: true, lessonKey: true, version: true, updatedAt: true, createdAt: true },
         })
+        matched = sortVersionRowsDesc(matches)[0]
       }
     } catch (error: any) {
       if (!isLessonKeyUnsupportedError(error)) throw error
-      const row = await prisma.lesson.findFirst({
+      const rows = await prisma.lesson.findMany({
         where: {
           wikiSlug,
           OR: [{ id: lessonId }, { slug: lessonId }],
         },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
-        select: { id: true },
+        select: { id: true, version: true, updatedAt: true, createdAt: true },
       })
+      const row = sortVersionRowsDesc(rows.map(mapLegacyLessonRow))[0]
       matched = row ? mapLegacyLessonRow(row) : row
     }
 
@@ -260,8 +259,8 @@ export async function DELETE(req: Request) {
     try {
       familyRows = await prisma.lesson.findMany({
         where: { wikiSlug, lessonKey: matched.lessonKey || matched.id },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
       })
+      familyRows = sortVersionRowsDesc(familyRows)
     } catch (error: any) {
       if (!isLessonKeyUnsupportedError(error)) throw error
         const single = await prisma.lesson.findUnique({
@@ -281,10 +280,9 @@ export async function DELETE(req: Request) {
                 ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
               ],
             },
-            orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }],
             select: legacyLessonSelect,
           })
-          familyRows = legacyRows.map(mapLegacyLessonRow)
+          familyRows = sortVersionRowsDesc(legacyRows.map(mapLegacyLessonRow))
         }
     }
     const lesson = pickEditableVersion(familyRows)

@@ -105,7 +105,7 @@ export function middleware(request: NextRequest) {
     if (passthroughPaths.some(p => pathname === p || pathname.startsWith(`${p}/`))) {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }
-    if (pathname.startsWith('/editor')) {
+    if (pathname.startsWith('/editor') || pathname.startsWith('/dashboard')) {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }
     if (pathname === '/') {

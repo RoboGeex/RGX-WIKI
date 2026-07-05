@@ -233,6 +233,39 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
   }
 }
 
+// Fetch a SINGLE lesson row (including drafts) with its full body, for preview.
+// Unlike getLessonBySlug this does not filter to published, and it never pulls
+// every lesson's body — preview only needs the one lesson being previewed, so
+// this stays cheap even on large wikis.
+export async function getPreviewLesson(idOrSlug: string, wikiSlug?: string): Promise<Lesson | undefined> {
+  if (process.env.USE_DB !== 'true') return undefined
+  const key = (idOrSlug || '').trim()
+  if (!key) return undefined
+
+  const prisma: any = getPrisma(wikiSlug)
+  const order = [{ version: 'desc' as const }, { updatedAt: 'desc' as const }]
+  try {
+    const matched = await prisma.lesson.findFirst({
+      where: {
+        ...(wikiSlug ? { wikiSlug } : {}),
+        OR: [{ id: key }, { slug: key }, { lessonKey: key }],
+      },
+      orderBy: order,
+    })
+    return (matched as Lesson) || undefined
+  } catch (error: any) {
+    if (!isLessonKeyUnsupportedError(error)) throw error
+    const matched = await prisma.lesson.findFirst({
+      where: {
+        ...(wikiSlug ? { wikiSlug } : {}),
+        OR: [{ id: key }, { slug: key }],
+      },
+      orderBy: order,
+    })
+    return (matched as Lesson) || undefined
+  }
+}
+
 type WikiRow = {
   slug: string
   displayName: string

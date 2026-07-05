@@ -6,7 +6,7 @@ import {
   getLessons,
 } from '@/lib/data'
 import { stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
-import { getLessonBySlug, getWikisFromDb } from '@/lib/server-data'
+import { getLessonBySlug, getPreviewLesson, getWikisFromDb } from '@/lib/server-data'
 import type { Locale } from '@/lib/i18n'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
@@ -55,12 +55,13 @@ export default async function LessonPage(
   }
   if (!kitData) notFound()
 
-  const wantsFullBody = preview || Boolean(previewId)
+  const wantsDrafts = preview || Boolean(previewId)
+  // Keep the list metadata-only (no bodies) even in preview — pulling every
+  // lesson's body here is huge on large wikis and throws. The single previewed
+  // lesson's body is fetched on its own below.
   const allLessons = await getLessons(kit, {
-    includeDrafts: wantsFullBody,
-    // Preview must render draft content, which requires the lesson body —
-    // metadataOnly strips it out, so only use it outside of preview mode.
-    metadataOnly: !wantsFullBody,
+    includeDrafts: wantsDrafts,
+    metadataOnly: true,
   })
 
   const lessonMeta = preview && previewId
@@ -76,8 +77,10 @@ export default async function LessonPage(
     notFound()
   }
 
-  const fullLesson = preview && previewId
-    ? undefined
+  // Preview renders the draft body, so fetch the one previewed lesson (drafts
+  // included). Non-preview renders the published version as before.
+  const fullLesson = wantsDrafts
+    ? await getPreviewLesson(previewId || lessonMeta.id || lessonMeta.slug || lessonSlug, kitData.wikiSlug)
     : await getLessonBySlug(lessonMeta.slug || lessonSlug, kitData.wikiSlug)
   const lesson = fullLesson || lessonMeta
   const currentSlug = stripLegacyDraftSuffix(lesson.slug || '')

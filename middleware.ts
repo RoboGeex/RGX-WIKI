@@ -112,8 +112,16 @@ export function middleware(request: NextRequest) {
       url.pathname = '/editor'
       return NextResponse.redirect(url)
     }
-    url.pathname = `/editor${pathname}`
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
+    // Anything else on the editors-only admin domain is student/public wiki
+    // content (e.g. /ziggy, /en/ziggy/lesson/x). Historically this was
+    // rewritten to /editor/<path>, which funnels it through EditorAuthGate and
+    // traps logged-in students in an endless /login redirect loop. Send it to
+    // the public hub instead; the session cookie is shared across
+    // *.robogeex.com (see auth cookie options), so the login carries over.
+    url.host = HUB_DOMAIN
+    url.protocol = 'https:'
+    url.port = ''
+    return NextResponse.redirect(url)
   }
 
   const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads']

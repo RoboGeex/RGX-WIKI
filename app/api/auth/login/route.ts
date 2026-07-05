@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { authenticate, createSession, SESSION_COOKIE } from '@/lib/auth'
+import { authenticate, createSession, SESSION_COOKIE, sessionCookieDomain } from '@/lib/auth'
 import { findDeveloperByCredentials } from '@/lib/developers'
 
 const COOKIE_OPTS = (expiresAt?: Date) => ({
@@ -7,6 +7,7 @@ const COOKIE_OPTS = (expiresAt?: Date) => ({
   sameSite: 'lax' as const,
   path: '/',
   secure: process.env.NODE_ENV === 'production',
+  domain: sessionCookieDomain(),
   ...(expiresAt ? { expires: expiresAt } : { maxAge: 60 * 60 * 24 * 30 }),
 })
 

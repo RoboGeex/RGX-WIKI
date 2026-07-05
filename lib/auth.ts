@@ -1,12 +1,28 @@
 import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 
 export type Role = 'admin' | 'teacher' | 'student'
 
 export const SESSION_COOKIE = 'rgx_session'
 const SESSION_DAYS = 30
+
+// Scope the session cookie to the parent domain so a login made on any
+// robogeex.com subdomain (e.g. admin.robogeex.com) is recognized on the wiki
+// hub (wiki.robogeex.com). Returns undefined for localhost / *.run.app /
+// preview hosts, where a host-only cookie is correct.
+export function sessionCookieDomain(): string | undefined {
+  try {
+    const host = (headers().get('host') || '').toLowerCase().split(':')[0]
+    if (host === 'robogeex.com' || host.endsWith('.robogeex.com')) {
+      return '.robogeex.com'
+    }
+  } catch {
+    // headers() unavailable outside a request scope — fall back to host-only.
+  }
+  return undefined
+}
 
 export type SessionUser = {
   id: string
@@ -77,6 +93,7 @@ export function setSessionCookie(token: string, expiresAt: Date) {
     sameSite: 'lax',
     path: '/',
     secure: process.env.NODE_ENV === 'production',
+    domain: sessionCookieDomain(),
     expires: expiresAt,
   })
 }
@@ -87,6 +104,7 @@ export function clearSessionCookie() {
     sameSite: 'lax',
     path: '/',
     secure: process.env.NODE_ENV === 'production',
+    domain: sessionCookieDomain(),
     maxAge: 0,
   })
 }

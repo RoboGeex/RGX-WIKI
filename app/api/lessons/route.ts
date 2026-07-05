@@ -13,6 +13,8 @@ import {
   collapseLessonsForEditor,
   collapseLessonsForPublic,
   getLessonKey,
+  groupLessonsByKey,
+  hasUnpublishedLessonChanges,
   pickLatestDraft,
   pickLatestPublished,
   sortVersionRowsDesc,
@@ -157,6 +159,36 @@ function getVersion(value: unknown): number {
 function pickLatestAny(rows: any[]): any | undefined {
   const sorted = sortVersionRowsDesc(rows)
   return sorted[0]
+}
+
+function toIsoDate(value: unknown): string {
+  if (!value) return ''
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : ''
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return ''
+    const parsed = new Date(trimmed)
+    return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : trimmed
+  }
+  return ''
+}
+
+function enrichLessonsWithPublishState(rows: any[], collapsed: any[], publishedOnly: boolean): any[] {
+  if (publishedOnly) return collapsed
+
+  const grouped = groupLessonsByKey(rows)
+  return collapsed.map((lesson) => {
+    const versions = grouped.get(lesson.lessonKey || lesson.id) || []
+    const latestDraft = pickLatestDraft(versions)
+    const latestPublished = pickLatestPublished(versions)
+    const hasPublishedVersion = Boolean(latestPublished)
+    return {
+      ...lesson,
+      status: hasPublishedVersion ? LESSON_STATUS.PUBLISHED : lesson.status,
+      lastPublishedAt: toIsoDate((latestPublished as any)?.publishedAt),
+      hasUnpublishedChanges: hasUnpublishedLessonChanges(latestDraft, latestPublished),
+    }
+  })
 }
 
 function toApiError(status: number, error: string, extra?: Partial<ApiError>): ApiError {
@@ -1762,9 +1794,10 @@ export async function GET(req: Request) {
       const collapsed = publishedOnly
         ? collapseLessonsForPublic(lessons)
         : collapseLessonsForEditor(lessons)
+      const enriched = enrichLessonsWithPublishState(lessons, collapsed, publishedOnly)
 
       markDbSuccess(wikiSlug)
-      return NextResponse.json(collapsed)
+      return NextResponse.json(enriched)
     } catch (error: any) {
       markDbFailure(wikiSlug)
       console.error(`[api/lessons] DB read failed for "${wikiSlug}".`, error)

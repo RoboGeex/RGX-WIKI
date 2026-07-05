@@ -2,7 +2,7 @@
 import { getLessons, getKits, getWiki } from "@/lib/data"
 import { getLessonsFromDb, getLessonVersionRowsFromDb } from "@/lib/server-data"
 import type { Lesson } from "@/lib/types"
-import { hasLessonContentChanges, pickLatestDraft, pickLatestPublished, sortVersionRowsDesc } from "@/lib/lesson-versions"
+import { hasUnpublishedLessonChanges, pickLatestDraft, pickLatestPublished, sortVersionRowsDesc } from "@/lib/lesson-versions"
 
 export type LessonGroup = {
   kit: { slug: string; title: string }
@@ -71,10 +71,7 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
     const latestPublished = pickLatestPublished(sorted)
     const hasPublished = Boolean(latestPublished)
     const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt || '')
-    const hasUnpublishedChanges =
-      Boolean(latestDraft) &&
-      Boolean(latestPublished) &&
-      hasLessonContentChanges(latestDraft, latestPublished)
+    const hasUnpublishedChanges = hasUnpublishedLessonChanges(latestDraft, latestPublished)
 
     familyState.set(familyKey, { hasPublished, lastPublishedAt, hasUnpublishedChanges })
   })
@@ -117,6 +114,7 @@ export async function loadLessonsForKit(kitSlug: string, wikiSlug: string): Prom
       if (!family) return lesson
       return {
         ...lesson,
+        status: family.hasPublished ? 'published' : lesson.status,
         lastPublishedAt: lesson.lastPublishedAt || family.lastPublishedAt || '',
         hasUnpublishedChanges:
           Boolean(lesson.hasUnpublishedChanges) ||

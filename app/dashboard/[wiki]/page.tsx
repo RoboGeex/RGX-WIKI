@@ -80,6 +80,8 @@ export default async function WikiDashboardPage({ params }: Params) {
             )}
             {lessons.map((lesson) => {
               const isDraft = lesson.status && lesson.status !== 'published'
+              const hasPublishedVersion = lesson.status === 'published' || Boolean(lesson.lastPublishedAt)
+              const hasUnpublishedChanges = Boolean(lesson.hasUnpublishedChanges)
               const viewPath = `/${wiki.defaultLocale || 'en'}/${kit.slug}/lesson/${lesson.slug}`
               const previewSuffix = isDraft ? (viewPath.includes('?') ? '&preview=1' : '?preview=1') : ''
               const viewHref = `${viewPath}${previewSuffix}`
@@ -100,6 +102,15 @@ export default async function WikiDashboardPage({ params }: Params) {
                       }`}>
                         {lesson.status === 'published' ? 'Published' : 'Draft'}
                       </span>
+                      {hasPublishedVersion && (
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          hasUnpublishedChanges
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        }`}>
+                          {hasUnpublishedChanges ? 'Changed' : 'Synced'}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       {lesson.duration_min} min · {lesson.difficulty}

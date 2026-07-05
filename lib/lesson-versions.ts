@@ -156,6 +156,24 @@ export function hasLessonContentChanges(
   return draftSignature !== publishedSignature
 }
 
+export function hasUnpublishedLessonChanges(
+  draft: VersionedLessonLike | Record<string, any> | undefined,
+  published: VersionedLessonLike | Record<string, any> | undefined
+): boolean {
+  if (!draft || !published) return false
+  if (hasLessonContentChanges(draft, published)) return true
+
+  const draftVersion = getVersion((draft as VersionedLessonLike).version)
+  const publishedVersion = getVersion((published as VersionedLessonLike).version)
+  if (draftVersion > publishedVersion) return true
+
+  const draftUpdatedAt = toTimestamp((draft as VersionedLessonLike).updatedAt)
+  const publishedAt =
+    toTimestamp((published as VersionedLessonLike).publishedAt) ||
+    toTimestamp((published as VersionedLessonLike).updatedAt)
+  return draftUpdatedAt > publishedAt
+}
+
 export function collapseLessonsForEditor<T extends VersionedLessonLike>(rows: T[]): T[] {
   const collapsed: T[] = []
   groupLessonsByKey(rows).forEach((versions) => {

@@ -5,7 +5,7 @@ import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 import { getPrisma } from '@/lib/prisma-multi'
-import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasLessonContentChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
+import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasUnpublishedLessonChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
 import { normalizeSlug, stripLegacyDraftSuffix, LEGACY_DRAFT_SUFFIX, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from './wikiPaths'
 import { HUB_DOMAIN } from '@/lib/domains'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
@@ -380,14 +380,13 @@ function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], incl
     const latestDraft = pickLatestDraft(versions)
     const latestPublished = pickLatestPublished(versions)
     const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt)
+    const hasPublishedVersion = Boolean(latestPublished)
+    const hasUnpublishedChanges = hasUnpublishedLessonChanges(latestDraft, latestPublished)
     return {
       ...lesson,
+      status: hasPublishedVersion ? LESSON_STATUS.PUBLISHED : lesson.status,
       lastPublishedAt,
-      hasUnpublishedChanges:
-        lesson.status === LESSON_STATUS.DRAFT &&
-        Boolean(latestDraft) &&
-        Boolean(latestPublished) &&
-        hasLessonContentChanges(latestDraft, latestPublished),
+      hasUnpublishedChanges,
     }
   })
 }

@@ -1,7 +1,7 @@
 // Server-only helpers to fetch from DB when USE_DB=true
 import type { Lesson, Wiki } from '@/lib/types'
 import { getPrisma } from '@/lib/prisma-multi'
-import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, getLessonKey, groupLessonsByKey, hasLessonContentChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
+import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, getLessonKey, groupLessonsByKey, hasUnpublishedLessonChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
 
 function isLessonKeyUnsupportedError(error: any): boolean {
   const message = typeof error?.message === 'string' ? error.message : ''
@@ -99,14 +99,13 @@ function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], publ
     const latestDraft = pickLatestDraft(versions)
     const latestPublished = pickLatestPublished(versions)
     const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt)
+    const hasPublishedVersion = Boolean(latestPublished)
+    const hasUnpublishedChanges = hasUnpublishedLessonChanges(latestDraft, latestPublished)
     return {
       ...lesson,
+      status: hasPublishedVersion ? LESSON_STATUS.PUBLISHED : lesson.status,
       lastPublishedAt,
-      hasUnpublishedChanges:
-        lesson.status === LESSON_STATUS.DRAFT &&
-        Boolean(latestDraft) &&
-        Boolean(latestPublished) &&
-        hasLessonContentChanges(latestDraft, latestPublished),
+      hasUnpublishedChanges,
     }
   })
 }

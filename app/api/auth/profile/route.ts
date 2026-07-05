@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { AuthError, getCurrentUser } from '@/lib/auth'
 
+// GET /api/auth/profile
+export async function GET() {
+  try {
+    const user = await getCurrentUser()
+    if (!user) throw new AuthError('Not signed in', 401)
+
+    return NextResponse.json({ ok: true, user })
+  } catch (e: any) {
+    const status = e instanceof AuthError ? e.status : 500
+    return NextResponse.json({ error: e?.message || 'Failed' }, { status })
+  }
+}
+
 // PATCH /api/auth/profile  { name, phone, school }
 export async function PATCH(request: Request) {
   try {

@@ -83,7 +83,17 @@ export type FamilyRowSummary = {
   hasBody: boolean
 }
 
-export type FamilyAction = 'healthy' | 'create-published' | 'skip-empty-draft' | 'skip-no-rows'
+export type FamilyAction =
+  | 'healthy'
+  | 'create-published'
+  // The family's draft row is really the orphaned twin of an already-published
+  // family (publish-time id collision bumped the published row to "<key>-1").
+  // The safe fix is renaming the draft to rejoin that family — NOT publishing
+  // it again, which would create a duplicate public lesson.
+  | 'merge-into-family'
+  | 'skip-manual-review'
+  | 'skip-empty-draft'
+  | 'skip-no-rows'
 
 export type FamilyReport = {
   lessonKey: string
@@ -96,6 +106,7 @@ export type FamilyReport = {
     newId: string
     newSlug: string
     newVersion: number
+    targetFamilyKey?: string
     idNote?: string
     slugNote?: string
   }
@@ -108,6 +119,7 @@ export type RepairPlan = {
   summary: {
     healthy: number
     needsPublishedRow: number
+    mergeable: number
     skipped: number
   }
 }
@@ -140,6 +152,38 @@ export function buildRepairPlan(wikiSlug: string, rows: RepairRow[]): RepairPlan
     if (!slugOwners.has(row.slug)) slugOwners.set(row.slug, lessonFamilyKey(row))
   })
 
+  // Index of families that already have a published row, for detecting
+  // orphan-draft twins (draft "x" split from published "x-1" by a
+  // publish-time id collision, or matched by identical title).
+  const normalizeTitle = (value: unknown) => String(value || '').trim().toLowerCase()
+  const publishedFamilies = new Map<string, { titles: Set<string>; hasDraft: boolean }>()
+  families.forEach((familyRows, key) => {
+    if (!familyRows.some((row) => normalizeLessonStatus(row.status) === LESSON_STATUS.PUBLISHED)) return
+    publishedFamilies.set(key, {
+      titles: new Set(
+        familyRows.flatMap((row) => [normalizeTitle(row.title_en), normalizeTitle(row.title_ar)]).filter(Boolean)
+      ),
+      hasDraft: familyRows.some((row) => normalizeLessonStatus(row.status) === LESSON_STATUS.DRAFT),
+    })
+  })
+
+  const findMergeTarget = (key: string, familyRows: RepairRow[]): string | undefined => {
+    // Strong signal: a published family keyed "<key>-<n>" (collision bump).
+    for (const candidate of publishedFamilies.keys()) {
+      if (new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`).test(candidate)) {
+        return candidate
+      }
+    }
+    // Weaker signal: identical title on a published family.
+    const familyTitles = familyRows
+      .flatMap((row) => [normalizeTitle(row.title_en), normalizeTitle(row.title_ar)])
+      .filter(Boolean)
+    for (const [candidate, info] of publishedFamilies) {
+      if (familyTitles.some((t) => info.titles.has(t))) return candidate
+    }
+    return undefined
+  }
+
   const reports: FamilyReport[] = []
 
   families.forEach((familyRows, key) => {
@@ -164,6 +208,44 @@ export function buildRepairPlan(wikiSlug: string, rows: RepairRow[]): RepairPlan
       reports.push({ ...base, action: 'skip-no-rows', note: 'No draft or published row found.' })
       return
     }
+    // Before considering a publish, check whether this draft is really the
+    // orphaned twin of an already-published family. Publishing it would
+    // duplicate a lesson that is already live — merge it back instead.
+    const mergeTarget = findMergeTarget(key, familyRows)
+    if (mergeTarget) {
+      const targetInfo = publishedFamilies.get(mergeTarget)!
+      const mergedId = `${mergeTarget}--draft`
+      if (targetInfo.hasDraft) {
+        reports.push({
+          ...base,
+          action: 'skip-manual-review',
+          note: `This draft duplicates published lesson "${mergeTarget}", which already has its own draft. The stale duplicate should be reviewed and deleted from the dashboard by hand.`,
+        })
+        return
+      }
+      if (allIds.has(mergedId)) {
+        reports.push({
+          ...base,
+          action: 'skip-manual-review',
+          note: `Cannot merge into "${mergeTarget}": id "${mergedId}" is already taken. Review manually.`,
+        })
+        return
+      }
+      reports.push({
+        ...base,
+        action: 'merge-into-family',
+        note: `Draft is the orphaned twin of published lesson "${mergeTarget}" — it will be renamed to rejoin that family. Nothing is published or deleted.`,
+        plan: {
+          sourceDraftId: newestDraft.id,
+          newId: mergedId,
+          newSlug: mergedId,
+          newVersion: 0,
+          targetFamilyKey: mergeTarget,
+        },
+      })
+      return
+    }
+
     if (!rowHasRenderableBody(newestDraft)) {
       reports.push({
         ...base,
@@ -223,6 +305,7 @@ export function buildRepairPlan(wikiSlug: string, rows: RepairRow[]): RepairPlan
     summary: {
       healthy: reports.filter((r) => r.action === 'healthy').length,
       needsPublishedRow: reports.filter((r) => r.action === 'create-published').length,
+      mergeable: reports.filter((r) => r.action === 'merge-into-family').length,
       skipped: reports.filter((r) => r.action.startsWith('skip')).length,
     },
   }

@@ -103,7 +103,7 @@ export async function GET(req: Request) {
     const plan = buildRepairPlan(wikiSlug, rows as RepairRow[])
 
     const repairableKeys = plan.families
-      .filter((f) => f.action === 'create-published')
+      .filter((f) => f.action === 'create-published' || f.action === 'merge-into-family')
       .map((f) => f.lessonKey)
 
     return NextResponse.json({
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
         repairableKeys.length === 0
           ? 'Nothing to repair — every lesson family already has a published row.'
           : {
-              note: 'Review the families above, then POST to this endpoint with the lessonKeys you approve. Only those families are touched, via INSERT only.',
+              note: 'Review the families above, then POST to this endpoint with the lessonKeys you approve. "create-published" families get a new published row inserted; "merge-into-family" families get their orphaned draft renamed to rejoin the published family. Nothing is ever deleted.',
               body: {
                 wiki: wikiSlug,
                 confirm: `REPAIR ${wikiSlug}`,
@@ -166,15 +166,54 @@ export async function POST(req: Request) {
     const toApply = plan.families.filter(
       (f) => requested.has(f.lessonKey) && f.action === 'create-published' && f.plan
     )
+    const toMerge = plan.families.filter(
+      (f) => requested.has(f.lessonKey) && f.action === 'merge-into-family' && f.plan
+    )
     const notApplicable = lessonKeys.filter(
-      (key) => !toApply.some((f) => f.lessonKey === key)
+      (key) => !toApply.some((f) => f.lessonKey === key) && !toMerge.some((f) => f.lessonKey === key)
     )
 
     const rowsById = new Map(rows.map((row: any) => [row.id, row]))
     const now = new Date()
     const created: Array<{ lessonKey: string; id: string; slug: string; copiedFromDraftId: string }> = []
+    const merged: Array<{
+      lessonKey: string
+      targetFamilyKey: string
+      before: { id: string; slug: string }
+      after: { id: string; slug: string }
+    }> = []
 
     await prisma.$transaction(async (tx: any) => {
+      for (const family of toMerge) {
+        const draft: any = rowsById.get(family.plan!.sourceDraftId)
+        if (!draft) throw new Error(`Draft row "${family.plan!.sourceDraftId}" disappeared mid-repair; aborting (nothing committed).`)
+
+        // Guards inside the transaction: the row must still be a draft, and
+        // the target id must still be free.
+        const taken = await tx.lesson.findUnique({ where: { id: family.plan!.newId }, select: { id: true } })
+        if (taken) continue
+        const changed = hasModernColumns
+          ? await tx.$executeRawUnsafe(
+              'UPDATE `Lesson` SET `id` = ?, `slug` = ?, `lessonKey` = ?, `updatedAt` = ? WHERE `id` = ? AND `wikiSlug` = ? AND `status` = ?',
+              family.plan!.newId, family.plan!.newSlug, family.plan!.targetFamilyKey, now,
+              draft.id, wikiSlug, LESSON_STATUS.DRAFT
+            )
+          : await tx.$executeRawUnsafe(
+              'UPDATE `Lesson` SET `id` = ?, `slug` = ?, `updatedAt` = ? WHERE `id` = ? AND `wikiSlug` = ? AND `status` = ?',
+              family.plan!.newId, family.plan!.newSlug, now,
+              draft.id, wikiSlug, LESSON_STATUS.DRAFT
+            )
+        if (changed !== 1) {
+          throw new Error(`Merge of "${draft.id}" matched ${changed} rows instead of 1; aborting (nothing committed).`)
+        }
+        merged.push({
+          lessonKey: family.lessonKey,
+          targetFamilyKey: family.plan!.targetFamilyKey!,
+          before: { id: draft.id, slug: draft.slug },
+          after: { id: family.plan!.newId, slug: family.plan!.newSlug },
+        })
+      }
+
       for (const family of toApply) {
         const draft: any = rowsById.get(family.plan!.sourceDraftId)
         if (!draft) throw new Error(`Draft row "${family.plan!.sourceDraftId}" disappeared mid-repair; aborting (nothing committed).`)
@@ -237,7 +276,7 @@ export async function POST(req: Request) {
       }
     }, { maxWait: 20000, timeout: 20000 })
 
-    if (created.length > 0) {
+    if (created.length > 0 || merged.length > 0) {
       revalidatePath('/', 'layout')
     }
 
@@ -245,10 +284,11 @@ export async function POST(req: Request) {
       ok: true,
       wiki: wikiSlug,
       created,
+      merged,
       notApplicable,
       revertNote:
-        created.length > 0
-          ? 'To undo, delete exactly these inserted row ids from the Lesson table — no existing rows were modified.'
+        created.length > 0 || merged.length > 0
+          ? 'To undo: delete the "created" row ids, and rename the "merged" rows back to their "before" id/slug. No other rows were touched.'
           : 'Nothing was written.',
     })
   } catch (error: any) {

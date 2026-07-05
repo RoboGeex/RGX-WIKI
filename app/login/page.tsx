@@ -52,6 +52,8 @@ export default function LoginPage() {
         dest = '/dashboard'
       } else if (role === 'editor') {
         dest = '/dashboard'   // developers go to the dashboard, not /editor
+      } else if (role === 'teacher') {
+        dest = '/teacher'
       } else {
         dest = '/home'
       }

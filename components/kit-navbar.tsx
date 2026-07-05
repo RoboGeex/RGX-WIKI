@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { Locale } from '../lib/i18n'
 import type { Lesson } from '../lib/types'
-import { isUnlocked, setStoredLocale } from '../lib/unlock'
+import { setStoredLocale } from '../lib/unlock'
 import Navbar from './navbar'
 import Sidebar from './sidebar'
 
@@ -30,19 +30,12 @@ export default function KitNavbar({
   const searchParams = useSearchParams()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
-  useEffect(() => {
-    if (!pathname) return
-    if (!pathname.includes('/lesson/')) return
-    if (pathname.includes('/unlock')) return
-    if (isUnlocked(kitSlug)) return
-
-    const search = new URLSearchParams({
-      kit: kitSlug,
-      redirect: pathname,
-    })
-
-    router.push(`/${locale}/unlock?${search.toString()}`)
-  }, [pathname, router, locale, kitSlug])
+  // Access control is enforced server-side in KitLayout (app/[locale]/[kit]/layout.tsx),
+  // which is force-dynamic and re-runs on every navigation. It gates on the access
+  // code AND correctly grants access to logged-in admins, assigned teachers, and
+  // enrolled students. We must NOT re-check "unlocked" here: this client component
+  // only knows about the access-code cookie/localStorage, so it would bounce
+  // legitimately-authorized logged-in users to /unlock in an endless loop.
 
   const handleLocaleChange = (nextLocale: Locale) => {
     setStoredLocale(nextLocale)

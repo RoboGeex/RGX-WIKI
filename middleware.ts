@@ -97,8 +97,12 @@ export function middleware(request: NextRequest) {
   }
 
   if (host === 'admin.robogeex.com') {
-    const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads']
-    if (passthroughPaths.some(p => pathname.startsWith(p))) {
+    // Auth routes must render as-is on the admin domain. Otherwise the
+    // rewrite below turns them into /editor/<path> (e.g. /login -> /editor/login,
+    // a 404 still wrapped by EditorAuthGate), so the editor's "please log in"
+    // redirect never reaches a real login page and loops.
+    const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads', '/login', '/signup', '/join']
+    if (passthroughPaths.some(p => pathname === p || pathname.startsWith(`${p}/`))) {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }
     if (pathname.startsWith('/editor')) {

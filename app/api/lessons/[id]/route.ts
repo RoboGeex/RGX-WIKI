@@ -106,6 +106,37 @@ function mapLegacyLessonRow(row: any) {
   }
 }
 
+function hasMeaningfulBodyBlock(block: any): boolean {
+  if (!block || typeof block !== 'object') return false
+
+  const textKeys = [
+    'en',
+    'ar',
+    'html_en',
+    'html_ar',
+    'title_en',
+    'title_ar',
+    'caption_en',
+    'caption_ar',
+    'image',
+    'url',
+    'poster',
+  ]
+  if (textKeys.some((key) => typeof block[key] === 'string' && block[key].trim().length > 0)) {
+    return true
+  }
+  if (Array.isArray(block.images) && block.images.length > 0) return true
+  if (Array.isArray(block.items_en) && block.items_en.length > 0) return true
+  if (Array.isArray(block.items_ar) && block.items_ar.length > 0) return true
+  if (Array.isArray(block.content)) return block.content.some(hasMeaningfulBodyBlock)
+
+  return false
+}
+
+function hasUsableLessonBody(row: any): boolean {
+  return Array.isArray(row?.body) && row.body.some(hasMeaningfulBodyBlock)
+}
+
 async function findLessonMatch(prisma: any, wikiSlug: string | undefined, identifier: string) {
   try {
     return await prisma.lesson.findFirst({
@@ -191,16 +222,23 @@ export async function GET(
 
     const latestPublished = pickLatestPublished(familyRows)
     const latestDraft = pickLatestDraft(familyRows)
+    const selectedWithBody =
+      canManage &&
+      selected === latestDraft &&
+      !hasUsableLessonBody(selected) &&
+      hasUsableLessonBody(latestPublished)
+        ? { ...selected, body: latestPublished!.body }
+        : selected
     const hasPublishedSnapshot = Boolean(latestPublished)
     const hasUnpublishedChanges =
       canManage &&
       hasPublishedSnapshot &&
       hasUnpublishedLessonChanges(latestDraft, latestPublished)
     return NextResponse.json({
-      ...selected,
-      status: hasPublishedSnapshot ? 'published' : (selected as any)?.status,
+      ...selectedWithBody,
+      status: hasPublishedSnapshot ? 'published' : (selectedWithBody as any)?.status,
       hasUnpublishedChanges,
-      lastPublishedAt: latestPublished?.publishedAt || (selected as any)?.publishedAt || null,
+      lastPublishedAt: latestPublished?.publishedAt || (selectedWithBody as any)?.publishedAt || null,
     })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to load lesson' }, { status: 500 })

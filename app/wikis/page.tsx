@@ -281,7 +281,7 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
               />
             </div>
             <Link
-              href="/dashboard"
+              href="/signup"
               className="inline-flex h-11 items-center rounded-full px-6 text-sm font-bold text-white"
               style={{
                 background: 'linear-gradient(135deg, var(--primary), var(--secondary))',

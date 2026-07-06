@@ -97,11 +97,12 @@ export function middleware(request: NextRequest) {
   }
 
   if (host === 'admin.robogeex.com') {
-    // Auth routes must render as-is on the admin domain. Otherwise the
-    // rewrite below turns them into /editor/<path> (e.g. /login -> /editor/login,
-    // a 404 still wrapped by EditorAuthGate), so the editor's "please log in"
-    // redirect never reaches a real login page and loops.
-    const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads', '/login', '/signup', '/join', '/teacher', '/home']
+    // The admin domain is for admins and content developers ONLY. Only the
+    // editor/admin surfaces, the shared login entry, and API/static assets are
+    // served here. `/login` must render as-is (otherwise the redirect below
+    // would turn it into /editor/login — a 404 wrapped by EditorAuthGate — and
+    // the "please log in" redirect would never reach a real login page).
+    const passthroughPaths = ['/api', '/_next', '/favicon.ico', '/images', '/uploads', '/login']
     if (passthroughPaths.some(p => pathname === p || pathname.startsWith(`${p}/`))) {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }
@@ -112,12 +113,12 @@ export function middleware(request: NextRequest) {
       url.pathname = '/editor'
       return NextResponse.redirect(url)
     }
-    // Anything else on the editors-only admin domain is student/public wiki
-    // content (e.g. /ziggy, /en/ziggy/lesson/x). Historically this was
-    // rewritten to /editor/<path>, which funnels it through EditorAuthGate and
-    // traps logged-in students in an endless /login redirect loop. Send it to
-    // the public hub instead; the session cookie is shared across
-    // *.robogeex.com (see auth cookie options), so the login carries over.
+    // Everything else here is a student/teacher/public surface (wiki content,
+    // /home, /teacher, /signup, /join, …). Students and teachers must not use
+    // the admin domain — and rewriting these to /editor funnels them through
+    // EditorAuthGate, trapping them in an endless /login loop. Redirect to the
+    // public hub instead; the session cookie is shared across *.robogeex.com
+    // (see auth cookie options), so any existing login carries over.
     url.host = HUB_DOMAIN
     url.protocol = 'https:'
     url.port = ''

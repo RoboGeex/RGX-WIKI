@@ -50,16 +50,16 @@ function initials(name: string | null, email: string) {
 
 function DirectoryAvatar({ name, email }: { name: string | null; email: string }) {
   return (
-    <div className="relative flex h-[70px] w-[70px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-xl font-bold text-[#8A8F99] shadow-inner">
-      <div className="absolute top-[18px] h-6 w-6 rounded-full bg-[#9EA3AD]" />
-      <div className="absolute bottom-2 h-8 w-12 rounded-t-full bg-[#9EA3AD]" />
+    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-base font-bold text-[#8A8F99] shadow-inner">
+      <div className="absolute top-4 h-5 w-5 rounded-full bg-[#9EA3AD]" />
+      <div className="absolute bottom-2 h-7 w-11 rounded-t-full bg-[#9EA3AD]" />
       <span className="sr-only">{initials(name, email)}</span>
     </div>
   )
 }
 
 function FieldLabel({ children }: { children: ReactNode }) {
-  return <p className="text-[15px] font-medium uppercase tracking-wide text-[#30323A]">{children}</p>
+  return <p className="text-xs font-medium uppercase tracking-wide text-[#30323A]">{children}</p>
 }
 
 function ProgressBar({ completed, total }: { completed: number; total: number }) {
@@ -221,8 +221,8 @@ export default function StudentsPageClient() {
           <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1 text-base font-medium text-[#6C7078] hover:text-[#070A12]">
             <ChevronLeft size={18} /> Back
           </Link>
-          <h1 className="text-[34px] font-extrabold leading-tight tracking-[-0.01em] text-[#070A12]">Student Directory</h1>
-          <p className="mt-2 text-xl text-[#2F333B]">{students.length} total</p>
+          <h1 className="text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-[#070A12]">Student Directory</h1>
+          <p className="mt-2 text-lg text-[#2F333B]">{students.length} total</p>
         </div>
         <button
           onClick={load}
@@ -277,19 +277,19 @@ export default function StudentsPageClient() {
           const complete = pct(s.totalCompleted, s.totalLessons)
           const teacherNames = [...new Set(s.wikis.map(w => w.teacherName || w.teacherEmail))]
           return (
-            <section key={s.student.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-7 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
-              <div className="grid items-center gap-6 lg:grid-cols-[284px_160px_190px_190px_112px_96px]">
-                <div className="flex items-center gap-5">
+            <section key={s.student.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-6 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
+              <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_190px_170px_120px_112px]">
+                <div className="flex items-center gap-4">
                   <DirectoryAvatar name={s.student.name} email={s.student.email} />
                   <div className="min-w-0">
-                    <p className="truncate text-[22px] font-semibold text-[#05070D]">{s.student.name || 'Unnamed'}</p>
-                    <p className="truncate text-lg text-[#3F434B]">{s.student.email}</p>
+                    <p className="truncate text-xl font-semibold text-[#05070D]">{s.student.name || 'Unnamed'}</p>
+                    <p className="truncate text-base text-[#3F434B]">{s.student.email}</p>
                   </div>
                 </div>
 
                 <div>
                   <FieldLabel>Enrolled Wikis</FieldLabel>
-                  <p className="mt-3 text-xl font-semibold text-[#070A12]">{s.wikis.length} Assigned</p>
+                  <p className="mt-2 text-lg font-semibold text-[#070A12]">{s.wikis.length} Assigned</p>
                 </div>
 
                 <div>
@@ -302,12 +302,12 @@ export default function StudentsPageClient() {
 
                 <div>
                   <FieldLabel>Teachers</FieldLabel>
-                  <p className="mt-3 truncate text-xl text-[#070A12]">{teacherNames.length ? teacherNames.join(', ') : '-'}</p>
+                  <p className="mt-2 truncate text-lg text-[#070A12]">{teacherNames.length ? teacherNames.join(', ') : '-'}</p>
                 </div>
 
                 <div>
                   <FieldLabel>Joined</FieldLabel>
-                  <p className="mt-3 whitespace-nowrap text-xl text-[#070A12]">{new Date(s.student.createdAt).toLocaleDateString()}</p>
+                  <p className="mt-2 whitespace-nowrap text-lg text-[#070A12]">{new Date(s.student.createdAt).toLocaleDateString()}</p>
                 </div>
 
                 <div className="flex items-center justify-end gap-5">

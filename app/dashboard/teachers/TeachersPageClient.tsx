@@ -34,16 +34,16 @@ function initials(name: string | null, email: string) {
 
 function DirectoryAvatar({ name, email }: { name: string | null; email: string }) {
   return (
-    <div className="relative flex h-[70px] w-[70px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-xl font-bold text-[#8A8F99] shadow-inner">
-      <div className="absolute top-[18px] h-6 w-6 rounded-full bg-[#9EA3AD]" />
-      <div className="absolute bottom-2 h-8 w-12 rounded-t-full bg-[#9EA3AD]" />
+    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-base font-bold text-[#8A8F99] shadow-inner">
+      <div className="absolute top-4 h-5 w-5 rounded-full bg-[#9EA3AD]" />
+      <div className="absolute bottom-2 h-7 w-11 rounded-t-full bg-[#9EA3AD]" />
       <span className="sr-only">{initials(name, email)}</span>
     </div>
   )
 }
 
 function FieldLabel({ children }: { children: ReactNode }) {
-  return <p className="text-[15px] font-medium uppercase tracking-wide text-[#30323A]">{children}</p>
+  return <p className="text-xs font-medium uppercase tracking-wide text-[#30323A]">{children}</p>
 }
 
 function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onClose: () => void; onCreated: () => void }) {
@@ -217,8 +217,8 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
           <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1 text-base font-medium text-[#6C7078] hover:text-[#070A12]">
             <ChevronLeft size={18} /> Back
           </Link>
-          <h1 className="text-[34px] font-extrabold leading-tight tracking-[-0.01em] text-[#070A12]">Teacher Directory</h1>
-          <p className="mt-2 text-xl text-[#2F333B]">{teachers.length} total</p>
+          <h1 className="text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-[#070A12]">Teacher Directory</h1>
+          <p className="mt-2 text-lg text-[#2F333B]">{teachers.length} total</p>
         </div>
         <button
           onClick={() => setShowDialog(true)}
@@ -259,13 +259,13 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
         {!loading && filtered.map(t => {
           const assigned = t.assignedWikiSlugs || []
           return (
-            <section key={t.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-7 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
-              <div className="grid items-center gap-6 lg:grid-cols-[284px_160px_100px_118px_166px_112px_100px]">
-                <div className="flex items-center gap-5">
+            <section key={t.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-6 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
+              <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_88px_110px_166px_112px_100px]">
+                <div className="flex items-center gap-4">
                   <DirectoryAvatar name={t.name} email={t.email} />
                   <div className="min-w-0">
-                    <p className="truncate text-[22px] font-semibold text-[#05070D]">{t.name || 'Unnamed'}</p>
-                    <p className="truncate text-lg text-[#3F434B]">{t.email}</p>
+                    <p className="truncate text-xl font-semibold text-[#05070D]">{t.name || 'Unnamed'}</p>
+                    <p className="truncate text-base text-[#3F434B]">{t.email}</p>
                   </div>
                 </div>
 
@@ -276,7 +276,7 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
                   ) : (
                     <button
                       onClick={() => setEditingId(t.id)}
-                      className="mt-2 inline-flex items-center rounded-lg border border-[#C9CCD3] bg-[#F2F3F6] px-3 py-1.5 text-lg font-semibold text-[#070A12] shadow-inner"
+                      className="mt-2 inline-flex items-center rounded-lg border border-[#C9CCD3] bg-[#F2F3F6] px-3 py-1.5 text-base font-semibold text-[#070A12] shadow-inner"
                     >
                       {assigned.length} Assigned
                     </button>
@@ -285,12 +285,12 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
 
                 <div>
                   <FieldLabel>Students</FieldLabel>
-                  <p className="mt-3 text-xl font-semibold text-[#070A12]">{t.studentCount}</p>
+                  <p className="mt-2 text-lg font-semibold text-[#070A12]">{t.studentCount}</p>
                 </div>
 
                 <div>
                   <FieldLabel>Last Login</FieldLabel>
-                  <p className="mt-3 text-xl text-[#070A12]">{timeAgo(t.lastLoginAt)}</p>
+                  <p className="mt-2 text-lg text-[#070A12]">{timeAgo(t.lastLoginAt)}</p>
                 </div>
 
                 <div>
@@ -301,12 +301,12 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
                       <p className="truncate text-base text-[#3F434B]">{t.createdByEmail}</p>
                       <p className="text-base text-[#3F434B]">{new Date(t.createdAt).toLocaleDateString()}</p>
                     </div>
-                  ) : <p className="mt-3 text-xl font-semibold text-[#070A12]">-</p>}
+                  ) : <p className="mt-2 text-lg font-semibold text-[#070A12]">-</p>}
                 </div>
 
                 <div>
                   <FieldLabel>Joined</FieldLabel>
-                  <p className="mt-3 whitespace-nowrap text-xl text-[#070A12]">{new Date(t.createdAt).toLocaleDateString()}</p>
+                  <p className="mt-2 whitespace-nowrap text-lg text-[#070A12]">{new Date(t.createdAt).toLocaleDateString()}</p>
                 </div>
 
                 <div className="flex items-center justify-end gap-5">

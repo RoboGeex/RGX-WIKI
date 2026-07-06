@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Lexend } from 'next/font/google'
-import { Home, Layout, LogOut, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2 } from 'lucide-react'
+import { Home, Layout, LogOut, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Eye, Clock, Circle, X } from 'lucide-react'
 
 const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
@@ -33,12 +33,108 @@ type Student = {
   joinedAt: string
   student: { id: string; email: string; name: string | null }
   link: { id: string; isActive: boolean }
-  progress: { completed: number; in_progress: number }
+  progress: { completed: number; in_progress: number; total: number }
+  lessons: {
+    id: string
+    title: string
+    order: number
+    duration_min: number
+    status: 'completed' | 'in_progress' | 'not_started'
+    completedAt: string | null
+    lastViewedAt: string | null
+  }[]
 }
 
 type Props = {
   wikis: Wiki[]
   user: { name: string | null; email: string }
+}
+
+function progressPct(progress: Student['progress']) {
+  return progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
+}
+
+function ProgressBar({ progress }: { progress: Student['progress'] }) {
+  const pct = progressPct(progress)
+  return (
+    <div className="flex min-w-[190px] items-center gap-3">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#F1E4E1]">
+        <div className="h-full rounded-full bg-gradient-to-r from-[#F0523F] to-[#E23B2E]" style={{ width: `${Math.max(pct, progress.completed > 0 ? 4 : 0)}%` }} />
+      </div>
+      <span className="w-10 text-right text-sm font-bold text-[#1A1110]">{pct}%</span>
+    </div>
+  )
+}
+
+function LessonStatus({ status }: { status: Student['lessons'][number]['status'] }) {
+  if (status === 'completed') {
+    return <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700"><Check size={13} /> Done</span>
+  }
+  if (status === 'in_progress') {
+    return <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700"><Clock size={13} /> In progress</span>
+  }
+  return <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EBE9] px-2.5 py-1 text-xs font-bold text-[#8B6B65]"><Circle size={13} /> Not started</span>
+}
+
+function ProgressDialog({ student, onClose }: { student: Student; onClose: () => void }) {
+  const pct = progressPct(student.progress)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[#F2E1DD] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-[#F3E7E4] px-6 py-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar name={student.student.name} email={student.student.email} size="md" />
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-bold text-[#1A1110]">{student.student.name || 'Unnamed student'}</h2>
+              <p className="truncate text-sm text-[#8B6B65]">{student.student.email}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[#B08981] hover:bg-[#FBF3F1] hover:text-[#1A1110]" aria-label="Close progress dialog">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="border-b border-[#F3E7E4] bg-[#FBF7F5] px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[#8B6B65]">Overall progress</p>
+              <p className="text-2xl font-extrabold text-[#1A1110]">{pct}% complete</p>
+            </div>
+            <p className="text-sm font-semibold text-[#6B4F4A]">
+              {student.progress.completed} of {student.progress.total} lessons completed
+            </p>
+          </div>
+          <div className="mt-3"><ProgressBar progress={student.progress} /></div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {student.lessons.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-[#EBD9D5] bg-[#FBF7F5] px-4 py-8 text-center text-sm text-[#8B6B65]">
+              No published lessons in this class yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {student.lessons.map((lesson) => (
+                <div key={lesson.id} className="flex items-center justify-between gap-4 rounded-xl border border-[#F3E7E4] bg-white px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-[#1A1110]">{lesson.order}. {lesson.title}</p>
+                    <p className="text-xs text-[#8B6B65]">{lesson.duration_min} min</p>
+                  </div>
+                  <LessonStatus status={lesson.status} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end border-t border-[#F3E7E4] bg-[#FBF7F5] px-6 py-4">
+          <button onClick={onClose} className="rounded-xl border border-[#EBD9D5] bg-white px-4 py-2 text-sm font-semibold text-[#6B4F4A] hover:bg-[#FBF3F1]">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function TeacherDashboardClient({ wikis, user }: Props) {
@@ -48,6 +144,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
 
   const activeLink = links.find((l) => l.isActive) || null
 
@@ -74,6 +171,12 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
   }, [wikiSlug])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!selectedStudent) return
+    const fresh = students.find((s) => s.enrollmentId === selectedStudent.enrollmentId) || null
+    if (fresh !== selectedStudent) setSelectedStudent(fresh)
+  }, [students, selectedStudent])
 
   async function generateLink() {
     if (activeLink && !confirm('This will replace the current active link. Students already enrolled keep access — new students will use the new link. Continue?')) return
@@ -279,7 +382,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
 
           {!loading && students.length > 0 && (
             <div className="overflow-x-auto -mx-2">
-              <table className="w-full min-w-[620px]">
+              <table className="w-full min-w-[760px]">
                 <thead>
                   <tr className="text-left text-[13px] font-bold uppercase tracking-wide text-[#B08981] border-b-2 border-[#F3E7E4]">
                     <th className="py-3 px-2 w-8">#</th>
@@ -304,24 +407,33 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
                       </td>
                       <td className="py-3.5 px-2 text-[15px] text-[#8B6B65] whitespace-nowrap">{new Date(s.joinedAt).toLocaleDateString()}</td>
                       <td className="py-3.5 px-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-700">
-                            <Check size={13} /> {s.progress.completed} done
-                          </span>
-                          {s.progress.in_progress > 0 && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-700">
-                              {s.progress.in_progress} in progress
+                        <div className="space-y-2">
+                          <ProgressBar progress={s.progress} />
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                              <Check size={12} /> {s.progress.completed} done
                             </span>
-                          )}
+                            <span className="text-xs font-semibold text-[#8B6B65]">
+                              {s.progress.total} total
+                            </span>
+                          </div>
                         </div>
                       </td>
                       <td className="py-3.5 px-2 text-right">
-                        <button
-                          onClick={() => removeStudent(s)}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors"
-                        >
-                          <Trash2 size={15} /> Remove
-                        </button>
+                        <div className="flex justify-end gap-3">
+                          <button
+                            onClick={() => setSelectedStudent(s)}
+                            className="inline-flex items-center gap-1 text-sm font-semibold text-[#6B4F4A] hover:text-[#1A1110] transition-colors"
+                          >
+                            <Eye size={15} /> View progress
+                          </button>
+                          <button
+                            onClick={() => removeStudent(s)}
+                            className="inline-flex items-center gap-1 text-sm font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors"
+                          >
+                            <Trash2 size={15} /> Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -331,6 +443,9 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
           )}
         </div>
       </div>
+      {selectedStudent && (
+        <ProgressDialog student={selectedStudent} onClose={() => setSelectedStudent(null)} />
+      )}
     </div>
   )
 }

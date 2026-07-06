@@ -20,30 +20,47 @@ export async function GET(request: Request) {
       },
     })
 
-    // Attach progress counts per student
     const studentIds = enrollments.map((e) => e.studentId)
+    const lessons = await prisma.lesson.findMany({
+      where: { wikiSlug, status: 'published' },
+      orderBy: { order: 'asc' },
+      select: { id: true, title_en: true, order: true, duration_min: true },
+    })
+
     const progress = studentIds.length
-      ? await prisma.lessonProgress.groupBy({
-          by: ['studentId', 'status'],
+      ? await prisma.lessonProgress.findMany({
           where: { studentId: { in: studentIds }, wikiSlug },
-          _count: true,
+          select: { studentId: true, lessonId: true, status: true, completedAt: true, lastViewedAt: true },
         })
       : []
 
-    const progressMap: Record<string, { completed: number; in_progress: number }> = {}
+    const progressMap: Record<string, Record<string, { status: string; completedAt: Date | null; lastViewedAt: Date }>> = {}
     for (const p of progress) {
-      if (!progressMap[p.studentId]) progressMap[p.studentId] = { completed: 0, in_progress: 0 }
-      if (p.status === 'completed') progressMap[p.studentId].completed = p._count
-      if (p.status === 'in_progress') progressMap[p.studentId].in_progress = p._count
+      if (!progressMap[p.studentId]) progressMap[p.studentId] = {}
+      progressMap[p.studentId][p.lessonId] = p
     }
 
-    const students = enrollments.map((e) => ({
-      enrollmentId: e.id,
-      joinedAt: e.joinedAt,
-      student: e.student,
-      link: e.link,
-      progress: progressMap[e.studentId] || { completed: 0, in_progress: 0 },
-    }))
+    const students = enrollments.map((e) => {
+      const lessonDetails = lessons.map((l) => ({
+        id: l.id,
+        title: l.title_en,
+        order: l.order,
+        duration_min: l.duration_min,
+        status: progressMap[e.studentId]?.[l.id]?.status ?? 'not_started',
+        completedAt: progressMap[e.studentId]?.[l.id]?.completedAt ?? null,
+        lastViewedAt: progressMap[e.studentId]?.[l.id]?.lastViewedAt ?? null,
+      }))
+      const completed = lessonDetails.filter((l) => l.status === 'completed').length
+      const inProgress = lessonDetails.filter((l) => l.status === 'in_progress').length
+      return {
+        enrollmentId: e.id,
+        joinedAt: e.joinedAt,
+        student: e.student,
+        link: e.link,
+        progress: { completed, in_progress: inProgress, total: lessons.length },
+        lessons: lessonDetails,
+      }
+    })
 
     return NextResponse.json({ students })
   } catch (e: any) {

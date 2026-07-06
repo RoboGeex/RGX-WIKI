@@ -108,34 +108,6 @@ h1, h2, h3, .font-bold, strong {
   font-size: 1.5rem !important;
   line-height: 2rem !important;
 }
-.dashboard-list-scale .text-xs,
-.dashboard-list-scale [class*="text-xs"] {
-  font-size: 0.75rem !important;
-  line-height: 1rem !important;
-}
-.dashboard-list-scale .text-sm,
-.dashboard-list-scale [class*="text-sm"] {
-  font-size: 0.875rem !important;
-  line-height: 1.25rem !important;
-}
-.dashboard-list-scale .text-base,
-.dashboard-list-scale [class*="text-base"] {
-  font-size: 1rem !important;
-  line-height: 1.5rem !important;
-}
-.dashboard-list-scale .text-xl,
-.dashboard-list-scale [class*="text-xl"] {
-  font-size: 1.25rem !important;
-  line-height: 1.75rem !important;
-}
-.dashboard-list-scale input,
-.dashboard-list-scale select,
-.dashboard-list-scale button,
-.dashboard-list-scale td,
-.dashboard-list-scale th {
-  font-size: 1rem !important;
-  line-height: 1.5rem !important;
-}
 .dashboard-text-scale .text-4xl {
   font-size: 3rem !important;
   line-height: 1.05 !important;

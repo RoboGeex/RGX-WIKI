@@ -1,12 +1,16 @@
 import { notFound, redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import {
   findLessonInList,
   findPrevNextInList,
   getKit,
   getLessons,
 } from '@/lib/data'
-import { stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
+import { buildLessonHref, stripLegacyDraftSuffix, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from '@/lib/wikiPaths'
+import { isHubHost } from '@/lib/domains'
 import { getLessonBySlug, getPreviewLesson, getWikisFromDb } from '@/lib/server-data'
+import { getCurrentUser } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import type { Locale } from '@/lib/i18n'
 import Callout from '@/components/callout'
 import CodeTabs from '@/components/code-tabs'
@@ -72,7 +76,10 @@ export default async function LessonPage(
     const sorted = allLessons.slice().sort((a, b) => (a.order || 0) - (b.order || 0))
     const firstLesson = sorted[0]
     if (firstLesson?.slug) {
-      redirect(`/${locale}/${kit}/lesson/${firstLesson.slug}`)
+      const isHub = isHubHost(headers().get('host'))
+      redirect(
+        buildLessonHref({ locale, kitSlug: kit, lessonSlug: firstLesson.slug, isHubDomain: isHub })
+      )
     }
     notFound()
   }
@@ -773,6 +780,25 @@ export default async function LessonPage(
   ]
   const coverSrc = coverCandidates.find((c) => typeof c === 'string' && c.trim().length > 0)?.trim() || placeholder
 
+  // Read the current student's saved progress for this lesson so the "mark
+  // complete" control reflects it on reload (the client component can't read
+  // the httpOnly session, and starting at 'idle' loses previously-saved state).
+  let initialProgressStatus: 'idle' | 'completed' = 'idle'
+  if (lesson.id) {
+    try {
+      const currentUser = await getCurrentUser()
+      if (currentUser?.role === 'student') {
+        const savedProgress = await prisma.lessonProgress.findUnique({
+          where: { studentId_lessonId: { studentId: currentUser.id, lessonId: lesson.id } },
+          select: { status: true },
+        })
+        if (savedProgress?.status === 'completed') initialProgressStatus = 'completed'
+      }
+    } catch {
+      // progress lookup must never break lesson rendering
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-0 sm:px-6 lg:px-10 xl:px-12 pt-0 sm:pt-4 pb-10">
       <div className={showSectionTabs ? 'lesson-section-tabs' : ''}>
@@ -890,7 +916,7 @@ export default async function LessonPage(
                   </article>
                 )}
 
-                <LessonProgressTracker lessonId={lesson.id} wikiSlug={kit} />
+                <LessonProgressTracker key={lesson.id} lessonId={lesson.id} wikiSlug={kitData.wikiSlug} initialStatus={initialProgressStatus} />
 
                 <PrevNextNav
                   prevLesson={prevLesson}

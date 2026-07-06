@@ -5,10 +5,11 @@ import { useEffect, useState } from 'react'
 type Props = {
   lessonId: string
   wikiSlug: string
+  initialStatus?: 'idle' | 'completed'
 }
 
-export default function LessonProgressTracker({ lessonId, wikiSlug }: Props) {
-  const [status, setStatus] = useState<'idle' | 'completed' | 'saving'>('idle')
+export default function LessonProgressTracker({ lessonId, wikiSlug, initialStatus = 'idle' }: Props) {
+  const [status, setStatus] = useState<'idle' | 'completed' | 'saving'>(initialStatus)
 
   // Mark as in_progress on mount
   useEffect(() => {

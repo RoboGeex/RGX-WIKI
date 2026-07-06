@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Lexend } from 'next/font/google'
-import { Home, Layout, LogOut, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Eye, Clock, Circle, X } from 'lucide-react'
+import { Home, Layout, LogOut, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Eye, Clock, Circle, X, Download } from 'lucide-react'
 
 const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
@@ -52,6 +52,26 @@ type Props = {
 
 function progressPct(progress: Student['progress']) {
   return progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
+}
+
+function escapeExcelCell(value: string | number | null | undefined) {
+  const text = value == null ? '' : String(value)
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function lessonStatusLabel(status: Student['lessons'][number]['status']) {
+  if (status === 'completed') return 'Completed'
+  if (status === 'in_progress') return 'In progress'
+  return 'Not started'
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return ''
+  return new Date(value).toLocaleDateString()
 }
 
 function ProgressBar({ progress }: { progress: Student['progress'] }) {
@@ -231,6 +251,68 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
     })
   }
 
+  function exportStudentsToExcel() {
+    const currentWiki = wikis.find((w) => w.slug === wikiSlug)
+    const lessonColumns = students[0]?.lessons || []
+    const columns = [
+      '#',
+      'Student name',
+      'Email',
+      'Joined',
+      'Completion',
+      'Completed lessons',
+      'In progress',
+      'Total lessons',
+      ...lessonColumns.map((lesson) => `${lesson.order}. ${lesson.title}`),
+    ]
+    const rows = students.map((student, index) => [
+      index + 1,
+      student.student.name || '',
+      student.student.email,
+      formatDate(student.joinedAt),
+      `${progressPct(student.progress)}%`,
+      student.progress.completed,
+      student.progress.in_progress,
+      student.progress.total,
+      ...lessonColumns.map((lesson) => {
+        const match = student.lessons.find((item) => item.id === lesson.id)
+        return lessonStatusLabel(match?.status || 'not_started')
+      }),
+    ])
+    const table = `
+      <table>
+        <thead>
+          <tr>${columns.map((column) => `<th>${escapeExcelCell(column)}</th>`).join('')}</tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `<tr>${row.map((cell) => `<td style="mso-number-format:'\\@';">${escapeExcelCell(cell)}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+    `
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head>
+          <meta charset="utf-8" />
+          <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Progress</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+        </head>
+        <body>
+          <h1>${escapeExcelCell(currentWiki?.displayName || wikiSlug || 'Class')} progress</h1>
+          ${table}
+        </body>
+      </html>
+    `
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const date = new Date().toISOString().slice(0, 10)
+    link.href = url
+    link.download = `${wikiSlug || 'class'}-student-progress-${date}.xls`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   const joinUrl = activeLink
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${activeLink.token}`
     : null
@@ -366,7 +448,16 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
 
         {/* Students */}
         <div className="rounded-[1.7rem] border border-[#F2E1DD] bg-white shadow-[0_24px_50px_-42px_rgba(226,59,46,0.5)] p-7">
-          <h2 className="text-xl font-bold text-[#1A1110] mb-5">Students &amp; progress</h2>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-bold text-[#1A1110]">Students &amp; progress</h2>
+            <button
+              onClick={exportStudentsToExcel}
+              disabled={students.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#EBD9D5] bg-white px-4 py-2 text-sm font-bold text-[#6B4F4A] transition-colors hover:bg-[#FBF3F1] disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <Download size={15} /> Export Excel
+            </button>
+          </div>
 
           {loading && <p className="text-base text-[#8B6B65]">Loading…</p>}
 

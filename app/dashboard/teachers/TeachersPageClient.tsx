@@ -150,12 +150,77 @@ function WikiEditor({ teacher, wikis, onSave, onCancel }: { teacher: Teacher; wi
   )
 }
 
+function AssignedWikisDialog({
+  teacher,
+  wikis,
+  editing,
+  onEdit,
+  onSave,
+  onClose,
+}: {
+  teacher: Teacher
+  wikis: Wiki[]
+  editing: boolean
+  onEdit: () => void
+  onSave: (slugs: string[]) => void
+  onClose: () => void
+}) {
+  const assigned = teacher.assignedWikiSlugs || []
+  const assignedWikis = assigned.map(slug => wikis.find(w => w.slug === slug)?.displayName || slug)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Assigned wikis</h2>
+            <p className="mt-1 text-base text-gray-500">{teacher.name || teacher.email}</p>
+          </div>
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-6 py-5">
+          {editing ? (
+            <WikiEditor teacher={teacher} wikis={wikis} onSave={onSave} onCancel={onClose} />
+          ) : assignedWikis.length > 0 ? (
+            <div className="space-y-2">
+              {assignedWikis.map(name => (
+                <div key={name} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-base font-medium text-gray-900">
+                  {name}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-base text-gray-500">
+              No wikis assigned.
+            </p>
+          )}
+        </div>
+
+        {!editing && (
+          <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+            <button onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-base text-gray-600 hover:bg-gray-50">
+              Close
+            </button>
+            <button onClick={onEdit} className="rounded-lg bg-gray-900 px-4 py-2 text-base font-medium text-white hover:bg-gray-800">
+              Edit assignment
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showDialog, setShowDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [assignedDialogTeacher, setAssignedDialogTeacher] = useState<Teacher | null>(null)
   const [search, setSearch] = useState('')
   const [filterWiki, setFilterWiki] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'disabled'>('all')
@@ -183,6 +248,7 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setEditingId(null)
+      setAssignedDialogTeacher(null)
       await load()
     } catch (e: any) {
       alert(e.message)
@@ -271,16 +337,15 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
 
                 <div>
                   <FieldLabel>Assigned Wikis</FieldLabel>
-                  {editingId === t.id ? (
-                    <WikiEditor teacher={t} wikis={wikis} onSave={s => saveWikis(t.id, s)} onCancel={() => setEditingId(null)} />
-                  ) : (
-                    <button
-                      onClick={() => setEditingId(t.id)}
-                      className="mt-2 inline-flex items-center rounded-lg border border-[#C9CCD3] bg-[#F2F3F6] px-3 py-1.5 text-base font-semibold text-[#070A12] shadow-inner"
-                    >
-                      {assigned.length} Assigned
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      setEditingId(null)
+                      setAssignedDialogTeacher(t)
+                    }}
+                    className="mt-2 inline-flex items-center rounded-lg border border-[#C9CCD3] bg-[#F2F3F6] px-3 py-1.5 text-base font-semibold text-[#070A12] shadow-inner hover:bg-[#E9EBF0]"
+                  >
+                    {assigned.length} Assigned
+                  </button>
                 </div>
 
                 <div>
@@ -325,6 +390,19 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
       </div>
 
       {showDialog && <CreateTeacherDialog wikis={wikis} onClose={() => setShowDialog(false)} onCreated={load} />}
+      {assignedDialogTeacher && (
+        <AssignedWikisDialog
+          teacher={assignedDialogTeacher}
+          wikis={wikis}
+          editing={editingId === assignedDialogTeacher.id}
+          onEdit={() => setEditingId(assignedDialogTeacher.id)}
+          onSave={s => saveWikis(assignedDialogTeacher.id, s)}
+          onClose={() => {
+            setEditingId(null)
+            setAssignedDialogTeacher(null)
+          }}
+        />
+      )}
     </div>
   )
 }

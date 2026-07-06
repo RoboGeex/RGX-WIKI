@@ -51,7 +51,10 @@ type LessonPathArgs = PathArgs & {
 
 export function buildLessonHref({ locale, kitSlug, lessonSlug, isHubDomain }: LessonPathArgs) {
   const safeLocale = normalizeLocale(locale)
-  const safeLesson = normalizeLessonSlug(lessonSlug)
+  // Strip the legacy "--draft"/"--draft-N" slug suffix so it never leaks into a
+  // public URL (e.g. /getting-started--draft-1). findLessonInList resolves the
+  // clean slug back to the underlying lesson.
+  const safeLesson = stripLegacyDraftSuffix(normalizeLessonSlug(lessonSlug))
   if (isHubDomain) {
     return `/${kitSlug}/${safeLocale}/${safeLesson}`
   }

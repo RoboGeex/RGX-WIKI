@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getWiki, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
+import { buildLessonHref } from "@/lib/wikiPaths"
 
 export const dynamic = "force-dynamic"
 
@@ -82,9 +83,15 @@ export default async function WikiDashboardPage({ params }: Params) {
               const isDraft = lesson.status && lesson.status !== 'published'
               const hasPublishedVersion = lesson.status === 'published' || Boolean(lesson.lastPublishedAt)
               const hasUnpublishedChanges = Boolean(lesson.hasUnpublishedChanges)
-              const viewPath = `/${wiki.defaultLocale || 'en'}/${kit.slug}/lesson/${lesson.slug}`
-              const previewSuffix = isDraft ? (viewPath.includes('?') ? '&preview=1' : '?preview=1') : ''
-              const viewHref = `${viewPath}${previewSuffix}`
+              // Clean public hub URL (no /lesson/, no legacy --draft suffix).
+              // On the admin domain this relative link is redirected to the hub.
+              const viewPath = buildLessonHref({
+                locale: wiki.defaultLocale as any,
+                kitSlug: kit.slug,
+                lessonSlug: lesson.slug,
+                isHubDomain: true,
+              })
+              const viewHref = isDraft ? `${viewPath}?preview=1` : viewPath
               return (
                 <div
                   key={lesson.slug}

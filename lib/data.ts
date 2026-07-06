@@ -528,7 +528,14 @@ export function findLessonInList(lessons: Lesson[], lessonSlug: string): Lesson 
   return lessons.find((l) => {
     const lessonSlugNorm = normalizeSlug(l.slug || '')
     const lessonIdNorm = normalizeSlug(l.id || '')
-    return candidates.has(lessonSlugNorm) || candidates.has(lessonIdNorm)
+    if (candidates.has(lessonSlugNorm) || candidates.has(lessonIdNorm)) return true
+    // Match on the draft-stripped base on BOTH sides so a clean public slug
+    // (e.g. "getting-started") resolves a lesson whose stored slug still carries
+    // a legacy suffix (e.g. "getting-started--draft-1"), and vice versa.
+    return (
+      stripLegacyDraftSuffix(lessonSlugNorm) === baseSlug ||
+      stripLegacyDraftSuffix(lessonIdNorm) === baseSlug
+    )
   })
 }
 

@@ -6,6 +6,7 @@ import {
   getKit,
 } from '@/lib/data'
 import { getWikisFromDb } from '@/lib/server-data'
+import { buildLessonHref } from '@/lib/wikiPaths'
 import type { Locale } from '@/lib/i18n'
 
 export const dynamic = 'force-dynamic'
@@ -29,10 +30,13 @@ export default async function KitPage(
   }
 
   const isHub = isHubHost(headers().get('host'))
-  
-  if (isHub) {
-    redirect(`/${kit}/${locale}/${firstLesson.slug}`)
-  } else {
-    redirect(`/${locale}/${firstLesson.slug}`)
-  }
+
+  redirect(
+    buildLessonHref({
+      locale,
+      kitSlug: kit,
+      lessonSlug: firstLesson.slug,
+      isHubDomain: isHub,
+    })
+  )
 }

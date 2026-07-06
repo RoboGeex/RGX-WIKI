@@ -3,7 +3,7 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, Plus, X, Search } from 'lucide-react'
+import { Check, ChevronLeft, Plus, X, Search } from 'lucide-react'
 
 type Wiki = { slug: string; displayName: string }
 type Teacher = {
@@ -133,18 +133,29 @@ function WikiEditor({ teacher, wikis, onSave, onCancel }: { teacher: Teacher; wi
   const [sel, setSel] = useState(teacher.assignedWikiSlugs || [])
   const toggle = (slug: string) => setSel(p => p.includes(slug) ? p.filter(s => s !== slug) : [...p, slug])
   return (
-    <div className="mt-2 space-y-2">
-      <div className="flex flex-wrap gap-1.5">
+    <div className="space-y-4">
+      <div>
+        <p className="mb-2 text-sm font-semibold text-[#343840]">Choose assigned wikis</p>
+        <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
         {wikis.map(w => (
           <button key={w.slug} type="button" onClick={() => toggle(w.slug)}
-            className={`rounded border px-2.5 py-1 text-base transition-colors ${sel.includes(w.slug) ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-500 hover:border-gray-500'}`}>
-            {w.displayName}
+            className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors ${sel.includes(w.slug) ? 'border-[#111318] bg-[#111318] text-white' : 'border-[#D4D7DE] bg-white text-[#30343B] hover:border-[#9EA3AD] hover:bg-[#F8F9FB]'}`}>
+            <span className="truncate">{w.displayName}</span>
+            <span className={`ml-3 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${sel.includes(w.slug) ? 'border-white bg-white text-[#111318]' : 'border-[#C9CDD5] text-transparent'}`}>
+              <Check size={10} />
+            </span>
           </button>
         ))}
+        {wikis.length === 0 && (
+          <p className="rounded-lg border border-[#D4D7DE] bg-[#F8F9FB] px-3 py-5 text-center text-sm text-[#6C7078]">
+            No published wikis yet.
+          </p>
+        )}
+        </div>
       </div>
-      <div className="flex gap-1.5">
-        <button onClick={() => onSave(sel)} className="rounded bg-gray-900 px-3 py-1 text-base text-white hover:bg-gray-800">Save</button>
-        <button onClick={onCancel} className="rounded border border-gray-300 px-3 py-1 text-base text-gray-600 hover:bg-gray-50">Cancel</button>
+      <div className="flex justify-end gap-2 border-t border-[#E4E6EB] pt-4">
+        <button onClick={onCancel} className="rounded-lg border border-[#C9CDD5] bg-white px-4 py-2 text-sm font-medium text-[#4B5059] hover:bg-[#F8F9FB]">Cancel</button>
+        <button onClick={() => onSave(sel)} className="rounded-lg bg-[#111318] px-4 py-2 text-sm font-semibold text-white hover:bg-black">Save changes</button>
       </div>
     </div>
   )
@@ -169,42 +180,53 @@ function AssignedWikisDialog({
   const assignedWikis = assigned.map(slug => wikis.find(w => w.slug === slug)?.displayName || slug)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Assigned wikis</h2>
-            <p className="mt-1 text-base text-gray-500">{teacher.name || teacher.email}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-[460px] overflow-hidden rounded-2xl border border-[#D7DAE0] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-[#E4E6EB] px-5 py-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <DirectoryAvatar name={teacher.name} email={teacher.email} />
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-[#070A12]">Assigned wikis</h2>
+                <p className="truncate text-sm text-[#60656F]">{teacher.name || teacher.email}</p>
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[#8A8F99] hover:bg-[#F2F3F6] hover:text-[#111318]" aria-label="Close assigned wikis dialog">
             <X size={18} />
           </button>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="px-5 py-4">
           {editing ? (
             <WikiEditor teacher={teacher} wikis={wikis} onSave={onSave} onCancel={onClose} />
           ) : assignedWikis.length > 0 ? (
-            <div className="space-y-2">
+            <div>
+              <div className="mb-3 inline-flex rounded-full bg-[#F2F3F6] px-2.5 py-1 text-xs font-semibold text-[#4B5059]">
+                {assignedWikis.length} assigned
+              </div>
+              <div className="space-y-2">
               {assignedWikis.map(name => (
-                <div key={name} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-base font-medium text-gray-900">
-                  {name}
+                <div key={name} className="flex items-center gap-3 rounded-lg border border-[#D9DCE2] bg-[#FAFBFC] px-3 py-2.5">
+                  <span className="h-2 w-2 rounded-full bg-[#56BD68]" />
+                  <span className="min-w-0 truncate text-sm font-medium text-[#111318]">{name}</span>
                 </div>
               ))}
+              </div>
             </div>
           ) : (
-            <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-base text-gray-500">
+            <p className="rounded-lg border border-dashed border-[#C9CDD5] bg-[#FAFBFC] px-4 py-8 text-center text-sm text-[#60656F]">
               No wikis assigned.
             </p>
           )}
         </div>
 
         {!editing && (
-          <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
-            <button onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-base text-gray-600 hover:bg-gray-50">
+          <div className="flex justify-end gap-2 border-t border-[#E4E6EB] bg-[#FAFBFC] px-5 py-4">
+            <button onClick={onClose} className="rounded-lg border border-[#C9CDD5] bg-white px-4 py-2 text-sm font-medium text-[#4B5059] hover:bg-[#F2F3F6]">
               Close
             </button>
-            <button onClick={onEdit} className="rounded-lg bg-gray-900 px-4 py-2 text-base font-medium text-white hover:bg-gray-800">
+            <button onClick={onEdit} className="rounded-lg bg-[#111318] px-4 py-2 text-sm font-semibold text-white hover:bg-black">
               Edit assignment
             </button>
           </div>

@@ -82,6 +82,43 @@ h1, h2, h3, .font-bold, strong {
   font-feature-settings: normal !important;
 }
 
+/* Dashboard content only: keep admin/editor/wiki shared chrome untouched. */
+.dashboard-text-scale {
+  font-size: 1.0625rem;
+}
+.dashboard-text-scale .text-xs,
+.dashboard-text-scale [class*="text-[13px]"] {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+.dashboard-text-scale .text-sm {
+  font-size: 1rem !important;
+  line-height: 1.5rem !important;
+}
+.dashboard-text-scale .text-base,
+.dashboard-text-scale [class*="text-[15px]"] {
+  font-size: 1.125rem !important;
+  line-height: 1.625rem !important;
+}
+.dashboard-text-scale .text-lg {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+}
+.dashboard-text-scale .text-xl {
+  font-size: 1.5rem !important;
+  line-height: 2rem !important;
+}
+.dashboard-text-scale .text-4xl {
+  font-size: 3rem !important;
+  line-height: 1.05 !important;
+}
+@media (min-width: 640px) {
+  .dashboard-text-scale .sm\:text-5xl {
+    font-size: 3.75rem !important;
+    line-height: 1 !important;
+  }
+}
+
 html {
   scroll-behavior: smooth;
   /* Always reserve scrollbar space so content width is consistent

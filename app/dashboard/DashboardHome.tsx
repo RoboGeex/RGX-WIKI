@@ -164,7 +164,7 @@ export default function DashboardHome() {
   ]
 
   return (
-    <div className={`${display.variable} rgx-dash space-y-9 text-[#1A1110]`}>
+    <div className={`${display.variable} rgx-dash dashboard-text-scale space-y-9 text-[#1A1110]`}>
 
       {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-4">

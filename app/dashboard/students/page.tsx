@@ -27,7 +27,7 @@ export default async function StudentsPage() {
   return (
     <div className="min-h-screen bg-[#f5f5f4]">
       <AdminNavbar userInitials={userInitials} />
-      <div className="mx-auto max-w-7xl px-6 pt-20 pb-12">
+      <div className="dashboard-text-scale mx-auto max-w-7xl px-6 pt-20 pb-12">
         <StudentsPageClient />
       </div>
     </div>

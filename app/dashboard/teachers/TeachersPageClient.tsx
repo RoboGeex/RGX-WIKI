@@ -1,5 +1,6 @@
 "use client"
 
+import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, Plus, X, Search } from 'lucide-react'
@@ -24,7 +25,27 @@ function timeAgo(d: string | null) {
   return days < 30 ? `${days}d ago` : new Date(d).toLocaleDateString()
 }
 
-// ── Create teacher dialog ────────────────────────────────────────────────────
+function initials(name: string | null, email: string) {
+  const source = name?.trim() || email
+  const parts = source.split(/\s+/)
+  if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+  return source.slice(0, 2).toUpperCase()
+}
+
+function DirectoryAvatar({ name, email }: { name: string | null; email: string }) {
+  return (
+    <div className="relative flex h-[70px] w-[70px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-xl font-bold text-[#8A8F99] shadow-inner">
+      <div className="absolute top-[18px] h-6 w-6 rounded-full bg-[#9EA3AD]" />
+      <div className="absolute bottom-2 h-8 w-12 rounded-t-full bg-[#9EA3AD]" />
+      <span className="sr-only">{initials(name, email)}</span>
+    </div>
+  )
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return <p className="text-[15px] font-medium uppercase tracking-wide text-[#30323A]">{children}</p>
+}
+
 function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -37,9 +58,10 @@ function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onC
     setSelectedWikis(p => p.includes(slug) ? p.filter(s => s !== slug) : [...p, slug])
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setCreating(true); setError(null)
+    setCreating(true)
+    setError(null)
     try {
       const res = await fetch('/api/admin/teachers', {
         method: 'POST',
@@ -48,55 +70,57 @@ function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onC
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
-      onCreated(); onClose()
-    } catch (e: any) { setError(e.message) }
-    finally { setCreating(false) }
+      onCreated()
+      onClose()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setCreating(false)
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-base font-semibold text-gray-900">Add teacher</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h2 className="text-xl font-semibold text-gray-900">Add teacher</h2>
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100"><X size={18} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label>
+              <span className="mb-1 block text-base font-medium text-gray-700">Full name</span>
               <input type="text" required value={name} onChange={e => setName(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 focus:outline-none focus:border-gray-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 focus:outline-none focus:border-gray-500" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password <span className="text-gray-400 font-normal">(min 8 characters)</span>
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 focus:border-gray-500 focus:outline-none" />
             </label>
-            <input type="text" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 focus:outline-none focus:border-gray-500" />
+            <label>
+              <span className="mb-1 block text-base font-medium text-gray-700">Email</span>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 focus:border-gray-500 focus:outline-none" />
+            </label>
           </div>
+          <label className="block">
+            <span className="mb-1 block text-base font-medium text-gray-700">Password <span className="font-normal text-gray-400">(min 8 characters)</span></span>
+            <input type="text" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 focus:border-gray-500 focus:outline-none" />
+          </label>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Assign wikis</label>
+            <p className="mb-2 text-base font-medium text-gray-700">Assign wikis</p>
             <div className="flex flex-wrap gap-2">
               {wikis.map(w => (
                 <button key={w.slug} type="button" onClick={() => toggle(w.slug)}
-                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${selectedWikis.includes(w.slug) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'}`}>
+                  className={`rounded-lg border px-3 py-1.5 text-base transition-colors ${selectedWikis.includes(w.slug) ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-600 hover:border-gray-500'}`}>
                   {w.displayName}
                 </button>
               ))}
-              {wikis.length === 0 && <p className="text-sm text-gray-400">No published wikis yet.</p>}
+              {wikis.length === 0 && <p className="text-base text-gray-400">No published wikis yet.</p>}
             </div>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-base text-red-600">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={creating} className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
-              {creating ? 'Creating…' : 'Create teacher'}
+            <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-base text-gray-600 hover:bg-gray-50">Cancel</button>
+            <button type="submit" disabled={creating} className="rounded-lg bg-gray-900 px-4 py-2 text-base font-medium text-white hover:bg-gray-800 disabled:opacity-50">
+              {creating ? 'Creating...' : 'Create teacher'}
             </button>
           </div>
         </form>
@@ -105,49 +129,50 @@ function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onC
   )
 }
 
-// ── Wiki edit inline ─────────────────────────────────────────────────────────
 function WikiEditor({ teacher, wikis, onSave, onCancel }: { teacher: Teacher; wikis: Wiki[]; onSave: (slugs: string[]) => void; onCancel: () => void }) {
   const [sel, setSel] = useState(teacher.assignedWikiSlugs || [])
   const toggle = (slug: string) => setSel(p => p.includes(slug) ? p.filter(s => s !== slug) : [...p, slug])
   return (
-    <div className="space-y-2">
+    <div className="mt-2 space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {wikis.map(w => (
           <button key={w.slug} type="button" onClick={() => toggle(w.slug)}
-            className={`px-2.5 py-1 rounded text-sm border transition-colors ${sel.includes(w.slug) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
+            className={`rounded border px-2.5 py-1 text-base transition-colors ${sel.includes(w.slug) ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-500 hover:border-gray-500'}`}>
             {w.displayName}
           </button>
         ))}
       </div>
       <div className="flex gap-1.5">
-        <button onClick={() => onSave(sel)} className="text-sm px-3 py-1 rounded bg-gray-900 text-white hover:bg-gray-800">Save</button>
-        <button onClick={onCancel} className="text-sm px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Cancel</button>
+        <button onClick={() => onSave(sel)} className="rounded bg-gray-900 px-3 py-1 text-base text-white hover:bg-gray-800">Save</button>
+        <button onClick={onCancel} className="rounded border border-gray-300 px-3 py-1 text-base text-gray-600 hover:bg-gray-50">Cancel</button>
       </div>
     </div>
   )
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
 export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showDialog, setShowDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-
   const [search, setSearch] = useState('')
   const [filterWiki, setFilterWiki] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'disabled'>('all')
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/admin/teachers')
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       setTeachers(data.teachers || [])
-    } catch (e: any) { setError(e.message) }
-    finally { setLoading(false) }
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -157,8 +182,11 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
       const res = await fetch(`/api/admin/teachers/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignedWikiSlugs: slugs }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setEditingId(null); await load()
-    } catch (e: any) { alert(e.message) }
+      setEditingId(null)
+      await load()
+    } catch (e: any) {
+      alert(e.message)
+    }
   }
 
   async function toggleDisabled(t: Teacher) {
@@ -169,7 +197,9 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) {
+      alert(e.message)
+    }
   }
 
   const filtered = teachers.filter(t => {
@@ -181,117 +211,117 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
   })
 
   return (
-    <div className="dashboard-list-scale space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors">
-            <ChevronLeft size={16} /> Back
+    <div className="dashboard-list-scale mx-auto max-w-[1224px] space-y-6 text-[#070A12]">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#D8DADF] pb-6">
+        <div>
+          <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1 text-base font-medium text-[#6C7078] hover:text-[#070A12]">
+            <ChevronLeft size={18} /> Back
           </Link>
-          <span className="text-gray-300">/</span>
-          <h1 className="text-xl font-bold text-gray-900">Teachers</h1>
-          {!loading && <span className="text-sm text-gray-400 font-normal">{teachers.length} total</span>}
+          <h1 className="text-[34px] font-extrabold leading-tight tracking-[-0.01em] text-[#070A12]">Teacher Directory</h1>
+          <p className="mt-2 text-xl text-[#2F333B]">{teachers.length} total</p>
         </div>
-        <button onClick={() => setShowDialog(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors">
-          <Plus size={15} /> Add teacher
+        <button
+          onClick={() => setShowDialog(true)}
+          className="inline-flex items-center gap-3 rounded-lg border border-[#C9CCD3] bg-white px-5 py-3 text-lg font-semibold text-[#070A12] shadow-[0_3px_8px_rgba(15,23,42,0.16)] transition hover:bg-[#F8F9FB]"
+        >
+          <Plus size={22} /> Add Teacher
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <Search size={15} className="text-gray-400 shrink-0" />
-          <input type="text" placeholder="Search by name or email…" value={search} onChange={e => setSearch(e.target.value)}
-            className="text-sm focus:outline-none text-gray-700 placeholder-gray-400 w-full" />
-        </div>
-        <div className="flex items-center gap-2">
-          <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-gray-500 bg-white">
-            <option value="">All wikis</option>
-            {wikis.map(w => <option key={w.slug} value={w.slug}>{w.displayName}</option>)}
-          </select>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-gray-500 bg-white">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="disabled">Disabled</option>
-          </select>
-          <button onClick={load} className="text-sm text-gray-400 hover:text-gray-700 px-2">↻</button>
-        </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_224px_224px]">
+        <label className="flex h-[46px] items-center gap-3 rounded-lg border border-[#C6CAD2] bg-white px-3 shadow-[0_2px_7px_rgba(15,23,42,0.08)]">
+          <Search size={21} className="text-[#757A84]" />
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full bg-transparent text-lg text-[#111318] placeholder:text-[#777B84] focus:outline-none"
+          />
+        </label>
+        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)}
+          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+          <option value="">All wikis</option>
+          {wikis.map(w => <option key={w.slug} value={w.slug}>{w.displayName}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
+          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="disabled">Disabled</option>
+        </select>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        {loading && <p className="p-8 text-sm text-gray-500 text-center">Loading…</p>}
-        {error && <p className="p-8 text-sm text-red-600 text-center">{error}</p>}
-        {!loading && filtered.length === 0 && <p className="p-8 text-sm text-gray-400 text-center">No teachers found.</p>}
-        {!loading && filtered.length > 0 && (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left">
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-10">#</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned wikis</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Students</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Last login</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Created by</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Joined</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((t, i) => (
-                <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-4 text-sm text-gray-400">{i + 1}</td>
-                  <td className="px-5 py-4">
-                    <p className="text-sm font-semibold text-gray-900">{t.name || '—'}</p>
-                    <p className="text-sm text-gray-500">{t.email}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    {t.disabledAt
-                      ? <span className="inline-flex items-center gap-1.5 text-sm text-red-600"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Disabled</span>
-                      : <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />Active</span>
-                    }
-                  </td>
-                  <td className="px-5 py-4">
-                    {editingId === t.id
-                      ? <WikiEditor teacher={t} wikis={wikis} onSave={s => saveWikis(t.id, s)} onCancel={() => setEditingId(null)} />
-                      : <div className="flex flex-wrap gap-1.5 items-center">
-                          {(t.assignedWikiSlugs || []).length === 0
-                            ? <span className="text-sm text-gray-400">None</span>
-                            : (t.assignedWikiSlugs || []).map(slug => {
-                                const w = wikis.find(x => x.slug === slug)
-                                return <span key={slug} className="px-2 py-0.5 rounded text-sm bg-gray-100 text-gray-700 border border-gray-200">{w?.displayName || slug}</span>
-                              })
-                          }
-                          <button onClick={() => setEditingId(t.id)} className="text-sm text-blue-500 hover:text-blue-700 underline ml-1">Edit</button>
-                        </div>
-                    }
-                  </td>
-                  <td className="px-5 py-4 text-sm text-gray-700 font-medium">{t.studentCount}</td>
-                  <td className="px-5 py-4 text-sm text-gray-500">{timeAgo(t.lastLoginAt)}</td>
-                  <td className="px-5 py-4">
-                    {t.createdByName
-                      ? <div>
-                          <p className="text-sm text-gray-700">{t.createdByName}</p>
-                          <p className="text-sm text-gray-400">{t.createdByEmail}</p>
-                        </div>
-                      : <span className="text-sm text-gray-400">—</span>}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-gray-500 whitespace-nowrap">{new Date(t.createdAt).toLocaleDateString()}</td>
-                  <td className="px-5 py-4">
-                    <button onClick={() => toggleDisabled(t)}
-                      className={`text-sm px-3 py-1 rounded border transition-colors ${t.disabledAt ? 'border-gray-300 text-gray-600 hover:bg-gray-50' : 'border-red-200 text-red-600 hover:bg-red-50'}`}>
-                      {t.disabledAt ? 'Enable' : 'Disable'}
+      <div className="space-y-6">
+        {loading && <p className="rounded-xl border border-[#D9DCE2] bg-white p-8 text-center text-lg text-[#60656F]">Loading...</p>}
+        {error && <p className="rounded-xl border border-red-200 bg-white p-8 text-center text-lg text-red-600">{error}</p>}
+        {!loading && filtered.length === 0 && <p className="rounded-xl border border-[#D9DCE2] bg-white p-8 text-center text-lg text-[#60656F]">No teachers found.</p>}
+        {!loading && filtered.map(t => {
+          const assigned = t.assignedWikiSlugs || []
+          return (
+            <section key={t.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-7 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
+              <div className="grid items-center gap-6 lg:grid-cols-[284px_160px_100px_118px_166px_112px_100px]">
+                <div className="flex items-center gap-5">
+                  <DirectoryAvatar name={t.name} email={t.email} />
+                  <div className="min-w-0">
+                    <p className="truncate text-[22px] font-semibold text-[#05070D]">{t.name || 'Unnamed'}</p>
+                    <p className="truncate text-lg text-[#3F434B]">{t.email}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <FieldLabel>Assigned Wikis</FieldLabel>
+                  {editingId === t.id ? (
+                    <WikiEditor teacher={t} wikis={wikis} onSave={s => saveWikis(t.id, s)} onCancel={() => setEditingId(null)} />
+                  ) : (
+                    <button
+                      onClick={() => setEditingId(t.id)}
+                      className="mt-2 inline-flex items-center rounded-lg border border-[#C9CCD3] bg-[#F2F3F6] px-3 py-1.5 text-lg font-semibold text-[#070A12] shadow-inner"
+                    >
+                      {assigned.length} Assigned
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+                  )}
+                </div>
+
+                <div>
+                  <FieldLabel>Students</FieldLabel>
+                  <p className="mt-3 text-xl font-semibold text-[#070A12]">{t.studentCount}</p>
+                </div>
+
+                <div>
+                  <FieldLabel>Last Login</FieldLabel>
+                  <p className="mt-3 text-xl text-[#070A12]">{timeAgo(t.lastLoginAt)}</p>
+                </div>
+
+                <div>
+                  <FieldLabel>Created By</FieldLabel>
+                  {t.createdByName ? (
+                    <div className="mt-2 leading-snug">
+                      <p className="text-lg font-semibold text-[#070A12]">{t.createdByName}</p>
+                      <p className="truncate text-base text-[#3F434B]">{t.createdByEmail}</p>
+                      <p className="text-base text-[#3F434B]">{new Date(t.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  ) : <p className="mt-3 text-xl font-semibold text-[#070A12]">-</p>}
+                </div>
+
+                <div>
+                  <FieldLabel>Joined</FieldLabel>
+                  <p className="mt-3 whitespace-nowrap text-xl text-[#070A12]">{new Date(t.createdAt).toLocaleDateString()}</p>
+                </div>
+
+                <div className="flex items-center justify-end gap-5">
+                  <span className={`h-5 w-5 rounded-full ${t.disabledAt ? 'bg-red-400' : 'bg-[#56BD68]'} shadow-[0_1px_5px_rgba(22,163,74,0.35)]`} />
+                  <button
+                    onClick={() => toggleDisabled(t)}
+                    className="rounded-lg border border-[#C9CCD3] bg-white px-5 py-2.5 text-lg font-medium text-[#070A12] shadow-sm transition hover:bg-[#F8F9FB]"
+                  >
+                    {t.disabledAt ? 'Enable' : 'Disable'}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )
+        })}
       </div>
 
       {showDialog && <CreateTeacherDialog wikis={wikis} onClose={() => setShowDialog(false)} onCreated={load} />}

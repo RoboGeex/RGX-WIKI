@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen } from 'lucide-react'
@@ -30,24 +31,6 @@ type StudentDetail = {
 
 function pct(c: number, t: number) { return t > 0 ? Math.round(c / t * 100) : 0 }
 
-function ProgressBar({ completed, total }: { completed: number; total: number }) {
-  const p = pct(completed, total)
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-orange-400 to-red-500 rounded-full transition-all" style={{ width: `${p}%` }} />
-      </div>
-      <span className="text-sm text-gray-500 w-10 text-right shrink-0">{p}%</span>
-    </div>
-  )
-}
-
-function StatusIcon({ status }: { status: string }) {
-  if (status === 'completed') return <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
-  if (status === 'in_progress') return <Clock size={15} className="text-blue-500 shrink-0" />
-  return <Circle size={15} className="text-gray-300 shrink-0" />
-}
-
 function timeAgo(d: string | null) {
   if (!d) return null
   const diff = Date.now() - new Date(d).getTime()
@@ -58,7 +41,45 @@ function timeAgo(d: string | null) {
   return new Date(d).toLocaleDateString()
 }
 
-// ── Student detail modal ─────────────────────────────────────────────────────
+function initials(name: string | null, email: string) {
+  const source = name?.trim() || email
+  const parts = source.split(/\s+/)
+  if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+  return source.slice(0, 2).toUpperCase()
+}
+
+function DirectoryAvatar({ name, email }: { name: string | null; email: string }) {
+  return (
+    <div className="relative flex h-[70px] w-[70px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-xl font-bold text-[#8A8F99] shadow-inner">
+      <div className="absolute top-[18px] h-6 w-6 rounded-full bg-[#9EA3AD]" />
+      <div className="absolute bottom-2 h-8 w-12 rounded-t-full bg-[#9EA3AD]" />
+      <span className="sr-only">{initials(name, email)}</span>
+    </div>
+  )
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return <p className="text-[15px] font-medium uppercase tracking-wide text-[#30323A]">{children}</p>
+}
+
+function ProgressBar({ completed, total }: { completed: number; total: number }) {
+  const p = pct(completed, total)
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[#ECEEF2]">
+        <div className="h-full rounded-full bg-gradient-to-r from-[#F0523F] to-[#E23B2E] transition-all" style={{ width: `${Math.max(p, 3)}%` }} />
+      </div>
+      <span className="w-12 shrink-0 text-right text-lg font-semibold text-[#30323A]">{p}%</span>
+    </div>
+  )
+}
+
+function StatusIcon({ status }: { status: string }) {
+  if (status === 'completed') return <CheckCircle2 size={17} className="shrink-0 text-emerald-500" />
+  if (status === 'in_progress') return <Clock size={17} className="shrink-0 text-blue-500" />
+  return <Circle size={17} className="shrink-0 text-gray-300" />
+}
+
 function StudentModal({ studentId, onClose }: { studentId: string; onClose: () => void }) {
   const [data, setData] = useState<StudentDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -72,68 +93,62 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
   }, [studentId])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-          {data
-            ? <div>
-                <h2 className="text-base font-semibold text-gray-900">{data.student.name || 'Unnamed'}</h2>
-                <p className="text-sm text-gray-500">{data.student.email}</p>
-              </div>
-            : <div className="h-5 w-48 bg-gray-100 rounded animate-pulse" />}
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
+          {data ? (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">{data.student.name || 'Unnamed student'}</h2>
+              <p className="text-base text-gray-500">{data.student.email}</p>
+            </div>
+          ) : <div className="h-5 w-48 animate-pulse rounded bg-gray-100" />}
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X size={18} /></button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
-          {loading && <p className="text-sm text-gray-500 py-8 text-center">Loading…</p>}
-          {data?.sections.length === 0 && <p className="text-sm text-gray-500 py-8 text-center">No active enrollments.</p>}
+        <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+          {loading && <p className="py-8 text-center text-base text-gray-500">Loading...</p>}
+          {data?.sections.length === 0 && <p className="py-8 text-center text-base text-gray-500">No active enrollments.</p>}
           {data?.sections.map(section => (
-            <div key={section.wikiSlug} className="border border-gray-200 rounded-lg overflow-hidden">
-              <button className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 hover:bg-gray-100 transition-colors"
+            <div key={section.wikiSlug} className="overflow-hidden rounded-lg border border-gray-200">
+              <button className="flex w-full items-center justify-between bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100"
                 onClick={() => setOpenWiki(openWiki === section.wikiSlug ? null : section.wikiSlug)}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <BookOpen size={15} className="text-gray-400 shrink-0" />
-                  <div className="text-left min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm">{section.wikiName}</p>
-                    <p className="text-sm text-gray-500">Teacher: {section.teacher.name || section.teacher.email} · Joined {timeAgo(section.joinedAt)}</p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <BookOpen size={17} className="shrink-0 text-gray-400" />
+                  <div className="min-w-0 text-left">
+                    <p className="text-base font-semibold text-gray-900">{section.wikiName}</p>
+                    <p className="text-base text-gray-500">Teacher: {section.teacher.name || section.teacher.email} - Joined {timeAgo(section.joinedAt)}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 shrink-0 ml-4">
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">{section.completed}</span>
-                    <span className="text-gray-400">/{section.total}</span>
-                    <span className="text-gray-400 ml-1">lessons</span>
-                  </p>
-                  <div className="w-24"><ProgressBar completed={section.completed} total={section.total} /></div>
-                  <ChevronRight size={15} className={`text-gray-400 transition-transform shrink-0 ${openWiki === section.wikiSlug ? 'rotate-90' : ''}`} />
+                <div className="ml-4 flex shrink-0 items-center gap-4">
+                  <p className="text-base text-gray-700"><span className="font-semibold">{section.completed}</span><span className="text-gray-400">/{section.total}</span></p>
+                  <div className="w-28"><ProgressBar completed={section.completed} total={section.total} /></div>
+                  <ChevronRight size={17} className={`shrink-0 text-gray-400 transition-transform ${openWiki === section.wikiSlug ? 'rotate-90' : ''}`} />
                 </div>
               </button>
               {openWiki === section.wikiSlug && (
                 <div>
-                  {section.lessons.length === 0 && <p className="px-5 py-3 text-sm text-gray-400">No published lessons.</p>}
+                  {section.lessons.length === 0 && <p className="px-5 py-3 text-base text-gray-400">No published lessons.</p>}
                   <table className="w-full">
                     <tbody className="divide-y divide-gray-100">
                       {section.lessons.map(l => (
                         <tr key={l.id} className="hover:bg-gray-50">
-                          <td className="px-5 py-2.5 w-6"><StatusIcon status={l.status} /></td>
+                          <td className="w-6 px-5 py-2.5"><StatusIcon status={l.status} /></td>
                           <td className="py-2.5 pr-4">
-                            <p className={`text-sm ${l.status === 'not_started' ? 'text-gray-400' : 'text-gray-800'}`}>
-                              {l.order}. {l.title}
-                            </p>
+                            <p className={`text-base ${l.status === 'not_started' ? 'text-gray-400' : 'text-gray-800'}`}>{l.order}. {l.title}</p>
                           </td>
                           <td className="py-2.5 pr-5 text-right whitespace-nowrap">
-                            {l.status === 'completed' && <p className="text-sm text-emerald-600">Done {timeAgo(l.completedAt)}</p>}
-                            {l.status === 'in_progress' && <p className="text-sm text-blue-500">Viewed {timeAgo(l.lastViewedAt)}</p>}
-                            {l.status === 'not_started' && <p className="text-sm text-gray-300">—</p>}
+                            {l.status === 'completed' && <p className="text-base text-emerald-600">Done {timeAgo(l.completedAt)}</p>}
+                            {l.status === 'in_progress' && <p className="text-base text-blue-500">Viewed {timeAgo(l.lastViewedAt)}</p>}
+                            {l.status === 'not_started' && <p className="text-base text-gray-300">-</p>}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <div className="px-5 py-2.5 bg-gray-50 border-t border-gray-100 flex justify-between text-sm text-gray-500">
+                  <div className="flex justify-between border-t border-gray-100 bg-gray-50 px-5 py-2.5 text-base text-gray-500">
                     <span>
-                      <span className="text-emerald-600 font-medium">{section.completed} done</span>
-                      {section.inProgress > 0 && <span className="text-blue-500 font-medium ml-3">{section.inProgress} in progress</span>}
+                      <span className="font-medium text-emerald-600">{section.completed} done</span>
+                      {section.inProgress > 0 && <span className="ml-3 font-medium text-blue-500">{section.inProgress} in progress</span>}
                     </span>
                     <span>{pct(section.completed, section.total)}% complete</span>
                   </div>
@@ -144,7 +159,7 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
         </div>
 
         {data && (
-          <div className="px-6 py-3 border-t border-gray-200 flex justify-between text-sm text-gray-400 shrink-0">
+          <div className="flex shrink-0 justify-between border-t border-gray-200 px-6 py-3 text-base text-gray-400">
             <span>Member since {new Date(data.student.createdAt).toLocaleDateString()}</span>
             <span>{data.sections.length} wiki{data.sections.length !== 1 ? 's' : ''} enrolled</span>
           </div>
@@ -154,27 +169,29 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
   )
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
 export default function StudentsPageClient() {
   const [students, setStudents] = useState<StudentSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-
   const [search, setSearch] = useState('')
   const [filterWiki, setFilterWiki] = useState('')
   const [filterTeacher, setFilterTeacher] = useState('')
   const [filterProgress, setFilterProgress] = useState('all')
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/admin/students')
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       setStudents(data.students || [])
-    } catch (e: any) { setError(e.message) }
-    finally { setLoading(false) }
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -198,101 +215,114 @@ export default function StudentsPageClient() {
   const hasFilters = search || filterWiki || filterTeacher || filterProgress !== 'all'
 
   return (
-    <div className="dashboard-list-scale space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors">
-            <ChevronLeft size={16} /> Back
+    <div className="dashboard-list-scale mx-auto max-w-[1224px] space-y-6 text-[#070A12]">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#D8DADF] pb-6">
+        <div>
+          <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1 text-base font-medium text-[#6C7078] hover:text-[#070A12]">
+            <ChevronLeft size={18} /> Back
           </Link>
-          <span className="text-gray-300">/</span>
-          <h1 className="text-xl font-bold text-gray-900">Students</h1>
-          {!loading && <span className="text-sm text-gray-400 font-normal">{students.length} total</span>}
+          <h1 className="text-[34px] font-extrabold leading-tight tracking-[-0.01em] text-[#070A12]">Student Directory</h1>
+          <p className="mt-2 text-xl text-[#2F333B]">{students.length} total</p>
         </div>
-        <button onClick={load} className="text-sm text-gray-400 hover:text-gray-700">↻ Refresh</button>
+        <button
+          onClick={load}
+          className="rounded-lg border border-[#C9CCD3] bg-white px-5 py-3 text-lg font-semibold text-[#070A12] shadow-[0_3px_8px_rgba(15,23,42,0.16)] transition hover:bg-[#F8F9FB]"
+        >
+          Refresh
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <Search size={15} className="text-gray-400 shrink-0" />
-          <input type="text" placeholder="Search by name or email…" value={search} onChange={e => setSearch(e.target.value)}
-            className="text-sm focus:outline-none text-gray-700 placeholder-gray-400 w-full" />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-gray-500 bg-white">
-            <option value="">All wikis</option>
-            {allWikis.map(w => <option key={w} value={w}>{w}</option>)}
-          </select>
-          <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-gray-500 bg-white">
-            <option value="">All teachers</option>
-            {allTeachers.map(([email, name]) => <option key={email} value={email}>{name}</option>)}
-          </select>
-          <select value={filterProgress} onChange={e => setFilterProgress(e.target.value)}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-gray-500 bg-white">
-            <option value="all">All progress</option>
-            <option value="not_started">Not started</option>
-            <option value="in_progress">In progress</option>
-            <option value="completed">Completed</option>
-          </select>
-          {hasFilters && (
-            <button onClick={() => { setSearch(''); setFilterWiki(''); setFilterTeacher(''); setFilterProgress('all') }}
-              className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1">
-              <X size={13} /> Clear
-            </button>
-          )}
-        </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_190px_224px_190px]">
+        <label className="flex h-[46px] items-center gap-3 rounded-lg border border-[#C6CAD2] bg-white px-3 shadow-[0_2px_7px_rgba(15,23,42,0.08)]">
+          <Search size={21} className="text-[#757A84]" />
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full bg-transparent text-lg text-[#111318] placeholder:text-[#777B84] focus:outline-none"
+          />
+        </label>
+        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)}
+          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+          <option value="">All wikis</option>
+          {allWikis.map(w => <option key={w} value={w}>{w}</option>)}
+        </select>
+        <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
+          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+          <option value="">All teachers</option>
+          {allTeachers.map(([email, name]) => <option key={email} value={email}>{name}</option>)}
+        </select>
+        <select value={filterProgress} onChange={e => setFilterProgress(e.target.value)}
+          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+          <option value="all">All progress</option>
+          <option value="not_started">Not started</option>
+          <option value="in_progress">In progress</option>
+          <option value="completed">Completed</option>
+        </select>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        {loading && <p className="p-8 text-sm text-gray-500 text-center">Loading…</p>}
-        {error && <p className="p-8 text-sm text-red-600 text-center">{error}</p>}
-        {!loading && filtered.length === 0 && <p className="p-8 text-sm text-gray-400 text-center">No students found.</p>}
-        {!loading && filtered.length > 0 && (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left">
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-10">#</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Student</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Enrolled wikis</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Progress</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Member since</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((s, i) => (
-                <tr key={s.student.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedId(s.student.id)}>
-                  <td className="px-5 py-4 text-sm text-gray-400">{i + 1}</td>
-                  <td className="px-5 py-4">
-                    <p className="text-sm font-semibold text-gray-900">{s.student.name || '—'}</p>
-                    <p className="text-sm text-gray-500">{s.student.email}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-wrap gap-1.5">
-                      {s.wikis.map(w => (
-                        <span key={w.wikiSlug} className="px-2 py-0.5 rounded text-sm bg-gray-100 text-gray-700 border border-gray-200">{w.wikiSlug}</span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 w-52">
+      {hasFilters && (
+        <button onClick={() => { setSearch(''); setFilterWiki(''); setFilterTeacher(''); setFilterProgress('all') }}
+          className="inline-flex items-center gap-2 text-base font-medium text-[#60656F] hover:text-[#070A12]">
+          <X size={16} /> Clear filters
+        </button>
+      )}
+
+      <div className="space-y-6">
+        {loading && <p className="rounded-xl border border-[#D9DCE2] bg-white p-8 text-center text-lg text-[#60656F]">Loading...</p>}
+        {error && <p className="rounded-xl border border-red-200 bg-white p-8 text-center text-lg text-red-600">{error}</p>}
+        {!loading && filtered.length === 0 && <p className="rounded-xl border border-[#D9DCE2] bg-white p-8 text-center text-lg text-[#60656F]">No students found.</p>}
+        {!loading && filtered.map(s => {
+          const complete = pct(s.totalCompleted, s.totalLessons)
+          const teacherNames = [...new Set(s.wikis.map(w => w.teacherName || w.teacherEmail))]
+          return (
+            <section key={s.student.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-7 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
+              <div className="grid items-center gap-6 lg:grid-cols-[284px_160px_190px_190px_112px_96px]">
+                <div className="flex items-center gap-5">
+                  <DirectoryAvatar name={s.student.name} email={s.student.email} />
+                  <div className="min-w-0">
+                    <p className="truncate text-[22px] font-semibold text-[#05070D]">{s.student.name || 'Unnamed'}</p>
+                    <p className="truncate text-lg text-[#3F434B]">{s.student.email}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <FieldLabel>Enrolled Wikis</FieldLabel>
+                  <p className="mt-3 text-xl font-semibold text-[#070A12]">{s.wikis.length} Assigned</p>
+                </div>
+
+                <div>
+                  <FieldLabel>Progress</FieldLabel>
+                  <div className="mt-3">
                     <ProgressBar completed={s.totalCompleted} total={s.totalLessons} />
-                    <p className="text-sm text-gray-400 mt-1">{s.totalCompleted} / {s.totalLessons} lessons</p>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-gray-500">{new Date(s.student.createdAt).toLocaleDateString()}</td>
-                  <td className="px-5 py-4">
-                    <span className="text-sm text-gray-500 flex items-center gap-0.5 hover:text-gray-900">
-                      Details <ChevronRight size={14} />
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+                    <p className="mt-1 text-base text-[#60656F]">{s.totalCompleted} / {s.totalLessons} lessons</p>
+                  </div>
+                </div>
+
+                <div>
+                  <FieldLabel>Teachers</FieldLabel>
+                  <p className="mt-3 truncate text-xl text-[#070A12]">{teacherNames.length ? teacherNames.join(', ') : '-'}</p>
+                </div>
+
+                <div>
+                  <FieldLabel>Joined</FieldLabel>
+                  <p className="mt-3 whitespace-nowrap text-xl text-[#070A12]">{new Date(s.student.createdAt).toLocaleDateString()}</p>
+                </div>
+
+                <div className="flex items-center justify-end gap-5">
+                  <span className={`h-5 w-5 rounded-full ${complete === 100 ? 'bg-[#56BD68]' : complete > 0 ? 'bg-blue-400' : 'bg-gray-300'} shadow-[0_1px_5px_rgba(15,23,42,0.22)]`} />
+                  <button
+                    onClick={() => setSelectedId(s.student.id)}
+                    className="rounded-lg border border-[#C9CCD3] bg-white px-5 py-2.5 text-lg font-medium text-[#070A12] shadow-sm transition hover:bg-[#F8F9FB]"
+                  >
+                    Details
+                  </button>
+                </div>
+              </div>
+            </section>
+          )
+        })}
       </div>
 
       {selectedId && <StudentModal studentId={selectedId} onClose={() => setSelectedId(null)} />}

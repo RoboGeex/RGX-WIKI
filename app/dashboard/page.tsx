@@ -26,9 +26,15 @@ export default async function DashboardPage() {
   if (!isAdmin) redirect('/login?redirect=/dashboard')
 
   return (
-    <div className="min-h-screen bg-[#f5f5f4]">
+    <div
+      className="min-h-screen"
+      style={{
+        background:
+          'radial-gradient(circle at 10% 0%, rgba(240,82,63,0.08), transparent 38%), radial-gradient(circle at 92% 4%, rgba(240,82,63,0.06), transparent 36%), linear-gradient(180deg, #FDF6F4 0%, #FBF7F5 100%)',
+      }}
+    >
       <AdminNavbar userInitials={userInitials} />
-      <div className="w-full px-6 pt-20 pb-12">
+      <div className="w-full max-w-[1400px] mx-auto px-6 pt-[96px] pb-14">
         <DashboardHome />
       </div>
     </div>

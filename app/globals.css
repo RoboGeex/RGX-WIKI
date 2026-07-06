@@ -69,6 +69,19 @@ h1, h2, h3, .font-bold, strong {
   font-feature-settings: "cv08" 1, "cv05" 1, "ss02" 1 !important;
 }
 
+/* Dashboard surfaces (admin / teacher / student) use Lexend for a bigger,
+   more legible display voice. The scoped selector + !important is required
+   to beat the global Inter !important rules above. --font-lexend is set on
+   the dashboard root via next/font's `variable`. */
+.rgx-dash,
+.rgx-dash h1, .rgx-dash h2, .rgx-dash h3, .rgx-dash h4, .rgx-dash h5, .rgx-dash h6,
+.rgx-dash p, .rgx-dash span, .rgx-dash a, .rgx-dash li, .rgx-dash button,
+.rgx-dash input, .rgx-dash label, .rgx-dash td, .rgx-dash th, .rgx-dash div,
+.rgx-dash strong, .rgx-dash kbd {
+  font-family: var(--font-lexend), "Inter", var(--font-inter), sans-serif !important;
+  font-feature-settings: normal !important;
+}
+
 html {
   scroll-behavior: smooth;
   /* Always reserve scrollbar space so content width is consistent

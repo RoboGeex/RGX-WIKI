@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Filter, UserPlus } from 'lucide-react'
+import { Lexend } from 'next/font/google'
+import { ChevronRight, UserPlus, RefreshCw, Users, GraduationCap, BookOpen, Activity, Plus } from 'lucide-react'
 import CategoriesCard from './CategoriesCard'
 import CreateWikiModal from '@/components/create-wiki-modal'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
+
+const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
 type Stats = { teachers: number; students: number; wikis: number; activeSessions: number }
 type AdminUser = {
@@ -43,82 +46,60 @@ function initials(name: string | null, email: string) {
   return email.slice(0, 2).toUpperCase()
 }
 
-const COLORS = ['bg-orange-500','bg-blue-500','bg-emerald-500','bg-purple-500','bg-rose-500','bg-amber-500','bg-teal-500','bg-indigo-500']
+const COLORS = ['from-[#F0523F] to-[#E23B2E]','from-blue-500 to-blue-600','from-emerald-500 to-emerald-600','from-purple-500 to-purple-600','from-amber-500 to-orange-500','from-teal-500 to-teal-600','from-indigo-500 to-indigo-600']
 function avatarColor(id: string) {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffff
   return COLORS[h % COLORS.length]
 }
 
-// ── Sparkline ────────────────────────────────────────────────────────────────
-function Sparkline({ values, color }: { values: number[]; color: string }) {
-  if (values.length < 2) return null
-  const min = Math.min(...values), max = Math.max(...values), range = max - min || 1
-  const W = 80, H = 32
-  const pts = values.map((v, i) => ({
-    x: (i / (values.length - 1)) * W,
-    y: H - ((v - min) / range) * (H - 4) - 2,
-  }))
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
-  return (
-    <svg width={W} height={H} className="overflow-visible">
-      <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 // ── Role badge ───────────────────────────────────────────────────────────────
 function RoleBadge({ role }: { role: string }) {
   const s: Record<string, string> = {
-    owner: 'border border-orange-300 text-orange-600 bg-orange-50',
+    owner: 'border border-[#F6C9C1] text-[#E23B2E] bg-[#FDEDEA]',
     superadmin: 'bg-blue-100 text-blue-700',
-    admin: 'bg-gray-100 text-gray-600',
+    admin: 'bg-[#F1EBE9] text-[#6B4F4A]',
     developer: 'bg-purple-100 text-purple-700',
     editor: 'bg-purple-100 text-purple-700',
   }
-  return <span className={`px-2 py-0.5 rounded text-xs font-medium ${s[role.toLowerCase()] ?? 'bg-gray-100 text-gray-600'}`}>{role}</span>
+  return <span className={`px-2.5 py-1 rounded-lg text-sm font-bold ${s[role.toLowerCase()] ?? 'bg-[#F1EBE9] text-[#6B4F4A]'}`}>{role}</span>
 }
 
 // ── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, deltaUp, sparkData, href, loading }: {
+function StatCard({ label, value, sub, icon: Icon, href, loading }: {
   label: string; value: number | string; sub: string
-  deltaUp?: boolean; sparkData: number[]; href?: string; loading: boolean
+  icon: any; href?: string; loading: boolean
 }) {
-  const sparkColor = deltaUp === undefined ? '#94a3b8' : deltaUp ? '#10b981' : '#ef4444'
   const inner = (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-300 transition-colors group cursor-pointer">
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-sm text-gray-500">{label}</p>
-      </div>
-      <div className="flex items-end justify-between">
-        <div>
-          {loading
-            ? <div className="h-9 w-12 bg-gray-100 rounded animate-pulse mb-1" />
-            : <p className="text-4xl font-bold text-gray-900 leading-none mb-1">{value}</p>
-          }
-          <p className="text-xs text-gray-400">{sub}</p>
+    <div className="h-full bg-white border border-[#F2E1DD] rounded-[1.5rem] p-6 hover:border-[#E23B2E]/40 hover:shadow-[0_24px_50px_-42px_rgba(226,59,46,0.55)] transition-all group">
+      <div className="flex items-center justify-between mb-5">
+        <div className="w-12 h-12 rounded-xl bg-[#FDEDEA] flex items-center justify-center text-[#E23B2E]">
+          <Icon size={22} />
         </div>
-        <div className="flex items-end gap-1">
-          <Sparkline values={sparkData} color={sparkColor} />
-          {href && <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors mb-1" />}
-        </div>
+        {href && <ChevronRight size={20} className="text-[#DEC7C2] group-hover:text-[#E23B2E] transition-colors" />}
       </div>
+      {loading
+        ? <div className="h-11 w-16 bg-[#F5EAE7] rounded-lg animate-pulse mb-2" />
+        : <p className="text-5xl font-extrabold text-[#1A1110] leading-none mb-2">{value}</p>
+      }
+      <p className="text-base font-bold text-[#1A1110]">{label}</p>
+      <p className="text-sm text-[#8B6B65] mt-0.5">{sub}</p>
     </div>
   )
-  return href ? <Link href={href}>{inner}</Link> : <div>{inner}</div>
+  return href ? <Link href={href} className="block h-full">{inner}</Link> : <div className="h-full">{inner}</div>
 }
 
 // ── Progress bar ─────────────────────────────────────────────────────────────
 function MiniProgress({ value }: { value: number }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+    <div className="flex items-center gap-2.5">
+      <div className="w-20 h-2 bg-[#F3E7E4] rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-orange-400 to-red-500"
-          style={{ width: `${value}%` }}
+          className="h-full rounded-full bg-gradient-to-r from-[#F0523F] to-[#E23B2E]"
+          style={{ width: `${Math.max(value, 2)}%` }}
         />
       </div>
-      <span className="text-xs text-gray-400 w-7 text-right">{value}%</span>
+      <span className="text-sm font-bold text-[#6B4F4A] w-9 text-right">{value}%</span>
     </div>
   )
 }
@@ -183,150 +164,132 @@ export default function DashboardHome() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className={`${display.variable} rgx-dash space-y-9 text-[#1A1110]`}>
 
       {/* Page header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />All systems
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#1A1110]">Dashboard</h1>
+            <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />All systems
             </span>
           </div>
-          <p className="text-sm text-gray-400">{dayName} · {dateStr} · last refresh {refreshLabel}</p>
+          <p className="text-base text-[#8B6B65]">{dayName} · {dateStr} · last refresh {refreshLabel}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={loadAll} className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-            ↻ Refresh
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button onClick={loadAll} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#EBD9D5] text-[15px] font-semibold text-[#6B4F4A] hover:bg-white transition-colors">
+            <RefreshCw size={16} /> Refresh
           </button>
           {isSuperadmin && (
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] text-white text-[15px] font-bold shadow-lg shadow-[#E23B2E]/25 hover:-translate-y-0.5 transition-transform"
             >
-              + New wiki
+              <Plus size={17} /> New wiki
             </button>
           )}
         </div>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard label="Active teachers" value={stats?.teachers ?? 0} sub="total registered"
-          sparkData={[1,1,2,1,1,1,stats?.teachers ?? 1]} loading={loadingStats} href="/dashboard/teachers" />
+          icon={GraduationCap} loading={loadingStats} href="/dashboard/teachers" />
         <StatCard label="Total students" value={stats?.students ?? 0} sub="enrolled across all wikis"
-          sparkData={[0,5,8,12,10,15,stats?.students ?? 0]} deltaUp={true} loading={loadingStats} href="/dashboard/students" />
-        <StatCard label="Published wikis" value={stats?.wikis ?? 0} sub="this month"
-          sparkData={[8,9,9,10,11,12,stats?.wikis ?? 0]} deltaUp={true} loading={loadingStats} />
+          icon={Users} loading={loadingStats} href="/dashboard/students" />
+        <StatCard label="Published wikis" value={stats?.wikis ?? 0} sub="live this month"
+          icon={BookOpen} loading={loadingStats} />
         <StatCard label="Admin sessions" value={stats?.activeSessions ?? 0} sub="currently active"
-          sparkData={[3,2,4,3,2,3,stats?.activeSessions ?? 0]} loading={loadingStats} />
+          icon={Activity} loading={loadingStats} />
       </div>
 
       {/* Bottom: two columns */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
 
         {/* Left: Admins & editors */}
-        <div className="xl:col-span-3 bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="xl:col-span-3 bg-white border border-[#F2E1DD] rounded-[1.5rem] overflow-hidden">
+          <div className="px-6 py-5 border-b border-[#F3E7E4] flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Admins &amp; editors</h2>
-              <p className="text-sm text-gray-400 mt-0.5">{totalPeople} people · {activeNow} active in the last hour</p>
+              <h2 className="text-xl font-bold text-[#1A1110]">Admins &amp; editors</h2>
+              <p className="text-base text-[#8B6B65] mt-0.5">{totalPeople} people · {activeNow} active this hour</p>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
-                <Filter size={13} /> Filter
-              </button>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
-                <UserPlus size={13} /> Invite
-              </button>
-            </div>
+            <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#EBD9D5] text-[15px] font-semibold text-[#6B4F4A] hover:bg-[#FBF3F1]">
+              <UserPlus size={16} /> Invite
+            </button>
           </div>
           {loadingAdmins
-            ? <div className="p-5 space-y-3">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-50 rounded animate-pulse" />)}</div>
+            ? <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-[#F7EFED] rounded-xl animate-pulse" />)}</div>
             : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Person</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Last seen</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Sessions</th>
-                    <th className="px-3 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {allPeople.map(p => (
-                    <tr key={p.id} className="hover:bg-gray-50 transition-colors group">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full ${avatarColor(p.id)} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
-                            {initials(p.name, p.email)}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{p.name || '—'}</p>
-                            <p className="text-xs text-gray-400">{p.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3"><RoleBadge role={p.role} /></td>
-                      <td className="px-5 py-3 text-sm text-gray-500">{timeAgo(p.lastLoginAt)}</td>
-                      <td className="px-5 py-3">
-                        {p.activeSessions > 0
-                          ? <span className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />{p.activeSessions}
-                            </span>
-                          : <span className="text-sm text-gray-300">—</span>
-                        }
-                      </td>
-                      <td className="px-3 py-3">
-                        <ChevronRight size={15} className="text-gray-200 group-hover:text-gray-400 transition-colors" />
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px]">
+                  <thead>
+                    <tr className="border-b border-[#F3E7E4]">
+                      <th className="px-6 py-3 text-left text-[13px] font-bold text-[#B08981] uppercase tracking-wide">Person</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-bold text-[#B08981] uppercase tracking-wide">Role</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-bold text-[#B08981] uppercase tracking-wide">Last seen</th>
+                      <th className="px-4 py-3 text-left text-[13px] font-bold text-[#B08981] uppercase tracking-wide">Sessions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {allPeople.map(p => (
+                      <tr key={p.id} className="border-b border-[#F6EEEC] last:border-0 hover:bg-[#FCF6F5] transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarColor(p.id)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+                              {initials(p.name, p.email)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[15px] font-bold text-[#1A1110] truncate">{p.name || '—'}</p>
+                              <p className="text-sm text-[#8B6B65] truncate">{p.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4"><RoleBadge role={p.role} /></td>
+                        <td className="px-4 py-4 text-[15px] text-[#8B6B65] whitespace-nowrap">{timeAgo(p.lastLoginAt)}</td>
+                        <td className="px-4 py-4">
+                          {p.activeSessions > 0
+                            ? <span className="flex items-center gap-1.5 text-[15px] font-bold text-[#1A1110]">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />{p.activeSessions}
+                              </span>
+                            : <span className="text-[15px] text-[#C6A39C]">—</span>
+                          }
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )
           }
         </div>
 
         {/* Right: Wiki health + needs attention */}
-        <div className="xl:col-span-2 space-y-4">
+        <div className="xl:col-span-2 space-y-6">
 
           {/* Wiki overview */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">Wiki overview</h3>
-              <Link href="/editor" className="text-xs text-gray-400 hover:text-gray-700">Manage →</Link>
+          <div className="bg-white border border-[#F2E1DD] rounded-[1.5rem] overflow-hidden">
+            <div className="px-6 py-5 border-b border-[#F3E7E4] flex items-center justify-between">
+              <h3 className="text-xl font-bold text-[#1A1110]">Wiki overview</h3>
+              <Link href="/editor" className="text-[15px] font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors">Manage →</Link>
             </div>
             {loadingWikis
-              ? <div className="p-5 space-y-2">{[1,2,3].map(i => <div key={i} className="h-8 bg-gray-50 rounded animate-pulse" />)}</div>
+              ? <div className="p-6 space-y-2.5">{[1,2,3].map(i => <div key={i} className="h-9 bg-[#F7EFED] rounded-lg animate-pulse" />)}</div>
               : wikiHealth.length === 0
-                ? <p className="px-5 py-4 text-sm text-gray-400">No published wikis yet.</p>
+                ? <p className="px-6 py-6 text-base text-[#8B6B65]">No published wikis yet.</p>
                 : (
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Wiki</th>
-                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Lessons</th>
-                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg completion</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {wikiHealth.map(w => (
-                        <tr key={w.slug} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-5 py-3">
-                            <p className="text-sm font-medium text-gray-900 truncate max-w-[140px]">{w.name}</p>
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-800">{w.totalLessons}</td>
-                          <td className="px-4 py-3">
-                            <MiniProgress value={w.avgCompletion} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="divide-y divide-[#F6EEEC]">
+                    {wikiHealth.map(w => (
+                      <div key={w.slug} className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-[#FCF6F5] transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-bold text-[#1A1110] truncate">{w.name}</p>
+                          <p className="text-sm text-[#8B6B65]">{w.totalLessons} lesson{w.totalLessons !== 1 ? 's' : ''}</p>
+                        </div>
+                        <MiniProgress value={w.avgCompletion} />
+                      </div>
+                    ))}
+                  </div>
                 )
             }
           </div>
@@ -335,40 +298,40 @@ export default function DashboardHome() {
           <CategoriesCard />
 
           {/* Needs attention — flagged lessons */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">Needs attention</h3>
+          <div className="bg-white border border-[#F2E1DD] rounded-[1.5rem] overflow-hidden">
+            <div className="px-6 py-5 border-b border-[#F3E7E4] flex items-center justify-between">
+              <h3 className="text-xl font-bold text-[#1A1110]">Needs attention</h3>
               {!loadingWikis && flaggedLessons.length > 0 && (
-                <span className="text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">
+                <span className="text-sm font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full">
                   {flaggedLessons.length} lesson{flaggedLessons.length !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
             {loadingWikis
-              ? <div className="p-5 space-y-2">{[1,2,3].map(i => <div key={i} className="h-8 bg-gray-50 rounded animate-pulse" />)}</div>
+              ? <div className="p-6 space-y-2.5">{[1,2,3].map(i => <div key={i} className="h-9 bg-[#F7EFED] rounded-lg animate-pulse" />)}</div>
               : flaggedLessons.length === 0
                 ? (
-                  <div className="px-5 py-6 flex items-center gap-3 text-sm text-gray-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shrink-0" />
+                  <div className="px-6 py-7 flex items-center gap-3 text-base text-[#8B6B65]">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block shrink-0" />
                     No pending lesson changes
                   </div>
                 )
                 : (
-                  <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+                  <div className="divide-y divide-[#F6EEEC] max-h-80 overflow-y-auto">
                     {flaggedLessons.map(l => (
-                      <div key={l.id} className="px-5 py-3 flex items-center gap-3">
-                        <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
+                      <div key={l.id} className="px-6 py-4 flex items-center gap-3">
+                        <span className={`shrink-0 px-2 py-1 rounded-lg text-sm font-bold whitespace-nowrap ${
                           l.status === 'published' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                          l.status === 'draft'     ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                          l.status === 'draft'     ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                                                      'bg-red-50 text-red-600 border border-red-200'
                         }`}>
                           {l.status === 'published' ? 'published' : l.status === 'draft' ? 'changed' : 'unpublished'}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{l.title}</p>
-                          <p className="text-xs text-gray-400 truncate">{l.wikiName}</p>
+                          <p className="text-[15px] font-bold text-[#1A1110] truncate">{l.title}</p>
+                          <p className="text-sm text-[#8B6B65] truncate">{l.wikiName}</p>
                         </div>
-                        <p className="text-xs text-gray-400 shrink-0">{timeAgo(l.updatedAt)}</p>
+                        <p className="text-sm text-[#B08981] shrink-0">{timeAgo(l.updatedAt)}</p>
                       </div>
                     ))}
                   </div>

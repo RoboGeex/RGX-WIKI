@@ -8,14 +8,14 @@ import { Home, Layout, LogOut, ChevronLeft, Link2, Copy, Check, Power, RefreshCw
 
 const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
-function Avatar({ name, email, size = 'sm' }: { name: string | null; email: string; size?: 'sm' | 'md' }) {
+function Avatar({ name, email, src, size = 'sm' }: { name: string | null; email: string; src?: string | null; size?: 'sm' | 'md' }) {
   const initials = name
     ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : email[0].toUpperCase()
   const sizes = { sm: 'w-9 h-9 text-sm', md: 'w-11 h-11 text-base' }
   return (
-    <div className={`${sizes[size]} rounded-xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] flex items-center justify-center font-bold text-white shrink-0`}>
-      {initials}
+    <div className={`${sizes[size]} relative overflow-hidden rounded-xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] flex items-center justify-center font-bold text-white shrink-0`}>
+      {src ? <Image src={src} alt={name || email} fill sizes={size === 'md' ? '44px' : '36px'} className="object-cover" /> : initials}
     </div>
   )
 }
@@ -31,7 +31,7 @@ type LinkInfo = {
 type Student = {
   enrollmentId: string
   joinedAt: string
-  student: { id: string; email: string; name: string | null }
+  student: { id: string; email: string; name: string | null; avatarUrl: string | null }
   link: { id: string; isActive: boolean }
   progress: { completed: number; in_progress: number; total: number }
   lessons: {
@@ -103,7 +103,7 @@ function ProgressDialog({ student, onClose }: { student: Student; onClose: () =>
       <div className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[#F2E1DD] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-[#F3E7E4] px-6 py-5">
           <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={student.student.name} email={student.student.email} size="md" />
+            <Avatar name={student.student.name} email={student.student.email} src={student.student.avatarUrl} size="md" />
             <div className="min-w-0">
               <h2 className="truncate text-xl font-bold text-[#1A1110]">{student.student.name || 'Unnamed student'}</h2>
               <p className="truncate text-sm text-[#8B6B65]">{student.student.email}</p>
@@ -489,7 +489,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
                       <td className="py-3.5 px-2 text-[#C6A39C] font-semibold">{i + 1}</td>
                       <td className="py-3.5 px-2">
                         <div className="flex items-center gap-3">
-                          <Avatar name={s.student.name} email={s.student.email} size="sm" />
+                          <Avatar name={s.student.name} email={s.student.email} src={s.student.avatarUrl} size="sm" />
                           <div className="min-w-0">
                             <p className="text-[15px] font-bold text-[#1A1110] truncate">{s.student.name || '—'}</p>
                             <p className="text-sm text-[#8B6B65] truncate">{s.student.email}</p>

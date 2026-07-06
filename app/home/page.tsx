@@ -79,7 +79,7 @@ export default async function HomePage() {
 
   return (
     <HomeClient
-      user={{ id: user.id, name: user.name, email: user.email, role: user.role }}
+      user={{ id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl }}
       studentData={studentData}
       teacherData={teacherData}
     />

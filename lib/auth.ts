@@ -28,6 +28,7 @@ export type SessionUser = {
   id: string
   email: string
   name: string | null
+  avatarUrl: string | null
   role: Role
 }
 
@@ -137,6 +138,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     id: session.user.id,
     email: session.user.email,
     name: session.user.name,
+    avatarUrl: session.user.avatarUrl,
     role: session.user.role as Role,
   }
 }

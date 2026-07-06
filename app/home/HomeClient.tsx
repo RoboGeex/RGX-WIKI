@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Lexend } from 'next/font/google'
-import { Home, Layout, LogOut, GraduationCap, ArrowRight, Check, Pencil } from 'lucide-react'
+import { Home, Layout, LogOut, GraduationCap, ArrowRight, Check, Pencil, Camera, Loader2, Trash2 } from 'lucide-react'
 
 const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
@@ -16,19 +16,20 @@ type Wiki = {
 }
 
 type Props = {
-  user: { id: string; name: string | null; email: string; role: string }
+  user: { id: string; name: string | null; email: string; role: string; avatarUrl: string | null }
   studentData: { wikis: Wiki[]; progress: Record<string, { total: number; completed: number }> } | null
   teacherData: { wikis: Wiki[]; studentCounts: Record<string, number> } | null
 }
 
-function Avatar({ name, email, size = 'md' }: { name: string | null; email: string; size?: 'sm' | 'md' | 'lg' }) {
+function Avatar({ name, email, src, size = 'md' }: { name: string | null; email: string; src?: string | null; size?: 'sm' | 'md' | 'lg' }) {
   const initials = name
     ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : email[0].toUpperCase()
   const sizes = { sm: 'w-9 h-9 text-sm', md: 'w-12 h-12 text-lg', lg: 'w-24 h-24 text-4xl' }
+  const px = { sm: '36px', md: '48px', lg: '96px' }
   return (
-    <div className={`${sizes[size]} rounded-2xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] flex items-center justify-center font-bold text-white shrink-0 shadow-lg shadow-[#E23B2E]/25`}>
-      {initials}
+    <div className={`${sizes[size]} relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] flex items-center justify-center font-bold text-white shrink-0 shadow-lg shadow-[#E23B2E]/25`}>
+      {src ? <Image src={src} alt={name || email} fill sizes={px[size]} className="object-cover" /> : initials}
     </div>
   )
 }
@@ -57,9 +58,49 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
   const [editingName, setEditingName] = useState(false)
   const [savingName, setSavingName] = useState(false)
   const [currentName, setCurrentName] = useState(user.name || '')
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl)
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const wikis = studentData?.wikis || teacherData?.wikis || []
   const isTeacher = user.role === 'teacher'
+
+  async function onAvatarSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setAvatarError('Please choose an image file.'); return }
+    if (file.size > 5 * 1024 * 1024) { setAvatarError('Image must be under 5 MB.'); return }
+    setAvatarError(null)
+    setAvatarBusy(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/auth/avatar', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok) setAvatarUrl(data.avatarUrl)
+      else setAvatarError(data.error || 'Upload failed.')
+    } catch {
+      setAvatarError('Upload failed.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarError(null)
+    setAvatarBusy(true)
+    try {
+      const res = await fetch('/api/auth/avatar', { method: 'DELETE' })
+      if (res.ok) setAvatarUrl(null)
+      else setAvatarError('Could not remove photo.')
+    } catch {
+      setAvatarError('Could not remove photo.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
 
   async function saveName() {
     if (!name.trim()) return
@@ -96,6 +137,9 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
           </Link>
 
           <div className="flex items-center gap-1.5">
+            <span className="mr-1 hidden sm:block">
+              <Avatar name={currentName} email={user.email} src={avatarUrl} size="sm" />
+            </span>
             <Link
               href="/home"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white bg-white/10 border border-white/15 text-[15px] font-semibold"
@@ -129,7 +173,38 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
         {/* Profile card */}
         <div className="rounded-[2rem] border border-[#F2E1DD] bg-white/90 shadow-[0_30px_70px_-50px_rgba(226,59,46,0.55)] p-7 sm:p-9">
           <div className="flex flex-col sm:flex-row items-start gap-6">
-            <Avatar name={currentName} email={user.email} size="lg" />
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative">
+                <Avatar name={currentName} email={user.email} src={avatarUrl} size="lg" />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarBusy}
+                  className="absolute -bottom-1.5 -right-1.5 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#1A1110] text-white shadow-lg transition-colors hover:bg-[#E23B2E] disabled:opacity-60"
+                  aria-label={avatarUrl ? 'Change profile picture' : 'Add profile picture'}
+                >
+                  {avatarBusy ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onAvatarSelected}
+                />
+              </div>
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={removeAvatar}
+                  disabled={avatarBusy}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors disabled:opacity-60"
+                >
+                  <Trash2 size={12} /> Remove
+                </button>
+              )}
+              {avatarError && <p className="max-w-[9rem] text-center text-xs font-medium text-[#E23B2E]">{avatarError}</p>}
+            </div>
             <div className="flex-1 min-w-0 w-full">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FDEDEA] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#E23B2E]">
                 <GraduationCap size={14} />

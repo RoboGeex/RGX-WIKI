@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       where: { teacherId: teacher.id, wikiSlug, status: 'active' },
       orderBy: { joinedAt: 'desc' },
       include: {
-        student: { select: { id: true, email: true, name: true } },
+        student: { select: { id: true, email: true, name: true, avatarUrl: true } },
         link: { select: { id: true, token: true, isActive: true } },
       },
     })

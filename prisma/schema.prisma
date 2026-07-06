@@ -111,6 +111,7 @@ model User {
   email         String   @unique
   passwordHash  String
   name          String?
+  avatarUrl     String?  @db.Text
   role               String    // "admin" | "teacher" | "student"
   assignedWikiSlugs  Json?     // string[] — only used for teachers
   disabledAt         DateTime?

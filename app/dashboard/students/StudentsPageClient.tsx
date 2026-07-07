@@ -4,10 +4,10 @@ import type { ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Lexend } from 'next/font/google'
+import { Cairo } from 'next/font/google'
 import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp } from 'lucide-react'
 
-const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
+const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
 type WikiProgress = {
   wikiSlug: string; teacherName: string | null; teacherEmail: string

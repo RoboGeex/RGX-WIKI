@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Lexend } from 'next/font/google'
+import { Cairo } from 'next/font/google'
 import { Search, LogOut } from 'lucide-react'
 
-const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-lexend' })
+const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-cairo' })
 
 interface AdminNavbarProps {
   userInitials?: string

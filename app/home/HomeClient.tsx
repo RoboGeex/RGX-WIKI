@@ -3,10 +3,10 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Lexend } from 'next/font/google'
+import { Cairo } from 'next/font/google'
 import { Home, Layout, LogOut, GraduationCap, ArrowRight, Check, Pencil, Camera, Loader2, Trash2 } from 'lucide-react'
 
-const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
+const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
 type Wiki = {
   slug: string

@@ -4,10 +4,11 @@ import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Lexend } from 'next/font/google'
+import { useSearchParams } from 'next/navigation'
+import { Cairo } from 'next/font/google'
 import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck } from 'lucide-react'
 
-const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
+const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
 type Wiki = { slug: string; displayName: string }
 type Teacher = {
@@ -234,6 +235,7 @@ function AssignedWikisDialog({
 }
 
 export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
+  const searchParams = useSearchParams()
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -260,6 +262,10 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (searchParams?.get('invite') === '1') setShowDialog(true)
+  }, [searchParams])
 
   async function saveWikis(id: string, slugs: string[]) {
     try {

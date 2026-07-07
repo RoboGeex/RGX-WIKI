@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Lexend } from 'next/font/google'
+import { Cairo } from 'next/font/google'
 import { ChevronRight, UserPlus, RefreshCw, Users, GraduationCap, BookOpen, Activity, Plus } from 'lucide-react'
 import CategoriesCard from './CategoriesCard'
 import CreateWikiModal from '@/components/create-wiki-modal'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
 
-const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
+const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
 type Stats = { teachers: number; students: number; wikis: number; activeSessions: number }
 type AdminUser = {
@@ -215,9 +215,9 @@ export default function DashboardHome() {
               <h2 className="text-xl font-bold text-[#1A1110]">Admins &amp; editors</h2>
               <p className="text-base text-[#8B6B65] mt-0.5">{totalPeople} people · {activeNow} active this hour</p>
             </div>
-            <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#EBD9D5] text-[15px] font-semibold text-[#6B4F4A] hover:bg-[#FBF3F1]">
+            <Link href="/dashboard/teachers?invite=1" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#EBD9D5] text-[15px] font-semibold text-[#6B4F4A] hover:bg-[#FBF3F1]">
               <UserPlus size={16} /> Invite
-            </button>
+            </Link>
           </div>
           {loadingAdmins
             ? <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-[#F7EFED] rounded-xl animate-pulse" />)}</div>

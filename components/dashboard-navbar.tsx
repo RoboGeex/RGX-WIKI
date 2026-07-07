@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { Cairo } from 'next/font/google'
 import { Globe, Menu, Eye, Edit3, Layout, HelpCircle, LogOut } from 'lucide-react'
 import { Locale, t } from '@/lib/i18n'
 import { setStoredLocale } from '@/lib/unlock'
 import { HUB_DOMAIN } from '@/lib/domains'
 // Note: We can't import server-side functions in client components
+
+const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-cairo' })
 
 interface Props {
   locale: Locale
@@ -132,7 +135,7 @@ export default function DashboardNavbar({ locale, wikiSlug, kitSlug }: Props) {
   const displayKitName = getKitNameForDisplay()
 
   return (
-    <nav className="bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur">
+    <nav className={`${display.variable} rgx-dash bg-[#1e1e1e] w-full border-b border-transparent fixed top-0 left-0 right-0 z-40 backdrop-blur`}>
       {/* Logo - Absolute Left */}
       <Link href="/dashboard" className="absolute left-0 top-0 h-16 flex items-center gap-2 pl-4 z-50">
         <Image 

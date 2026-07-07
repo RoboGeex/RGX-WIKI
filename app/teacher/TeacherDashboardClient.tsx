@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Lexend } from 'next/font/google'
+import { Cairo } from 'next/font/google'
 import { Home, Layout, LogOut, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Eye, Clock, Circle, X, Download } from 'lucide-react'
 
-const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
+const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
 function Avatar({ name, email, src, size = 'sm' }: { name: string | null; email: string; src?: string | null; size?: 'sm' | 'md' }) {
   const initials = name

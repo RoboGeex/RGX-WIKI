@@ -1,10 +1,13 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { Cairo } from "next/font/google"
 import { getWiki, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { buildLessonHref } from "@/lib/wikiPaths"
 
 export const dynamic = "force-dynamic"
+
+const display = Cairo({ subsets: ["arabic", "latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-cairo" })
 
 interface Params {
   params: { wiki: string }
@@ -28,7 +31,7 @@ export default async function WikiDashboardPage({ params }: Params) {
   )
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8 space-y-8">
+    <div className={`${display.variable} rgx-dash mx-auto max-w-5xl px-6 py-8 space-y-8`}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <Link href="/dashboard" className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700 inline-flex items-center">

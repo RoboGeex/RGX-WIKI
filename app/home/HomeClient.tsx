@@ -89,6 +89,8 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
   }
 
   async function removeAvatar() {
+    if (!window.confirm('Remove your profile picture? This cannot be undone.')) return
+
     setAvatarError(null)
     setAvatarBusy(true)
     try {

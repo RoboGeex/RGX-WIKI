@@ -3,14 +3,18 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen } from 'lucide-react'
+import Image from 'next/image'
+import { Lexend } from 'next/font/google'
+import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp } from 'lucide-react'
+
+const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
 type WikiProgress = {
   wikiSlug: string; teacherName: string | null; teacherEmail: string
   joinedAt: string; progress: { completed: number; in_progress: number; total: number }
 }
 type StudentSummary = {
-  student: { id: string; email: string; name: string | null; createdAt: string }
+  student: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string }
   wikis: WikiProgress[]; totalCompleted: number; totalLessons: number
 }
 type LessonDetail = {
@@ -25,7 +29,7 @@ type WikiSection = {
   completed: number; inProgress: number; total: number
 }
 type StudentDetail = {
-  student: { id: string; email: string; name: string | null; createdAt: string }
+  student: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string }
   sections: WikiSection[]
 }
 
@@ -48,36 +52,54 @@ function initials(name: string | null, email: string) {
   return source.slice(0, 2).toUpperCase()
 }
 
-function DirectoryAvatar({ name, email }: { name: string | null; email: string }) {
+function DirectoryAvatar({ name, email, src }: { name: string | null; email: string; src?: string | null }) {
   return (
-    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-base font-bold text-[#8A8F99] shadow-inner">
-      <div className="absolute top-4 h-5 w-5 rounded-full bg-[#9EA3AD]" />
-      <div className="absolute bottom-2 h-7 w-11 rounded-t-full bg-[#9EA3AD]" />
-      <span className="sr-only">{initials(name, email)}</span>
+    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-base font-bold text-white shadow-[0_6px_16px_-6px_rgba(226,59,46,0.6)] ring-1 ring-black/5">
+      {src ? (
+        <Image src={src} alt={name || email} fill sizes="56px" className="object-cover" />
+      ) : (
+        <span>{initials(name, email)}</span>
+      )}
     </div>
   )
 }
 
 function FieldLabel({ children }: { children: ReactNode }) {
-  return <p className="text-xs font-medium uppercase tracking-wide text-[#30323A]">{children}</p>
+  return <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]">{children}</p>
 }
 
 function ProgressBar({ completed, total }: { completed: number; total: number }) {
   const p = pct(completed, total)
+  const done = p === 100
   return (
     <div className="flex items-center gap-3">
-      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[#ECEEF2]">
-        <div className="h-full rounded-full bg-gradient-to-r from-[#F0523F] to-[#E23B2E] transition-all" style={{ width: `${Math.max(p, 3)}%` }} />
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#EEF1F5]">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${done ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#F0523F] to-[#E23B2E]'}`}
+          style={{ width: `${Math.max(p, p > 0 ? 4 : 0)}%` }}
+        />
       </div>
-      <span className="w-12 shrink-0 text-right text-lg font-semibold text-[#30323A]">{p}%</span>
+      <span className={`w-11 shrink-0 text-right text-base font-bold ${done ? 'text-emerald-600' : 'text-[#334155]'}`}>{p}%</span>
     </div>
   )
 }
 
 function StatusIcon({ status }: { status: string }) {
   if (status === 'completed') return <CheckCircle2 size={17} className="shrink-0 text-emerald-500" />
-  if (status === 'in_progress') return <Clock size={17} className="shrink-0 text-blue-500" />
-  return <Circle size={17} className="shrink-0 text-gray-300" />
+  if (status === 'in_progress') return <Clock size={17} className="shrink-0 text-amber-500" />
+  return <Circle size={17} className="shrink-0 text-[#CBD5E1]" />
+}
+
+function MetricCard({ icon, label, value, tint }: { icon: ReactNode; label: string; value: string; tint: string }) {
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-[#EAECF1] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tint}`}>{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold text-[#8A93A3]">{label}</p>
+        <p className="text-2xl font-extrabold leading-tight tracking-tight text-[#0F172A]">{value}</p>
+      </div>
+    </div>
+  )
 }
 
 function StudentModal({ studentId, onClose }: { studentId: string; onClose: () => void }) {
@@ -93,64 +115,67 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
   }, [studentId])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#EEF0F4] px-6 py-5">
           {data ? (
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">{data.student.name || 'Unnamed student'}</h2>
-              <p className="text-base text-gray-500">{data.student.email}</p>
+            <div className="flex min-w-0 items-center gap-3">
+              <DirectoryAvatar name={data.student.name} email={data.student.email} src={data.student.avatarUrl} />
+              <div className="min-w-0">
+                <h2 className="truncate text-xl font-bold text-[#0F172A]">{data.student.name || 'Unnamed student'}</h2>
+                <p className="truncate text-base text-[#64748B]">{data.student.email}</p>
+              </div>
             </div>
-          ) : <div className="h-5 w-48 animate-pulse rounded bg-gray-100" />}
-          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X size={18} /></button>
+          ) : <div className="h-10 w-56 animate-pulse rounded-xl bg-[#F1F3F7]" />}
+          <button onClick={onClose} className="rounded-xl p-2 text-[#94A3B8] transition-colors hover:bg-[#F1F3F7] hover:text-[#0F172A]" aria-label="Close"><X size={18} /></button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
-          {loading && <p className="py-8 text-center text-base text-gray-500">Loading...</p>}
-          {data?.sections.length === 0 && <p className="py-8 text-center text-base text-gray-500">No active enrollments.</p>}
+        <div className="flex-1 space-y-3 overflow-y-auto bg-[#FAFBFC] px-6 py-5">
+          {loading && <p className="py-8 text-center text-base text-[#64748B]">Loading…</p>}
+          {data?.sections.length === 0 && <p className="rounded-2xl border border-dashed border-[#E2E6EC] bg-white py-10 text-center text-base text-[#64748B]">No active enrollments.</p>}
           {data?.sections.map(section => (
-            <div key={section.wikiSlug} className="overflow-hidden rounded-lg border border-gray-200">
-              <button className="flex w-full items-center justify-between bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100"
+            <div key={section.wikiSlug} className="overflow-hidden rounded-2xl border border-[#E7E9EE] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <button className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition-colors hover:bg-[#FAFBFC]"
                 onClick={() => setOpenWiki(openWiki === section.wikiSlug ? null : section.wikiSlug)}>
                 <div className="flex min-w-0 items-center gap-3">
-                  <BookOpen size={17} className="shrink-0 text-gray-400" />
-                  <div className="min-w-0 text-left">
-                    <p className="text-base font-semibold text-gray-900">{section.wikiName}</p>
-                    <p className="text-base text-gray-500">Teacher: {section.teacher.name || section.teacher.email} - Joined {timeAgo(section.joinedAt)}</p>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDECE9] text-[#E23B2E]"><BookOpen size={18} /></div>
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-bold text-[#0F172A]">{section.wikiName}</p>
+                    <p className="truncate text-sm text-[#64748B]">{section.teacher.name || section.teacher.email} · Joined {timeAgo(section.joinedAt)}</p>
                   </div>
                 </div>
                 <div className="ml-4 flex shrink-0 items-center gap-4">
-                  <p className="text-base text-gray-700"><span className="font-semibold">{section.completed}</span><span className="text-gray-400">/{section.total}</span></p>
-                  <div className="w-28"><ProgressBar completed={section.completed} total={section.total} /></div>
-                  <ChevronRight size={17} className={`shrink-0 text-gray-400 transition-transform ${openWiki === section.wikiSlug ? 'rotate-90' : ''}`} />
+                  <p className="text-base text-[#334155]"><span className="font-bold">{section.completed}</span><span className="text-[#94A3B8]">/{section.total}</span></p>
+                  <div className="hidden w-28 sm:block"><ProgressBar completed={section.completed} total={section.total} /></div>
+                  <ChevronRight size={18} className={`shrink-0 text-[#94A3B8] transition-transform ${openWiki === section.wikiSlug ? 'rotate-90' : ''}`} />
                 </div>
               </button>
               {openWiki === section.wikiSlug && (
-                <div>
-                  {section.lessons.length === 0 && <p className="px-5 py-3 text-base text-gray-400">No published lessons.</p>}
+                <div className="border-t border-[#EEF0F4]">
+                  {section.lessons.length === 0 && <p className="px-5 py-4 text-sm text-[#94A3B8]">No published lessons.</p>}
                   <table className="w-full">
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-[#F1F3F7]">
                       {section.lessons.map(l => (
-                        <tr key={l.id} className="hover:bg-gray-50">
-                          <td className="w-6 px-5 py-2.5"><StatusIcon status={l.status} /></td>
-                          <td className="py-2.5 pr-4">
-                            <p className={`text-base ${l.status === 'not_started' ? 'text-gray-400' : 'text-gray-800'}`}>{l.order}. {l.title}</p>
+                        <tr key={l.id} className="transition-colors hover:bg-[#FAFBFC]">
+                          <td className="w-6 px-5 py-3"><StatusIcon status={l.status} /></td>
+                          <td className="py-3 pr-4">
+                            <p className={`text-sm ${l.status === 'not_started' ? 'text-[#94A3B8]' : 'text-[#334155]'}`}>{l.order}. {l.title}</p>
                           </td>
-                          <td className="py-2.5 pr-5 text-right whitespace-nowrap">
-                            {l.status === 'completed' && <p className="text-base text-emerald-600">Done {timeAgo(l.completedAt)}</p>}
-                            {l.status === 'in_progress' && <p className="text-base text-blue-500">Viewed {timeAgo(l.lastViewedAt)}</p>}
-                            {l.status === 'not_started' && <p className="text-base text-gray-300">-</p>}
+                          <td className="py-3 pr-5 text-right whitespace-nowrap">
+                            {l.status === 'completed' && <p className="text-sm font-medium text-emerald-600">Done {timeAgo(l.completedAt)}</p>}
+                            {l.status === 'in_progress' && <p className="text-sm font-medium text-amber-600">Viewed {timeAgo(l.lastViewedAt)}</p>}
+                            {l.status === 'not_started' && <p className="text-sm text-[#CBD5E1]">—</p>}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <div className="flex justify-between border-t border-gray-100 bg-gray-50 px-5 py-2.5 text-base text-gray-500">
+                  <div className="flex justify-between border-t border-[#EEF0F4] bg-[#FAFBFC] px-5 py-3 text-sm text-[#64748B]">
                     <span>
-                      <span className="font-medium text-emerald-600">{section.completed} done</span>
-                      {section.inProgress > 0 && <span className="ml-3 font-medium text-blue-500">{section.inProgress} in progress</span>}
+                      <span className="font-semibold text-emerald-600">{section.completed} done</span>
+                      {section.inProgress > 0 && <span className="ml-3 font-semibold text-amber-600">{section.inProgress} in progress</span>}
                     </span>
-                    <span>{pct(section.completed, section.total)}% complete</span>
+                    <span className="font-semibold text-[#334155]">{pct(section.completed, section.total)}% complete</span>
                   </div>
                 </div>
               )}
@@ -159,7 +184,7 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
         </div>
 
         {data && (
-          <div className="flex shrink-0 justify-between border-t border-gray-200 px-6 py-3 text-base text-gray-400">
+          <div className="flex shrink-0 justify-between border-t border-[#EEF0F4] px-6 py-4 text-sm text-[#94A3B8]">
             <span>Member since {new Date(data.student.createdAt).toLocaleDateString()}</span>
             <span>{data.sections.length} wiki{data.sections.length !== 1 ? 's' : ''} enrolled</span>
           </div>
@@ -214,47 +239,64 @@ export default function StudentsPageClient() {
 
   const hasFilters = search || filterWiki || filterTeacher || filterProgress !== 'all'
 
+  const avgCompletion = students.length
+    ? Math.round(students.reduce((sum, s) => sum + pct(s.totalCompleted, s.totalLessons), 0) / students.length)
+    : 0
+  const fullyComplete = students.filter(s => s.totalLessons > 0 && s.totalCompleted >= s.totalLessons).length
+
+  const selectClass = "h-[46px] rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
+
   return (
-    <div className="dashboard-list-scale mx-auto max-w-[1224px] space-y-6 text-[#070A12]">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#D8DADF] pb-6">
+    <div className={`${display.variable} rgx-dash mx-auto max-w-[1224px] space-y-6 text-[#0F172A]`}>
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1 text-base font-medium text-[#6C7078] hover:text-[#070A12]">
-            <ChevronLeft size={18} /> Back
+          <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748B] transition-colors hover:text-[#0F172A]">
+            <ChevronLeft size={16} /> Back to dashboard
           </Link>
-          <h1 className="text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-[#070A12]">Student Directory</h1>
-          <p className="mt-2 text-lg text-[#2F333B]">{students.length} total</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-white shadow-[0_8px_20px_-8px_rgba(226,59,46,0.7)]">
+              <Users size={22} />
+            </div>
+            <h1 className="text-[28px] font-extrabold leading-none tracking-tight text-[#0F172A]">Student directory</h1>
+          </div>
         </div>
         <button
           onClick={load}
-          className="rounded-lg border border-[#C9CCD3] bg-white px-5 py-3 text-lg font-semibold text-[#070A12] shadow-[0_3px_8px_rgba(15,23,42,0.16)] transition hover:bg-[#F8F9FB]"
+          className="inline-flex items-center gap-2 rounded-xl border border-[#E2E6EC] bg-white px-4 py-2.5 text-base font-semibold text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#CBD5E1] hover:bg-[#FAFBFC]"
         >
-          Refresh
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
 
+      {/* Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <MetricCard icon={<Users size={20} />} label="Total students" value={String(students.length)} tint="bg-[#FDECE9] text-[#E23B2E]" />
+        <MetricCard icon={<TrendingUp size={20} />} label="Average completion" value={`${avgCompletion}%`} tint="bg-[#EAF1FE] text-[#2F6BE0]" />
+        <MetricCard icon={<GraduationCap size={20} />} label="Fully complete" value={String(fullyComplete)} tint="bg-emerald-50 text-emerald-600" />
+      </div>
+
+      {/* Filters */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_190px_224px_190px]">
-        <label className="flex h-[46px] items-center gap-3 rounded-lg border border-[#C6CAD2] bg-white px-3 shadow-[0_2px_7px_rgba(15,23,42,0.08)]">
-          <Search size={21} className="text-[#757A84]" />
+        <label className="flex h-[46px] items-center gap-3 rounded-xl border border-[#E2E6EC] bg-white px-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition focus-within:border-[#E23B2E] focus-within:ring-4 focus-within:ring-[#E23B2E]/10">
+          <Search size={19} className="text-[#94A3B8]" />
           <input
             type="text"
-            placeholder="Search by name or email..."
+            placeholder="Search by name or email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full bg-transparent text-lg text-[#111318] placeholder:text-[#777B84] focus:outline-none"
+            className="w-full bg-transparent text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
           />
         </label>
-        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)}
-          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)} className={selectClass}>
           <option value="">All wikis</option>
           {allWikis.map(w => <option key={w} value={w}>{w}</option>)}
         </select>
-        <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
-          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+        <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)} className={selectClass}>
           <option value="">All teachers</option>
           {allTeachers.map(([email, name]) => <option key={email} value={email}>{name}</option>)}
         </select>
-        <select value={filterProgress} onChange={e => setFilterProgress(e.target.value)}
-          className="h-[46px] rounded-lg border border-[#C6CAD2] bg-white px-4 text-lg text-[#111318] shadow-[0_2px_7px_rgba(15,23,42,0.08)] focus:outline-none">
+        <select value={filterProgress} onChange={e => setFilterProgress(e.target.value)} className={selectClass}>
           <option value="all">All progress</option>
           <option value="not_started">Not started</option>
           <option value="in_progress">In progress</option>
@@ -264,57 +306,65 @@ export default function StudentsPageClient() {
 
       {hasFilters && (
         <button onClick={() => { setSearch(''); setFilterWiki(''); setFilterTeacher(''); setFilterProgress('all') }}
-          className="inline-flex items-center gap-2 text-base font-medium text-[#60656F] hover:text-[#070A12]">
-          <X size={16} /> Clear filters
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748B] transition-colors hover:text-[#E23B2E]">
+          <X size={15} /> Clear filters
         </button>
       )}
 
-      <div className="space-y-6">
-        {loading && <p className="rounded-xl border border-[#D9DCE2] bg-white p-8 text-center text-lg text-[#60656F]">Loading...</p>}
-        {error && <p className="rounded-xl border border-red-200 bg-white p-8 text-center text-lg text-red-600">{error}</p>}
-        {!loading && filtered.length === 0 && <p className="rounded-xl border border-[#D9DCE2] bg-white p-8 text-center text-lg text-[#60656F]">No students found.</p>}
+      {/* List */}
+      <div className="space-y-4">
+        {loading && <p className="rounded-2xl border border-[#EAECF1] bg-white p-10 text-center text-base text-[#64748B]">Loading…</p>}
+        {error && <p className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-base font-medium text-red-600">{error}</p>}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-[#D8DEE6] bg-white p-14 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1F3F7] text-[#94A3B8]"><Users size={26} /></div>
+            <p className="text-lg font-bold text-[#0F172A]">No students found</p>
+            <p className="mt-1 text-base text-[#64748B]">{hasFilters ? 'Try adjusting your filters.' : 'Students appear here once they join a class.'}</p>
+          </div>
+        )}
         {!loading && filtered.map(s => {
           const complete = pct(s.totalCompleted, s.totalLessons)
           const teacherNames = [...new Set(s.wikis.map(w => w.teacherName || w.teacherEmail))]
+          const dot = complete === 100 ? 'bg-emerald-500' : complete > 0 ? 'bg-amber-400' : 'bg-[#CBD5E1]'
           return (
-            <section key={s.student.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-6 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
+            <section key={s.student.id} className="group rounded-2xl border border-[#EAECF1] bg-white px-5 py-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F3D3CD] hover:shadow-[0_18px_40px_-24px_rgba(226,59,46,0.4)]">
               <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_190px_170px_120px_112px]">
                 <div className="flex items-center gap-4">
-                  <DirectoryAvatar name={s.student.name} email={s.student.email} />
+                  <DirectoryAvatar name={s.student.name} email={s.student.email} src={s.student.avatarUrl} />
                   <div className="min-w-0">
-                    <p className="truncate text-xl font-semibold text-[#05070D]">{s.student.name || 'Unnamed'}</p>
-                    <p className="truncate text-base text-[#3F434B]">{s.student.email}</p>
+                    <p className="truncate text-lg font-bold text-[#0F172A]">{s.student.name || 'Unnamed'}</p>
+                    <p className="truncate text-sm text-[#64748B]">{s.student.email}</p>
                   </div>
                 </div>
 
                 <div>
-                  <FieldLabel>Enrolled Wikis</FieldLabel>
-                  <p className="mt-2 text-lg font-semibold text-[#070A12]">{s.wikis.length} Assigned</p>
+                  <FieldLabel>Enrolled wikis</FieldLabel>
+                  <p className="mt-2 text-base font-bold text-[#0F172A]">{s.wikis.length} assigned</p>
                 </div>
 
                 <div>
                   <FieldLabel>Progress</FieldLabel>
-                  <div className="mt-3">
+                  <div className="mt-2.5">
                     <ProgressBar completed={s.totalCompleted} total={s.totalLessons} />
-                    <p className="mt-1 text-base text-[#60656F]">{s.totalCompleted} / {s.totalLessons} lessons</p>
+                    <p className="mt-1.5 text-sm text-[#94A3B8]">{s.totalCompleted} / {s.totalLessons} lessons</p>
                   </div>
                 </div>
 
                 <div>
                   <FieldLabel>Teachers</FieldLabel>
-                  <p className="mt-2 truncate text-lg text-[#070A12]">{teacherNames.length ? teacherNames.join(', ') : '-'}</p>
+                  <p className="mt-2 truncate text-base text-[#334155]">{teacherNames.length ? teacherNames.join(', ') : '—'}</p>
                 </div>
 
                 <div>
                   <FieldLabel>Joined</FieldLabel>
-                  <p className="mt-2 whitespace-nowrap text-lg text-[#070A12]">{new Date(s.student.createdAt).toLocaleDateString()}</p>
+                  <p className="mt-2 whitespace-nowrap text-base text-[#334155]">{new Date(s.student.createdAt).toLocaleDateString()}</p>
                 </div>
 
-                <div className="flex items-center justify-end gap-5">
-                  <span className={`h-5 w-5 rounded-full ${complete === 100 ? 'bg-[#56BD68]' : complete > 0 ? 'bg-blue-400' : 'bg-gray-300'} shadow-[0_1px_5px_rgba(15,23,42,0.22)]`} />
+                <div className="flex items-center justify-end gap-4">
+                  <span className={`h-3 w-3 rounded-full ${dot} ring-4 ring-black/[0.03]`} title={`${complete}% complete`} />
                   <button
                     onClick={() => setSelectedId(s.student.id)}
-                    className="rounded-lg border border-[#C9CCD3] bg-white px-5 py-2.5 text-lg font-medium text-[#070A12] shadow-sm transition hover:bg-[#F8F9FB]"
+                    className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2 text-base font-semibold text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#F3D3CD] hover:bg-[#FDF3F1] hover:text-[#E23B2E]"
                   >
                     Details
                   </button>

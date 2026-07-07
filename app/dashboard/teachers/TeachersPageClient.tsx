@@ -3,11 +3,12 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Check, ChevronLeft, Plus, X, Search } from 'lucide-react'
 
 type Wiki = { slug: string; displayName: string }
 type Teacher = {
-  id: string; email: string; name: string | null
+  id: string; email: string; name: string | null; avatarUrl: string | null
   assignedWikiSlugs: string[] | null; disabledAt: string | null
   createdAt: string; createdByName: string | null; createdByEmail: string | null
   studentCount: number; lastLoginAt: string | null
@@ -32,12 +33,18 @@ function initials(name: string | null, email: string) {
   return source.slice(0, 2).toUpperCase()
 }
 
-function DirectoryAvatar({ name, email }: { name: string | null; email: string }) {
+function DirectoryAvatar({ name, email, src }: { name: string | null; email: string; src?: string | null }) {
   return (
-    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-base font-bold text-[#8A8F99] shadow-inner">
-      <div className="absolute top-4 h-5 w-5 rounded-full bg-[#9EA3AD]" />
-      <div className="absolute bottom-2 h-7 w-11 rounded-t-full bg-[#9EA3AD]" />
-      <span className="sr-only">{initials(name, email)}</span>
+    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-[#ECEEF2] to-[#D7DAE1] text-base font-bold text-[#8A8F99] shadow-inner">
+      {src ? (
+        <Image src={src} alt={name || email} fill sizes="64px" className="object-cover" />
+      ) : (
+        <>
+          <div className="absolute top-4 h-5 w-5 rounded-full bg-[#9EA3AD]" />
+          <div className="absolute bottom-2 h-7 w-11 rounded-t-full bg-[#9EA3AD]" />
+          <span className="sr-only">{initials(name, email)}</span>
+        </>
+      )}
     </div>
   )
 }
@@ -185,7 +192,7 @@ function AssignedWikisDialog({
         <div className="flex items-start justify-between gap-4 border-b border-[#E4E6EB] px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <DirectoryAvatar name={teacher.name} email={teacher.email} />
+              <DirectoryAvatar name={teacher.name} email={teacher.email} src={teacher.avatarUrl} />
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-semibold text-[#070A12]">Assigned wikis</h2>
                 <p className="truncate text-sm text-[#60656F]">{teacher.name || teacher.email}</p>
@@ -350,7 +357,7 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
             <section key={t.id} className="rounded-xl border border-[#D0D3DA] bg-white px-5 py-6 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
               <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_88px_110px_166px_112px_100px]">
                 <div className="flex items-center gap-4">
-                  <DirectoryAvatar name={t.name} email={t.email} />
+                  <DirectoryAvatar name={t.name} email={t.email} src={t.avatarUrl} />
                   <div className="min-w-0">
                     <p className="truncate text-xl font-semibold text-[#05070D]">{t.name || 'Unnamed'}</p>
                     <p className="truncate text-base text-[#3F434B]">{t.email}</p>

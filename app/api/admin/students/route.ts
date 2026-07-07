@@ -12,14 +12,14 @@ export async function GET() {
       where: { status: 'active' },
       orderBy: { joinedAt: 'desc' },
       include: {
-        student: { select: { id: true, email: true, name: true, createdAt: true } },
+        student: { select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true } },
         teacher: { select: { id: true, email: true, name: true } },
       },
     })
 
     // Group by student — one student may be in multiple wikis
     const studentMap = new Map<string, {
-      student: { id: string; email: string; name: string | null; createdAt: Date }
+      student: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: Date }
       wikis: { wikiSlug: string; teacherName: string | null; teacherEmail: string; joinedAt: Date }[]
     }>()
 

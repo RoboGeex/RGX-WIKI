@@ -4,7 +4,10 @@ import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Check, ChevronLeft, Plus, X, Search, GraduationCap } from 'lucide-react'
+import { Lexend } from 'next/font/google'
+import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck, BookOpen } from 'lucide-react'
+
+const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
 type Wiki = { slug: string; displayName: string }
 type Teacher = {
@@ -35,9 +38,9 @@ function initials(name: string | null, email: string) {
 
 function DirectoryAvatar({ name, email, src }: { name: string | null; email: string; src?: string | null }) {
   return (
-    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-lg font-bold text-white shadow-lg shadow-[#E23B2E]/25">
+    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-base font-bold text-white shadow-[0_6px_16px_-6px_rgba(226,59,46,0.6)] ring-1 ring-black/5">
       {src ? (
-        <Image src={src} alt={name || email} fill sizes="64px" className="object-cover" />
+        <Image src={src} alt={name || email} fill sizes="56px" className="object-cover" />
       ) : (
         <span>{initials(name, email)}</span>
       )}
@@ -46,8 +49,22 @@ function DirectoryAvatar({ name, email, src }: { name: string | null; email: str
 }
 
 function FieldLabel({ children }: { children: ReactNode }) {
-  return <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#B08981]">{children}</p>
+  return <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]">{children}</p>
 }
+
+function MetricCard({ icon, label, value, tint }: { icon: ReactNode; label: string; value: string; tint: string }) {
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-[#EAECF1] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tint}`}>{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold text-[#8A93A3]">{label}</p>
+        <p className="text-2xl font-extrabold leading-tight tracking-tight text-[#0F172A]">{value}</p>
+      </div>
+    </div>
+  )
+}
+
+const selectClass = "h-[46px] rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
 
 function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
@@ -83,51 +100,53 @@ function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onC
   }
 
   return (
-    <div className="rgx-dash fixed inset-0 z-50 flex items-center justify-center bg-[#1A1110]/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-[1.5rem] border border-[#F2E1DD] bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-[#F3E7E4] px-6 py-5">
-          <h2 className="text-2xl font-extrabold tracking-tight text-[#1A1110]">Add teacher</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-[#B08981] hover:bg-[#FBF3F1] hover:text-[#1A1110]"><X size={20} /></button>
+    <div className={`${display.variable} rgx-dash fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm`} onClick={onClose}>
+      <form onSubmit={handleSubmit} className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between border-b border-[#EEF0F4] px-6 py-5">
+          <h2 className="text-xl font-bold text-[#0F172A]">Add teacher</h2>
+          <button type="button" onClick={onClose} className="rounded-xl p-2 text-[#94A3B8] transition-colors hover:bg-[#F1F3F7] hover:text-[#0F172A]" aria-label="Close"><X size={18} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
+
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label>
-              <span className="mb-1.5 block text-[15px] font-bold text-[#6B4F4A]">Full name</span>
+              <span className="mb-1.5 block text-sm font-semibold text-[#475569]">Full name</span>
               <input type="text" required value={name} onChange={e => setName(e.target.value)}
-                className="w-full rounded-xl border border-[#EBD9D5] px-3.5 py-2.5 text-base text-[#1A1110] focus:border-[#E23B2E] focus:outline-none focus:ring-2 focus:ring-[#F0523F]/20" />
+                className="w-full rounded-xl border border-[#E2E6EC] px-3.5 py-2.5 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10" />
             </label>
             <label>
-              <span className="mb-1.5 block text-[15px] font-bold text-[#6B4F4A]">Email</span>
+              <span className="mb-1.5 block text-sm font-semibold text-[#475569]">Email</span>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-[#EBD9D5] px-3.5 py-2.5 text-base text-[#1A1110] focus:border-[#E23B2E] focus:outline-none focus:ring-2 focus:ring-[#F0523F]/20" />
+                className="w-full rounded-xl border border-[#E2E6EC] px-3.5 py-2.5 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10" />
             </label>
           </div>
           <label className="block">
-            <span className="mb-1.5 block text-[15px] font-bold text-[#6B4F4A]">Password <span className="font-medium text-[#B08981]">(min 8 characters)</span></span>
+            <span className="mb-1.5 block text-sm font-semibold text-[#475569]">Password <span className="font-medium text-[#94A3B8]">(min 8 characters)</span></span>
             <input type="text" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-[#EBD9D5] px-3.5 py-2.5 text-base text-[#1A1110] focus:border-[#E23B2E] focus:outline-none focus:ring-2 focus:ring-[#F0523F]/20" />
+              className="w-full rounded-xl border border-[#E2E6EC] px-3.5 py-2.5 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10" />
           </label>
           <div>
-            <p className="mb-2.5 text-[15px] font-bold text-[#6B4F4A]">Assign wikis</p>
+            <p className="mb-2.5 text-sm font-semibold text-[#475569]">Assign wikis</p>
             <div className="flex flex-wrap gap-2">
               {wikis.map(w => (
                 <button key={w.slug} type="button" onClick={() => toggle(w.slug)}
-                  className={`rounded-xl border px-3.5 py-2 text-[15px] font-semibold transition-colors ${selectedWikis.includes(w.slug) ? 'border-[#1A1110] bg-[#1A1110] text-white' : 'border-[#EBD9D5] bg-white text-[#6B4F4A] hover:border-[#E23B2E]/50'}`}>
+                  className={`rounded-xl border px-3.5 py-2 text-base font-medium transition-colors ${selectedWikis.includes(w.slug) ? 'border-[#E23B2E] bg-[#FDECE9] text-[#E23B2E]' : 'border-[#E2E6EC] bg-white text-[#475569] hover:border-[#CBD5E1]'}`}>
                   {w.displayName}
                 </button>
               ))}
-              {wikis.length === 0 && <p className="text-base text-[#B08981]">No published wikis yet.</p>}
+              {wikis.length === 0 && <p className="text-base text-[#94A3B8]">No published wikis yet.</p>}
             </div>
           </div>
-          {error && <p className="text-base font-medium text-[#E23B2E]">{error}</p>}
-          <div className="flex justify-end gap-2.5 pt-1">
-            <button type="button" onClick={onClose} className="rounded-xl border border-[#EBD9D5] px-4 py-2.5 text-base font-semibold text-[#6B4F4A] hover:bg-[#FBF3F1]">Cancel</button>
-            <button type="submit" disabled={creating} className="rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-2.5 text-base font-bold text-white shadow-lg shadow-[#E23B2E]/25 hover:-translate-y-0.5 transition-transform disabled:opacity-50">
-              {creating ? 'Creating…' : 'Create teacher'}
-            </button>
-          </div>
-        </form>
-      </div>
+          {error && <p className="text-base font-medium text-red-600">{error}</p>}
+        </div>
+
+        <div className="flex shrink-0 justify-end gap-2.5 border-t border-[#EEF0F4] bg-[#FAFBFC] px-6 py-4">
+          <button type="button" onClick={onClose} className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2.5 text-base font-semibold text-[#475569] transition hover:bg-[#F1F3F7]">Cancel</button>
+          <button type="submit" disabled={creating} className="rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-2.5 text-base font-bold text-white shadow-[0_8px_20px_-8px_rgba(226,59,46,0.7)] transition hover:-translate-y-0.5 disabled:opacity-50">
+            {creating ? 'Creating…' : 'Create teacher'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
@@ -137,101 +156,76 @@ function WikiEditor({ teacher, wikis, onSave, onCancel }: { teacher: Teacher; wi
   const toggle = (slug: string) => setSel(p => p.includes(slug) ? p.filter(s => s !== slug) : [...p, slug])
   return (
     <div className="space-y-4">
-      <div>
-        <p className="mb-2 text-[15px] font-bold text-[#6B4F4A]">Choose assigned wikis</p>
-        <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+      <p className="text-sm font-semibold text-[#475569]">Choose assigned wikis</p>
+      <div className="grid gap-2">
         {wikis.map(w => (
           <button key={w.slug} type="button" onClick={() => toggle(w.slug)}
-            className={`flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-left text-[15px] font-semibold transition-colors ${sel.includes(w.slug) ? 'border-[#1A1110] bg-[#1A1110] text-white' : 'border-[#EBD9D5] bg-white text-[#6B4F4A] hover:border-[#E23B2E]/50 hover:bg-[#FBF3F1]'}`}>
+            className={`flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-left text-base font-medium transition-colors ${sel.includes(w.slug) ? 'border-[#E23B2E] bg-[#FDECE9] text-[#E23B2E]' : 'border-[#E2E6EC] bg-white text-[#475569] hover:border-[#CBD5E1] hover:bg-[#FAFBFC]'}`}>
             <span className="truncate">{w.displayName}</span>
-            <span className={`ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${sel.includes(w.slug) ? 'border-white bg-white text-[#1A1110]' : 'border-[#DEC7C2] text-transparent'}`}>
+            <span className={`ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${sel.includes(w.slug) ? 'border-[#E23B2E] bg-[#E23B2E] text-white' : 'border-[#CBD5E1] text-transparent'}`}>
               <Check size={12} />
             </span>
           </button>
         ))}
         {wikis.length === 0 && (
-          <p className="rounded-xl border border-[#EBD9D5] bg-[#FBF3F1] px-3 py-5 text-center text-base text-[#8B6B65]">
+          <p className="rounded-xl border border-dashed border-[#E2E6EC] bg-[#FAFBFC] px-3 py-5 text-center text-base text-[#64748B]">
             No published wikis yet.
           </p>
         )}
-        </div>
       </div>
-      <div className="flex justify-end gap-2.5 border-t border-[#F3E7E4] pt-4">
-        <button onClick={onCancel} className="rounded-xl border border-[#EBD9D5] bg-white px-4 py-2.5 text-base font-semibold text-[#6B4F4A] hover:bg-[#FBF3F1]">Cancel</button>
-        <button onClick={() => onSave(sel)} className="rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-2.5 text-base font-bold text-white shadow-lg shadow-[#E23B2E]/25 hover:-translate-y-0.5 transition-transform">Save changes</button>
+      <div className="flex justify-end gap-2.5 pt-1">
+        <button onClick={onCancel} className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2.5 text-base font-semibold text-[#475569] transition hover:bg-[#F1F3F7]">Cancel</button>
+        <button onClick={() => onSave(sel)} className="rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-2.5 text-base font-bold text-white shadow-[0_8px_20px_-8px_rgba(226,59,46,0.7)] transition hover:-translate-y-0.5">Save changes</button>
       </div>
     </div>
   )
 }
 
 function AssignedWikisDialog({
-  teacher,
-  wikis,
-  editing,
-  onEdit,
-  onSave,
-  onClose,
+  teacher, wikis, editing, onEdit, onSave, onClose,
 }: {
-  teacher: Teacher
-  wikis: Wiki[]
-  editing: boolean
-  onEdit: () => void
-  onSave: (slugs: string[]) => void
-  onClose: () => void
+  teacher: Teacher; wikis: Wiki[]; editing: boolean
+  onEdit: () => void; onSave: (slugs: string[]) => void; onClose: () => void
 }) {
   const assigned = teacher.assignedWikiSlugs || []
   const assignedWikis = assigned.map(slug => wikis.find(w => w.slug === slug)?.displayName || slug)
 
   return (
-    <div className="rgx-dash fixed inset-0 z-50 flex items-center justify-center bg-[#1A1110]/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-[460px] overflow-hidden rounded-[1.5rem] border border-[#F2E1DD] bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-4 border-b border-[#F3E7E4] px-6 py-5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <DirectoryAvatar name={teacher.name} email={teacher.email} src={teacher.avatarUrl} />
-              <div className="min-w-0">
-                <h2 className="truncate text-xl font-extrabold tracking-tight text-[#1A1110]">Assigned wikis</h2>
-                <p className="truncate text-base text-[#8B6B65]">{teacher.name || teacher.email}</p>
-              </div>
+    <div className={`${display.variable} rgx-dash fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm`} onClick={onClose}>
+      <div className="flex max-h-[86vh] w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#EEF0F4] px-6 py-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <DirectoryAvatar name={teacher.name} email={teacher.email} src={teacher.avatarUrl} />
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-bold text-[#0F172A]">Assigned wikis</h2>
+              <p className="truncate text-base text-[#64748B]">{teacher.name || teacher.email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-[#B08981] hover:bg-[#FBF3F1] hover:text-[#1A1110]" aria-label="Close assigned wikis dialog">
-            <X size={20} />
-          </button>
+          <button onClick={onClose} className="rounded-xl p-2 text-[#94A3B8] transition-colors hover:bg-[#F1F3F7] hover:text-[#0F172A]" aria-label="Close"><X size={18} /></button>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="flex-1 overflow-y-auto bg-[#FAFBFC] px-6 py-5">
           {editing ? (
             <WikiEditor teacher={teacher} wikis={wikis} onSave={onSave} onCancel={onClose} />
           ) : assignedWikis.length > 0 ? (
-            <div>
-              <div className="mb-3 inline-flex rounded-full bg-[#FDEDEA] px-3 py-1 text-sm font-bold text-[#E23B2E]">
-                {assignedWikis.length} assigned
-              </div>
-              <div className="space-y-2">
+            <div className="space-y-2">
+              <div className="mb-3 inline-flex rounded-full bg-[#FDECE9] px-3 py-1 text-sm font-bold text-[#E23B2E]">{assignedWikis.length} assigned</div>
               {assignedWikis.map(name => (
-                <div key={name} className="flex items-center gap-3 rounded-xl border border-[#EBD9D5] bg-[#FBF3F1] px-3.5 py-3">
+                <div key={name} className="flex items-center gap-3 rounded-xl border border-[#E7E9EE] bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  <span className="min-w-0 truncate text-base font-semibold text-[#1A1110]">{name}</span>
+                  <span className="min-w-0 truncate text-base font-medium text-[#0F172A]">{name}</span>
                 </div>
               ))}
-              </div>
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-[#DEC7C2] bg-[#FBF3F1] px-4 py-8 text-center text-base text-[#8B6B65]">
-              No wikis assigned.
-            </p>
+            <p className="rounded-2xl border border-dashed border-[#E2E6EC] bg-white px-4 py-10 text-center text-base text-[#64748B]">No wikis assigned.</p>
           )}
         </div>
 
         {!editing && (
-          <div className="flex justify-end gap-2.5 border-t border-[#F3E7E4] bg-[#FCF6F5] px-6 py-4">
-            <button onClick={onClose} className="rounded-xl border border-[#EBD9D5] bg-white px-4 py-2.5 text-base font-semibold text-[#6B4F4A] hover:bg-[#FBF3F1]">
-              Close
-            </button>
-            <button onClick={onEdit} className="rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-2.5 text-base font-bold text-white shadow-lg shadow-[#E23B2E]/25 hover:-translate-y-0.5 transition-transform">
-              Edit assignment
-            </button>
+          <div className="flex shrink-0 justify-end gap-2.5 border-t border-[#EEF0F4] px-6 py-4">
+            <button onClick={onClose} className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2.5 text-base font-semibold text-[#475569] transition hover:bg-[#F1F3F7]">Close</button>
+            <button onClick={onEdit} className="rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-2.5 text-base font-bold text-white shadow-[0_8px_20px_-8px_rgba(226,59,46,0.7)] transition hover:-translate-y-0.5">Edit assignment</button>
           </div>
         )}
       </div>
@@ -301,118 +295,140 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
     return true
   })
 
+  const hasFilters = search || filterWiki || filterStatus !== 'all'
+  const activeCount = teachers.filter(t => !t.disabledAt).length
+  const totalStudents = teachers.reduce((sum, t) => sum + (t.studentCount || 0), 0)
+
   return (
-    <div className="mx-auto max-w-[1224px] space-y-7 text-[#1A1110]">
+    <div className={`${display.variable} rgx-dash mx-auto max-w-[1224px] space-y-6 text-[#0F172A]`}>
+      {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/dashboard" className="mb-3 inline-flex items-center gap-1.5 text-[15px] font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors">
-            <ChevronLeft size={18} /> Back to dashboard
+          <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748B] transition-colors hover:text-[#0F172A]">
+            <ChevronLeft size={16} /> Back to dashboard
           </Link>
-          <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight text-[#1A1110]">Teacher directory</h1>
-          <p className="mt-2 text-lg text-[#8B6B65]"><span className="font-bold text-[#1A1110]">{teachers.length}</span> teacher{teachers.length !== 1 ? 's' : ''} total</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-white shadow-[0_8px_20px_-8px_rgba(226,59,46,0.7)]">
+              <GraduationCap size={22} />
+            </div>
+            <h1 className="text-[28px] font-extrabold leading-none tracking-tight text-[#0F172A]">Teacher directory</h1>
+          </div>
         </div>
-        <button
-          onClick={() => setShowDialog(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-3 text-[15px] font-bold text-white shadow-lg shadow-[#E23B2E]/25 transition-transform hover:-translate-y-0.5"
-        >
-          <Plus size={20} /> Add teacher
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={load}
+            className="inline-flex items-center gap-2 rounded-xl border border-[#E2E6EC] bg-white px-4 py-2.5 text-base font-semibold text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#CBD5E1] hover:bg-[#FAFBFC]"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+          <button
+            onClick={() => setShowDialog(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-5 py-2.5 text-base font-bold text-white shadow-[0_8px_20px_-8px_rgba(226,59,46,0.7)] transition hover:-translate-y-0.5"
+          >
+            <Plus size={18} /> Add teacher
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_224px_224px]">
-        <label className="flex h-[52px] items-center gap-3 rounded-xl border border-[#EBD9D5] bg-white px-4 focus-within:border-[#E23B2E] focus-within:ring-2 focus-within:ring-[#F0523F]/15">
-          <Search size={20} className="text-[#B08981]" />
+      {/* Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <MetricCard icon={<GraduationCap size={20} />} label="Total teachers" value={String(teachers.length)} tint="bg-[#FDECE9] text-[#E23B2E]" />
+        <MetricCard icon={<UserCheck size={20} />} label="Active" value={String(activeCount)} tint="bg-emerald-50 text-emerald-600" />
+        <MetricCard icon={<Users size={20} />} label="Total students" value={String(totalStudents)} tint="bg-[#EAF1FE] text-[#2F6BE0]" />
+      </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_224px_224px]">
+        <label className="flex h-[46px] items-center gap-3 rounded-xl border border-[#E2E6EC] bg-white px-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition focus-within:border-[#E23B2E] focus-within:ring-4 focus-within:ring-[#E23B2E]/10">
+          <Search size={19} className="text-[#94A3B8]" />
           <input
             type="text"
             placeholder="Search by name or email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full bg-transparent text-base text-[#1A1110] placeholder:text-[#B08981] focus:outline-none"
+            className="w-full bg-transparent text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
           />
         </label>
-        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)}
-          className="h-[52px] rounded-xl border border-[#EBD9D5] bg-white px-4 text-base font-medium text-[#1A1110] focus:border-[#E23B2E] focus:outline-none">
+        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)} className={selectClass}>
           <option value="">All wikis</option>
           {wikis.map(w => <option key={w.slug} value={w.slug}>{w.displayName}</option>)}
         </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-          className="h-[52px] rounded-xl border border-[#EBD9D5] bg-white px-4 text-base font-medium text-[#1A1110] focus:border-[#E23B2E] focus:outline-none">
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className={selectClass}>
           <option value="all">All statuses</option>
           <option value="active">Active</option>
           <option value="disabled">Disabled</option>
         </select>
       </div>
 
+      {hasFilters && (
+        <button onClick={() => { setSearch(''); setFilterWiki(''); setFilterStatus('all') }}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748B] transition-colors hover:text-[#E23B2E]">
+          <X size={15} /> Clear filters
+        </button>
+      )}
+
+      {/* List */}
       <div className="space-y-4">
-        {loading && <p className="rounded-[1.5rem] border border-[#F2E1DD] bg-white p-10 text-center text-lg text-[#8B6B65]">Loading…</p>}
-        {error && <p className="rounded-[1.5rem] border border-[#F6C9C1] bg-[#FDEDEA] p-8 text-center text-lg font-medium text-[#E23B2E]">{error}</p>}
+        {loading && <p className="rounded-2xl border border-[#EAECF1] bg-white p-10 text-center text-base text-[#64748B]">Loading…</p>}
+        {error && <p className="rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-base font-medium text-red-600">{error}</p>}
         {!loading && !error && filtered.length === 0 && (
-          <div className="rounded-[1.5rem] border border-[#F2E1DD] bg-white p-14 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDEDEA] text-[#E23B2E]"><GraduationCap size={26} /></div>
-            <p className="text-lg font-bold text-[#1A1110]">No teachers found</p>
-            <p className="mt-1 text-base text-[#8B6B65]">Try a different search or add a teacher.</p>
+          <div className="rounded-2xl border border-dashed border-[#D8DEE6] bg-white p-14 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1F3F7] text-[#94A3B8]"><GraduationCap size={26} /></div>
+            <p className="text-lg font-bold text-[#0F172A]">No teachers found</p>
+            <p className="mt-1 text-base text-[#64748B]">{hasFilters ? 'Try adjusting your filters.' : 'Add a teacher to get started.'}</p>
           </div>
         )}
         {!loading && filtered.map(t => {
           const assigned = t.assignedWikiSlugs || []
+          const dot = t.disabledAt ? 'bg-[#CBD5E1]' : 'bg-emerald-500'
           return (
-            <section key={t.id} className="rounded-[1.5rem] border border-[#F2E1DD] bg-white px-6 py-6 shadow-[0_24px_50px_-42px_rgba(226,59,46,0.5)] transition-shadow hover:shadow-[0_28px_56px_-40px_rgba(226,59,46,0.55)]">
-              <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_92px_120px_170px_1fr]">
+            <section key={t.id} className="group rounded-2xl border border-[#EAECF1] bg-white px-5 py-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F3D3CD] hover:shadow-[0_18px_40px_-24px_rgba(226,59,46,0.4)]">
+              <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_110px_160px_1fr_150px]">
                 <div className="flex items-center gap-4">
                   <DirectoryAvatar name={t.name} email={t.email} src={t.avatarUrl} />
                   <div className="min-w-0">
-                    <p className="truncate text-xl font-bold text-[#1A1110]">{t.name || 'Unnamed'}</p>
-                    <p className="truncate text-base text-[#8B6B65]">{t.email}</p>
+                    <p className="truncate text-lg font-bold text-[#0F172A]">{t.name || 'Unnamed'}</p>
+                    <p className="truncate text-sm text-[#64748B]">{t.email}</p>
                   </div>
                 </div>
 
                 <div>
                   <FieldLabel>Assigned wikis</FieldLabel>
                   <button
-                    onClick={() => {
-                      setEditingId(null)
-                      setAssignedDialogTeacher(t)
-                    }}
-                    className="mt-2 inline-flex items-center rounded-xl border border-[#F2C9C1] bg-[#FDEDEA] px-3.5 py-1.5 text-[15px] font-bold text-[#E23B2E] hover:bg-[#FBDDD7]"
+                    onClick={() => { setEditingId(null); setAssignedDialogTeacher(t) }}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-[#F3D3CD] bg-[#FDF3F1] px-3.5 py-1.5 text-base font-bold text-[#E23B2E] transition hover:bg-[#FCE9E5]"
                   >
-                    {assigned.length} assigned
+                    <BookOpen size={15} /> {assigned.length} assigned
                   </button>
                 </div>
 
                 <div>
                   <FieldLabel>Students</FieldLabel>
-                  <p className="mt-2 text-xl font-bold text-[#1A1110]">{t.studentCount}</p>
+                  <p className="mt-2 text-lg font-bold text-[#0F172A]">{t.studentCount}</p>
                 </div>
 
                 <div>
                   <FieldLabel>Last login</FieldLabel>
-                  <p className="mt-2 text-base text-[#6B4F4A]">{timeAgo(t.lastLoginAt)}</p>
+                  <p className="mt-2 text-base text-[#334155]">{timeAgo(t.lastLoginAt)}</p>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <FieldLabel>Created by</FieldLabel>
                   {t.createdByName ? (
                     <div className="mt-2 leading-snug">
-                      <p className="text-base font-bold text-[#1A1110]">{t.createdByName}</p>
-                      <p className="truncate text-sm text-[#8B6B65]">{t.createdByEmail}</p>
-                      <p className="text-sm text-[#B08981]">{new Date(t.createdAt).toLocaleDateString()}</p>
+                      <p className="truncate text-base font-semibold text-[#0F172A]">{t.createdByName}</p>
+                      <p className="truncate text-sm text-[#64748B]">{new Date(t.createdAt).toLocaleDateString()}</p>
                     </div>
                   ) : (
-                    <div className="mt-2 leading-snug">
-                      <p className="text-base font-semibold text-[#6B4F4A]">—</p>
-                      <p className="text-sm text-[#B08981]">Joined {new Date(t.createdAt).toLocaleDateString()}</p>
-                    </div>
+                    <p className="mt-2 text-base text-[#334155]">Joined {new Date(t.createdAt).toLocaleDateString()}</p>
                   )}
                 </div>
 
                 <div className="flex items-center justify-end gap-4">
-                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-bold ${t.disabledAt ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
-                    <span className={`h-2 w-2 rounded-full ${t.disabledAt ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                    {t.disabledAt ? 'Disabled' : 'Active'}
-                  </span>
+                  <span className={`h-3 w-3 rounded-full ${dot} ring-4 ring-black/[0.03]`} title={t.disabledAt ? 'Disabled' : 'Active'} />
                   <button
                     onClick={() => toggleDisabled(t)}
-                    className="rounded-xl border border-[#EBD9D5] bg-white px-4 py-2.5 text-[15px] font-semibold text-[#6B4F4A] transition hover:bg-[#FBF3F1]"
+                    className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2 text-base font-semibold text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#F3D3CD] hover:bg-[#FDF3F1] hover:text-[#E23B2E]"
                   >
                     {t.disabledAt ? 'Enable' : 'Disable'}
                   </button>
@@ -431,10 +447,7 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
           editing={editingId === assignedDialogTeacher.id}
           onEdit={() => setEditingId(assignedDialogTeacher.id)}
           onSave={s => saveWikis(assignedDialogTeacher.id, s)}
-          onClose={() => {
-            setEditingId(null)
-            setAssignedDialogTeacher(null)
-          }}
+          onClose={() => { setEditingId(null); setAssignedDialogTeacher(null) }}
         />
       )}
     </div>

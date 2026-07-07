@@ -13,11 +13,24 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     })
     if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
 
-    // All active enrollments for this student
-    const enrollments = await prisma.enrollment.findMany({
-      where: { studentId: params.id, status: 'active' },
+    // All enrollments for this student, including revoked/removed ones so
+    // progress data stays visible after an invite link is disabled.
+    const allEnrollments = await prisma.enrollment.findMany({
+      where: { studentId: params.id },
+      orderBy: { joinedAt: 'desc' },
       include: { teacher: { select: { name: true, email: true } } },
     })
+
+    // One section per wiki: prefer the active enrollment, else the latest one.
+    const byWiki = new Map<string, (typeof allEnrollments)[number]>()
+    for (const e of allEnrollments) {
+      const current = byWiki.get(e.wikiSlug)
+      if (!current || (e.status === 'active' && current.status !== 'active')) {
+        byWiki.set(e.wikiSlug, e)
+      }
+    }
+    const enrollments = Array.from(byWiki.values())
+      .sort((a, b) => (a.status === b.status ? 0 : a.status === 'active' ? -1 : 1))
 
     const wikiSlugs = enrollments.map(e => e.wikiSlug)
 
@@ -64,6 +77,8 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
         wikiName: wikiNameMap[e.wikiSlug] || e.wikiSlug,
         teacher: e.teacher,
         joinedAt: e.joinedAt,
+        status: e.status,
+        removedAt: e.removedAt,
         lessons: lessonDetails,
         completed,
         inProgress,

@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { AuthError, requireRole } from '@/lib/auth'
 
 // GET /api/teacher/students?wikiSlug=xxx
-// Returns active enrollments + per-student lesson progress summary
+// Returns all enrollments (active + revoked/removed, so data from disabled
+// links stays findable) + per-student lesson progress summary
 export async function GET(request: Request) {
   try {
     const teacher = await requireRole('admin', 'teacher')
@@ -11,14 +12,26 @@ export async function GET(request: Request) {
     const wikiSlug = searchParams.get('wikiSlug') || ''
     if (!wikiSlug) return NextResponse.json({ error: 'wikiSlug required' }, { status: 400 })
 
-    const enrollments = await prisma.enrollment.findMany({
-      where: { teacherId: teacher.id, wikiSlug, status: 'active' },
+    const allEnrollments = await prisma.enrollment.findMany({
+      where: { teacherId: teacher.id, wikiSlug },
       orderBy: { joinedAt: 'desc' },
       include: {
         student: { select: { id: true, email: true, name: true, avatarUrl: true } },
         link: { select: { id: true, token: true, isActive: true } },
       },
     })
+
+    // One row per student: prefer the active enrollment; otherwise keep the
+    // most recent inactive one (a student who rejoined via a new link would
+    // otherwise appear twice).
+    const byStudent = new Map<string, (typeof allEnrollments)[number]>()
+    for (const e of allEnrollments) {
+      const current = byStudent.get(e.studentId)
+      if (!current || (e.status === 'active' && current.status !== 'active')) {
+        byStudent.set(e.studentId, e)
+      }
+    }
+    const enrollments = Array.from(byStudent.values())
 
     const studentIds = enrollments.map((e) => e.studentId)
     const lessons = await prisma.lesson.findMany({
@@ -55,6 +68,8 @@ export async function GET(request: Request) {
       return {
         enrollmentId: e.id,
         joinedAt: e.joinedAt,
+        status: e.status,
+        removedAt: e.removedAt,
         student: e.student,
         link: e.link,
         progress: { completed, in_progress: inProgress, total: lessons.length },

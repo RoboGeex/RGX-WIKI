@@ -11,7 +11,7 @@ const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700'
 
 type WikiProgress = {
   wikiSlug: string; teacherName: string | null; teacherEmail: string
-  joinedAt: string; progress: { completed: number; in_progress: number; total: number }
+  joinedAt: string; status?: string; progress: { completed: number; in_progress: number; total: number }
 }
 type StudentSummary = {
   student: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string }
@@ -25,7 +25,8 @@ type LessonDetail = {
 type WikiSection = {
   wikiSlug: string; wikiName: string
   teacher: { name: string | null; email: string }
-  joinedAt: string; lessons: LessonDetail[]
+  joinedAt: string; status?: string; removedAt?: string | null
+  lessons: LessonDetail[]
   completed: number; inProgress: number; total: number
 }
 type StudentDetail = {
@@ -132,7 +133,7 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
 
         <div className="flex-1 space-y-3 overflow-y-auto bg-[#FAFBFC] px-6 py-5">
           {loading && <p className="py-8 text-center text-base text-[#64748B]">Loading…</p>}
-          {data?.sections.length === 0 && <p className="rounded-2xl border border-dashed border-[#E2E6EC] bg-white py-10 text-center text-base text-[#64748B]">No active enrollments.</p>}
+          {data?.sections.length === 0 && <p className="rounded-2xl border border-dashed border-[#E2E6EC] bg-white py-10 text-center text-base text-[#64748B]">No enrollments yet.</p>}
           {data?.sections.map(section => (
             <div key={section.wikiSlug} className="overflow-hidden rounded-2xl border border-[#E7E9EE] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <button className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition-colors hover:bg-[#FAFBFC]"
@@ -140,7 +141,14 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDECE9] text-[#E23B2E]"><BookOpen size={18} /></div>
                   <div className="min-w-0">
-                    <p className="truncate text-base font-bold text-[#0F172A]">{section.wikiName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-base font-bold text-[#0F172A]">{section.wikiName}</p>
+                      {section.status && section.status !== 'active' && (
+                        <span className="shrink-0 rounded-full bg-[#F1F3F7] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#64748B]">
+                          {section.status === 'revoked' ? 'Link disabled' : 'Removed'}
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate text-sm text-[#64748B]">{section.teacher.name || section.teacher.email} · Joined {timeAgo(section.joinedAt)}</p>
                   </div>
                 </div>
@@ -203,12 +211,13 @@ export default function StudentsPageClient() {
   const [filterWiki, setFilterWiki] = useState('')
   const [filterTeacher, setFilterTeacher] = useState('')
   const [filterProgress, setFilterProgress] = useState('all')
+  const [includeFormer, setIncludeFormer] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/students')
+      const res = await fetch(`/api/admin/students${includeFormer ? '?includeFormer=1' : ''}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       setStudents(data.students || [])
@@ -217,7 +226,7 @@ export default function StudentsPageClient() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [includeFormer])
 
   useEffect(() => { load() }, [load])
 
@@ -304,12 +313,23 @@ export default function StudentsPageClient() {
         </select>
       </div>
 
-      {hasFilters && (
-        <button onClick={() => { setSearch(''); setFilterWiki(''); setFilterTeacher(''); setFilterProgress('all') }}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748B] transition-colors hover:text-[#E23B2E]">
-          <X size={15} /> Clear filters
-        </button>
-      )}
+      <div className="flex flex-wrap items-center gap-5">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#64748B] transition-colors hover:text-[#0F172A]">
+          <input
+            type="checkbox"
+            checked={includeFormer}
+            onChange={e => setIncludeFormer(e.target.checked)}
+            className="h-4 w-4 rounded border-[#CBD5E1] accent-[#E23B2E]"
+          />
+          Include former students (disabled links / removed)
+        </label>
+        {hasFilters && (
+          <button onClick={() => { setSearch(''); setFilterWiki(''); setFilterTeacher(''); setFilterProgress('all') }}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748B] transition-colors hover:text-[#E23B2E]">
+            <X size={15} /> Clear filters
+          </button>
+        )}
+      </div>
 
       {/* List */}
       <div className="space-y-4">
@@ -332,7 +352,12 @@ export default function StudentsPageClient() {
                 <div className="flex items-center gap-4">
                   <DirectoryAvatar name={s.student.name} email={s.student.email} src={s.student.avatarUrl} />
                   <div className="min-w-0">
-                    <p className="truncate text-lg font-bold text-[#0F172A]">{s.student.name || 'Unnamed'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-lg font-bold text-[#0F172A]">{s.student.name || 'Unnamed'}</p>
+                      {s.wikis.length > 0 && s.wikis.every(w => w.status && w.status !== 'active') && (
+                        <span className="shrink-0 rounded-full bg-[#F1F3F7] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#64748B]">Former</span>
+                      )}
+                    </div>
                     <p className="truncate text-sm text-[#64748B]">{s.student.email}</p>
                   </div>
                 </div>

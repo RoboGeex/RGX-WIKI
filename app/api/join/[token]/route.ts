@@ -36,15 +36,35 @@ export async function POST(_: Request, { params }: { params: { token: string } }
       )
     }
 
-    await prisma.enrollment.create({
-      data: {
-        studentId: user.id,
-        teacherId: link.teacherId,
-        linkId: link.id,
-        wikiSlug: link.wikiSlug,
-        status: 'active',
+    // A revoked/removed enrollment for this same link may still exist (rows are
+    // kept so teachers/admins can see past students) — reactivate it instead of
+    // creating a duplicate, which would violate the unique constraint.
+    const previous = await prisma.enrollment.findUnique({
+      where: {
+        studentId_wikiSlug_linkId: {
+          studentId: user.id,
+          wikiSlug: link.wikiSlug,
+          linkId: link.id,
+        },
       },
     })
+
+    if (previous) {
+      await prisma.enrollment.update({
+        where: { id: previous.id },
+        data: { status: 'active', removedAt: null, joinedAt: new Date() },
+      })
+    } else {
+      await prisma.enrollment.create({
+        data: {
+          studentId: user.id,
+          teacherId: link.teacherId,
+          linkId: link.id,
+          wikiSlug: link.wikiSlug,
+          status: 'active',
+        },
+      })
+    }
 
     return NextResponse.json({ ok: true, wikiSlug: link.wikiSlug })
   } catch (e: any) {

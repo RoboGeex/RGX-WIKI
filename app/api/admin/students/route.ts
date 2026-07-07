@@ -3,13 +3,18 @@ import { prisma } from '@/lib/prisma'
 import { AuthError } from '@/lib/auth'
 import { requireAdminAccess } from '@/lib/admin-auth'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireAdminAccess()
 
-    // All active enrollments with student + teacher info
-    const enrollments = await prisma.enrollment.findMany({
-      where: { status: 'active' },
+    // Default: active enrollments only. ?includeFormer=1 also returns students
+    // whose enrollments were revoked (link disabled) or removed, so their data
+    // stays findable after a teacher turns off an invite link.
+    const { searchParams } = new URL(request.url)
+    const includeFormer = searchParams.get('includeFormer') === '1'
+
+    const allEnrollments = await prisma.enrollment.findMany({
+      where: includeFormer ? {} : { status: 'active' },
       orderBy: { joinedAt: 'desc' },
       include: {
         student: { select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true } },
@@ -17,10 +22,22 @@ export async function GET() {
       },
     })
 
+    // One row per (student, wiki): prefer the active enrollment; otherwise the
+    // most recent inactive one (rejoining via a new link leaves old rows behind).
+    const byStudentWiki = new Map<string, (typeof allEnrollments)[number]>()
+    for (const e of allEnrollments) {
+      const key = `${e.studentId}::${e.wikiSlug}`
+      const current = byStudentWiki.get(key)
+      if (!current || (e.status === 'active' && current.status !== 'active')) {
+        byStudentWiki.set(key, e)
+      }
+    }
+    const enrollments = Array.from(byStudentWiki.values())
+
     // Group by student — one student may be in multiple wikis
     const studentMap = new Map<string, {
       student: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: Date }
-      wikis: { wikiSlug: string; teacherName: string | null; teacherEmail: string; joinedAt: Date }[]
+      wikis: { wikiSlug: string; teacherName: string | null; teacherEmail: string; joinedAt: Date; status: string }[]
     }>()
 
     for (const e of enrollments) {
@@ -32,6 +49,7 @@ export async function GET() {
         teacherName: e.teacher.name,
         teacherEmail: e.teacher.email,
         joinedAt: e.joinedAt,
+        status: e.status,
       })
     }
 

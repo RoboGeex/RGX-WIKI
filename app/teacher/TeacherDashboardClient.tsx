@@ -31,6 +31,8 @@ type LinkInfo = {
 type Student = {
   enrollmentId: string
   joinedAt: string
+  status: 'active' | 'removed' | 'revoked'
+  removedAt: string | null
   student: { id: string; email: string; name: string | null; avatarUrl: string | null }
   link: { id: string; isActive: boolean }
   progress: { completed: number; in_progress: number; total: number }
@@ -67,6 +69,12 @@ function lessonStatusLabel(status: Student['lessons'][number]['status']) {
   if (status === 'completed') return 'Completed'
   if (status === 'in_progress') return 'In progress'
   return 'Not started'
+}
+
+function enrollmentStatusLabel(status: Student['status']) {
+  if (status === 'revoked') return 'Link disabled'
+  if (status === 'removed') return 'Removed'
+  return 'Active'
 }
 
 function formatDate(value: string | null | undefined) {
@@ -165,8 +173,11 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [showFormer, setShowFormer] = useState(false)
 
   const activeLink = links.find((l) => l.isActive) || null
+  const activeStudents = students.filter((s) => s.status === 'active')
+  const formerStudents = students.filter((s) => s.status !== 'active')
 
   const load = useCallback(async () => {
     if (!wikiSlug) return
@@ -216,7 +227,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
 
   async function toggleLink(link: LinkInfo) {
     const disable = link.isActive
-    if (disable && !confirm('Turning this link off will revoke access for ALL students enrolled through it. Continue?')) return
+    if (disable && !confirm('Turning this link off will revoke access for ALL students enrolled through it. Their progress stays available under "Former students". Continue?')) return
     try {
       const res = await fetch(`/api/teacher/links/${link.id}`, {
         method: 'PATCH',
@@ -259,6 +270,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
       'Student name',
       'Email',
       'Joined',
+      'Status',
       'Completion',
       'Completed lessons',
       'In progress',
@@ -270,6 +282,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
       student.student.name || '',
       student.student.email,
       formatDate(student.joinedAt),
+      enrollmentStatusLabel(student.status),
       `${progressPct(student.progress)}%`,
       student.progress.completed,
       student.progress.in_progress,
@@ -401,7 +414,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
               <h2 className="text-xl font-bold text-[#1A1110]">Invite link</h2>
             </div>
             <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B4F4A] bg-[#FBF3F1] border border-[#EBD9D5] px-3 py-1.5 rounded-full">
-              <Users size={15} className="text-[#B08981]" /> {students.length} / 35
+              <Users size={15} className="text-[#B08981]" /> {activeStudents.length} / 35
             </span>
           </div>
 
@@ -471,7 +484,13 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
             </div>
           )}
 
-          {!loading && students.length > 0 && (
+          {!loading && students.length > 0 && activeStudents.length === 0 && (
+            <p className="rounded-xl border border-dashed border-[#EBD9D5] bg-[#FBF7F5] px-4 py-6 text-center text-base text-[#8B6B65]">
+              No active students right now. Past students are listed below.
+            </p>
+          )}
+
+          {!loading && activeStudents.length > 0 && (
             <div className="overflow-x-auto -mx-2">
               <table className="w-full min-w-[760px]">
                 <thead>
@@ -484,7 +503,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((s, i) => (
+                  {activeStudents.map((s, i) => (
                     <tr key={s.enrollmentId} className="border-b border-[#F6EEEC] last:border-0 hover:bg-[#FCF6F5] transition-colors">
                       <td className="py-3.5 px-2 text-[#C6A39C] font-semibold">{i + 1}</td>
                       <td className="py-3.5 px-2">
@@ -530,6 +549,85 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Former students — enrollments revoked by disabling a link, or removed manually */}
+          {!loading && formerStudents.length > 0 && (
+            <div className="mt-6 border-t border-[#F3E7E4] pt-5">
+              <button
+                onClick={() => setShowFormer(!showFormer)}
+                className="inline-flex items-center gap-2 text-[15px] font-bold text-[#6B4F4A] hover:text-[#1A1110] transition-colors"
+              >
+                <ChevronLeft size={16} className={`transition-transform ${showFormer ? '-rotate-90' : 'rotate-180'}`} />
+                Former students ({formerStudents.length})
+              </button>
+              <p className="mt-1 text-sm text-[#B08981]">
+                Students whose invite link was turned off or who were removed. Their progress is kept.
+              </p>
+
+              {showFormer && (
+                <div className="overflow-x-auto -mx-2 mt-3">
+                  <table className="w-full min-w-[760px]">
+                    <thead>
+                      <tr className="text-left text-[13px] font-bold uppercase tracking-wide text-[#B08981] border-b-2 border-[#F3E7E4]">
+                        <th className="py-3 px-2 w-8">#</th>
+                        <th className="py-3 px-2">Student</th>
+                        <th className="py-3 px-2">Joined</th>
+                        <th className="py-3 px-2">Status</th>
+                        <th className="py-3 px-2">Progress</th>
+                        <th className="py-3 px-2 text-right"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formerStudents.map((s, i) => (
+                        <tr key={s.enrollmentId} className="border-b border-[#F6EEEC] last:border-0 hover:bg-[#FCF6F5] transition-colors opacity-80">
+                          <td className="py-3.5 px-2 text-[#C6A39C] font-semibold">{i + 1}</td>
+                          <td className="py-3.5 px-2">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={s.student.name} email={s.student.email} src={s.student.avatarUrl} size="sm" />
+                              <div className="min-w-0">
+                                <p className="text-[15px] font-bold text-[#1A1110] truncate">{s.student.name || '—'}</p>
+                                <p className="text-sm text-[#8B6B65] truncate">{s.student.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-2 text-[15px] text-[#8B6B65] whitespace-nowrap">{new Date(s.joinedAt).toLocaleDateString()}</td>
+                          <td className="py-3.5 px-2 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EBE9] px-2.5 py-1 text-xs font-bold text-[#8B6B65]">
+                              <Power size={12} /> {enrollmentStatusLabel(s.status)}
+                            </span>
+                            {s.removedAt && (
+                              <p className="mt-1 text-xs text-[#B08981]">{new Date(s.removedAt).toLocaleDateString()}</p>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-2">
+                            <div className="space-y-2">
+                              <ProgressBar progress={s.progress} />
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                                  <Check size={12} /> {s.progress.completed} done
+                                </span>
+                                <span className="text-xs font-semibold text-[#8B6B65]">
+                                  {s.progress.total} total
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-2 text-right">
+                            <button
+                              onClick={() => setSelectedStudent(s)}
+                              className="inline-flex items-center gap-1 text-sm font-semibold text-[#6B4F4A] hover:text-[#1A1110] transition-colors"
+                            >
+                              <Eye size={15} /> View progress
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,11 +1,12 @@
 "use client"
 
 import type { ReactNode } from 'react'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Cairo } from 'next/font/google'
 import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp } from 'lucide-react'
+import { formatUtcDate } from '@/lib/format-date'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -36,6 +37,11 @@ type StudentDetail = {
 
 function pct(c: number, t: number) { return t > 0 ? Math.round(c / t * 100) : 0 }
 
+// Deterministic date shared with the server render (see lib/format-date).
+function formatDate(d: string | Date | null | undefined) {
+  return formatUtcDate(d)
+}
+
 function timeAgo(d: string | null) {
   if (!d) return null
   const diff = Date.now() - new Date(d).getTime()
@@ -43,7 +49,7 @@ function timeAgo(d: string | null) {
   if (days === 0) return 'today'
   if (days === 1) return 'yesterday'
   if (days < 30) return `${days}d ago`
-  return new Date(d).toLocaleDateString()
+  return formatDate(d)
 }
 
 function initials(name: string | null, email: string) {
@@ -193,7 +199,7 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
 
         {data && (
           <div className="flex shrink-0 justify-between border-t border-[#EEF0F4] px-6 py-4 text-sm text-[#94A3B8]">
-            <span>Member since {new Date(data.student.createdAt).toLocaleDateString()}</span>
+            <span>Member since {formatDate(data.student.createdAt)}</span>
             <span>{data.sections.length} wiki{data.sections.length !== 1 ? 's' : ''} enrolled</span>
           </div>
         )}
@@ -202,9 +208,11 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
   )
 }
 
-export default function StudentsPageClient() {
-  const [students, setStudents] = useState<StudentSummary[]>([])
-  const [loading, setLoading] = useState(true)
+export default function StudentsPageClient({ initialStudents = null }: { initialStudents?: StudentSummary[] | null }) {
+  const [students, setStudents] = useState<StudentSummary[]>(initialStudents ?? [])
+  // If the server pre-loaded data we render immediately; otherwise we'll fetch
+  // on mount, so start in the loading state as before.
+  const [loading, setLoading] = useState(initialStudents == null)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -228,7 +236,16 @@ export default function StudentsPageClient() {
     }
   }, [includeFormer])
 
-  useEffect(() => { load() }, [load])
+  // Fetch whenever the includeFormer toggle changes, but skip the very first
+  // render if the server already provided that exact view. Tracking the last
+  // toggle we loaded (seeded to the server's `false` view) makes this correct
+  // and idempotent under React StrictMode's double-invoked mount effects.
+  const lastLoadedFormer = useRef<boolean | null>(initialStudents != null ? false : null)
+  useEffect(() => {
+    if (lastLoadedFormer.current === includeFormer) return
+    lastLoadedFormer.current = includeFormer
+    load()
+  }, [load, includeFormer])
 
   const allWikis = [...new Set(students.flatMap(s => s.wikis.map(w => w.wikiSlug)))]
   const allTeachers = [...new Map(students.flatMap(s => s.wikis.map(w => [w.teacherEmail, w.teacherName || w.teacherEmail]))).entries()]
@@ -382,7 +399,7 @@ export default function StudentsPageClient() {
 
                 <div>
                   <FieldLabel>Joined</FieldLabel>
-                  <p className="mt-2 whitespace-nowrap text-base text-[#334155]">{new Date(s.student.createdAt).toLocaleDateString()}</p>
+                  <p className="mt-2 whitespace-nowrap text-base text-[#334155]">{formatDate(s.student.createdAt)}</p>
                 </div>
 
                 <div className="flex items-center justify-end gap-4">

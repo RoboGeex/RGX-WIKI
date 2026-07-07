@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { Cairo } from 'next/font/google'
 import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck } from 'lucide-react'
+import { formatUtcDate } from '@/lib/format-date'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -27,7 +28,7 @@ function timeAgo(d: string | null) {
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   const days = Math.floor(h / 24)
-  return days < 30 ? `${days}d ago` : new Date(d).toLocaleDateString()
+  return days < 30 ? `${days}d ago` : formatUtcDate(d)
 }
 
 function initials(name: string | null, email: string) {
@@ -234,10 +235,12 @@ function AssignedWikisDialog({
   )
 }
 
-export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
+export default function TeachersPageClient({ wikis, initialTeachers = null }: { wikis: Wiki[]; initialTeachers?: Teacher[] | null }) {
   const searchParams = useSearchParams()
-  const [teachers, setTeachers] = useState<Teacher[]>([])
-  const [loading, setLoading] = useState(true)
+  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers ?? [])
+  // If the server pre-loaded data we render immediately; otherwise fetch on
+  // mount, so start in the loading state as before.
+  const [loading, setLoading] = useState(initialTeachers == null)
   const [error, setError] = useState<string | null>(null)
   const [showDialog, setShowDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -261,7 +264,16 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Fetch on mount only when the server did NOT pre-load data. This pure guard
+  // (no "run once" ref) is idempotent under React StrictMode's double-invoked
+  // mount effects — it never re-fetches over server data. Refresh calls load()
+  // directly, so it's unaffected.
+  useEffect(() => {
+    if (initialTeachers != null) return
+    load()
+    // initialTeachers is mount-stable (from a server component); only load changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   useEffect(() => {
     if (searchParams?.get('invite') === '1') setShowDialog(true)
@@ -415,7 +427,10 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
 
                 <div>
                   <FieldLabel>Last login</FieldLabel>
-                  <p className="mt-2 text-base text-[#334155]">{timeAgo(t.lastLoginAt)}</p>
+                  {/* Relative time depends on the current clock, which differs
+                      slightly between server render and client hydration —
+                      suppress the (harmless) text mismatch. */}
+                  <p className="mt-2 text-base text-[#334155]" suppressHydrationWarning>{timeAgo(t.lastLoginAt)}</p>
                 </div>
 
                 <div className="min-w-0">
@@ -423,10 +438,10 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
                   {t.createdByName ? (
                     <div className="mt-2 leading-snug">
                       <p className="truncate text-base font-semibold text-[#0F172A]">{t.createdByName}</p>
-                      <p className="truncate text-sm text-[#64748B]">{new Date(t.createdAt).toLocaleDateString()}</p>
+                      <p className="truncate text-sm text-[#64748B]">{formatUtcDate(t.createdAt)}</p>
                     </div>
                   ) : (
-                    <p className="mt-2 text-base text-[#334155]">Joined {new Date(t.createdAt).toLocaleDateString()}</p>
+                    <p className="mt-2 text-base text-[#334155]">Joined {formatUtcDate(t.createdAt)}</p>
                   )}
                 </div>
 

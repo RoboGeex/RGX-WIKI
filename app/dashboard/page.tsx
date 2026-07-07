@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation'
 import { requireAdminAccess } from '@/lib/admin-auth'
+import { getAdminStats, getAdminPeople, getWikiHealth } from '@/lib/admin-dashboard'
 import AdminNavbar from '../../components/admin-navbar'
 import DashboardHome from './DashboardHome'
+
+// Always reflect the latest data — never statically cache.
+export const dynamic = 'force-dynamic'
 
 function getInitials(name: string | null | undefined, email: string) {
   if (name) {
@@ -25,6 +29,16 @@ export default async function DashboardPage() {
 
   if (!isAdmin) redirect('/login?redirect=/dashboard')
 
+  // Pre-load the dashboard datasets on the server so cards and tables arrive
+  // with data instead of skeletons. Each is independent; any that fails passes
+  // null and the client fetches it on mount (original behavior) — a pure upgrade.
+  const [initialStats, initialPeople, initialWikiHealth] = await Promise.all([
+    getAdminStats().catch(() => null),
+    getAdminPeople().catch(() => null),
+    getWikiHealth().catch(() => null),
+  ])
+  const serialize = (v: unknown) => (v == null ? null : JSON.parse(JSON.stringify(v)))
+
   return (
     <div
       className="min-h-screen"
@@ -35,7 +49,11 @@ export default async function DashboardPage() {
     >
       <AdminNavbar userInitials={userInitials} />
       <div className="w-full max-w-[1400px] mx-auto px-6 pt-[96px] pb-14">
-        <DashboardHome />
+        <DashboardHome
+          initialStats={serialize(initialStats)}
+          initialPeople={serialize(initialPeople)}
+          initialWikiHealth={serialize(initialWikiHealth)}
+        />
       </div>
     </div>
   )

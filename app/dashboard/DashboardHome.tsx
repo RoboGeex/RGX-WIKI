@@ -7,6 +7,7 @@ import { ChevronRight, UserPlus, RefreshCw, Users, GraduationCap, BookOpen, Acti
 import CategoriesCard from './CategoriesCard'
 import CreateWikiModal from '@/components/create-wiki-modal'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
+import { formatUtcDate } from '@/lib/format-date'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -35,7 +36,7 @@ function timeAgo(d: string | null) {
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   const days = Math.floor(h / 24)
-  return days < 30 ? `${days}d ago` : new Date(d).toLocaleDateString()
+  return days < 30 ? `${days}d ago` : formatUtcDate(d)
 }
 
 function initials(name: string | null, email: string) {
@@ -105,17 +106,27 @@ function MiniProgress({ value }: { value: number }) {
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
-export default function DashboardHome() {
-  const [stats, setStats]     = useState<Stats | null>(null)
-  const [admins, setAdmins]   = useState<AdminUser[]>([])
-  const [devs, setDevs]       = useState<DevUser[]>([])
-  const [wikiHealth, setWikiHealth] = useState<WikiHealth[]>([])
-  const [flaggedLessons, setFlaggedLessons] = useState<FlaggedLesson[]>([])
+type DashboardHomeProps = {
+  initialStats?: Stats | null
+  initialPeople?: { admins: AdminUser[]; developers: DevUser[] } | null
+  initialWikiHealth?: { wikis: WikiHealth[]; lessons: FlaggedLesson[] } | null
+}
 
-  const [loadingStats, setLoadingStats]   = useState(true)
-  const [loadingAdmins, setLoadingAdmins] = useState(true)
-  const [loadingWikis, setLoadingWikis]   = useState(true)
-  const [refreshedAt, setRefreshedAt]     = useState<Date>(new Date())
+export default function DashboardHome({
+  initialStats = null,
+  initialPeople = null,
+  initialWikiHealth = null,
+}: DashboardHomeProps) {
+  const [stats, setStats]     = useState<Stats | null>(initialStats)
+  const [admins, setAdmins]   = useState<AdminUser[]>(initialPeople?.admins ?? [])
+  const [devs, setDevs]       = useState<DevUser[]>(initialPeople?.developers ?? [])
+  const [wikiHealth, setWikiHealth] = useState<WikiHealth[]>(initialWikiHealth?.wikis ?? [])
+  const [flaggedLessons, setFlaggedLessons] = useState<FlaggedLesson[]>(initialWikiHealth?.lessons ?? [])
+
+  const [loadingStats, setLoadingStats]   = useState(initialStats == null)
+  const [loadingAdmins, setLoadingAdmins] = useState(initialPeople == null)
+  const [loadingWikis, setLoadingWikis]   = useState(initialWikiHealth == null)
+  const [refreshedAt, setRefreshedAt]     = useState<Date>(() => new Date())
 
   const [isSuperadmin, setIsSuperadmin] = useState(false)
   const [createOpen, setCreateOpen]     = useState(false)
@@ -148,7 +159,17 @@ export default function DashboardHome() {
     })
   }, [])
 
-  useEffect(() => { loadAll() }, [loadAll])
+  // Fetch on mount only when the server did NOT pre-load everything; otherwise
+  // keep the server data. This pure guard (no "run once" ref) is idempotent
+  // under React StrictMode's double-invoked mount effects — critical here
+  // because the dev-mode APIs return empty stubs that would wipe real SSR data.
+  // Refresh calls loadAll() directly, so it's unaffected.
+  useEffect(() => {
+    if (initialStats != null && initialPeople != null && initialWikiHealth != null) return
+    loadAll()
+    // initial* props are mount-stable (from a server component); only loadAll changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadAll])
 
   const totalPeople = admins.length + devs.length
   const activeNow   = admins.filter(a => a.activeSessions > 0).length
@@ -175,7 +196,9 @@ export default function DashboardHome() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />All systems
             </span>
           </div>
-          <p className="text-base text-[#8B6B65]">{dayName} · {dateStr} · last refresh {refreshLabel}</p>
+          {/* Built from the current clock (new Date()/Date.now()), which differs
+              between server render and client hydration — suppress the mismatch. */}
+          <p className="text-base text-[#8B6B65]" suppressHydrationWarning>{dayName} · {dateStr} · last refresh {refreshLabel}</p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
           <button onClick={loadAll} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#EBD9D5] text-[15px] font-semibold text-[#6B4F4A] hover:bg-white transition-colors">
@@ -247,7 +270,7 @@ export default function DashboardHome() {
                           </div>
                         </td>
                         <td className="px-4 py-4"><RoleBadge role={p.role} /></td>
-                        <td className="px-4 py-4 text-[15px] text-[#8B6B65] whitespace-nowrap">{timeAgo(p.lastLoginAt)}</td>
+                        <td className="px-4 py-4 text-[15px] text-[#8B6B65] whitespace-nowrap" suppressHydrationWarning>{timeAgo(p.lastLoginAt)}</td>
                         <td className="px-4 py-4">
                           {p.activeSessions > 0
                             ? <span className="flex items-center gap-1.5 text-[15px] font-bold text-[#1A1110]">
@@ -331,7 +354,7 @@ export default function DashboardHome() {
                           <p className="text-[15px] font-bold text-[#1A1110] truncate">{l.title}</p>
                           <p className="text-sm text-[#8B6B65] truncate">{l.wikiName}</p>
                         </div>
-                        <p className="text-sm text-[#B08981] shrink-0">{timeAgo(l.updatedAt)}</p>
+                        <p className="text-sm text-[#B08981] shrink-0" suppressHydrationWarning>{timeAgo(l.updatedAt)}</p>
                       </div>
                     ))}
                   </div>

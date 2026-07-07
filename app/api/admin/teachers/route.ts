@@ -2,41 +2,13 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { AuthError, createUser } from '@/lib/auth'
 import { requireAdminAccess } from '@/lib/admin-auth'
+import { getAdminTeachersList } from '@/lib/admin-teachers'
 
 export async function GET() {
   try {
     await requireAdminAccess()
-
-    const teachers = await prisma.user.findMany({
-      where: { role: 'teacher' },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatarUrl: true,
-        assignedWikiSlugs: true,
-        disabledAt: true,
-        createdAt: true,
-        createdByName: true,
-        createdByEmail: true,
-      },
-    })
-
-    // Enrich with student count + last login per teacher
-    const enriched = await Promise.all(teachers.map(async (t) => {
-      const [studentCount, lastSession] = await Promise.all([
-        prisma.enrollment.count({ where: { teacherId: t.id, status: 'active' } }),
-        prisma.session.findFirst({
-          where: { userId: t.id },
-          orderBy: { createdAt: 'desc' },
-          select: { createdAt: true },
-        }),
-      ])
-      return { ...t, studentCount, lastLoginAt: lastSession?.createdAt ?? null }
-    }))
-
-    return NextResponse.json({ teachers: enriched })
+    const teachers = await getAdminTeachersList()
+    return NextResponse.json({ teachers })
   } catch (e: any) {
     const status = e instanceof AuthError ? e.status : 500
     return NextResponse.json({ error: e?.message || 'Failed' }, { status })

@@ -17,7 +17,10 @@ interface Props {
   defaultLessonSlug?: string
   resourcesUrl?: string
   isHubDomain?: boolean
-  showStudentDashboardLink?: boolean
+  dashboardLink?: {
+    href: string
+    ariaLabel: string
+  }
   onLocaleChange: (l: Locale) => void
   onMenuClick: () => void
 }
@@ -29,7 +32,7 @@ export default function Navbar({
   defaultLessonSlug,
   resourcesUrl,
   isHubDomain = false,
-  showStudentDashboardLink = false,
+  dashboardLink,
   onLocaleChange,
   onMenuClick,
 }: Props) {
@@ -176,12 +179,12 @@ export default function Navbar({
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
-          {showStudentDashboardLink && (
+          {dashboardLink && (
             <Link
-              href="/home"
+              href={dashboardLink.href}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/30 px-3 text-sm font-medium text-white transition hover:bg-white/10"
-              aria-label="Back to student dashboard"
-              title="Back to student dashboard"
+              aria-label={dashboardLink.ariaLabel}
+              title={dashboardLink.ariaLabel}
             >
               <LayoutDashboard size={16} />
               <span className="hidden lg:inline">Dashboard</span>

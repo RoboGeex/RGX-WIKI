@@ -141,6 +141,13 @@ export default async function KitLayout(
   const hostHeader = headers().get('host')
   const host = normalizeHost(hostHeader)
   const isHubDomain = isHubHost(host)
+  const dashboardUser = await resolveCurrentUser()
+  const dashboardLink =
+    dashboardUser?.role === 'student'
+      ? { href: '/home', ariaLabel: 'Back to student dashboard' }
+      : dashboardUser?.role === 'teacher'
+        ? { href: '/teacher', ariaLabel: 'Back to teacher dashboard' }
+        : undefined
 
   return (
     <div className="min-h-screen bg-white sm:bg-[#eef2f1]">
@@ -151,7 +158,7 @@ export default async function KitLayout(
         defaultLessonSlug={wiki?.defaultLessonSlug}
         resourcesUrl={wiki?.resourcesUrl}
         isHubDomain={isHubDomain}
-        showStudentDashboardLink={(await resolveCurrentUser())?.role === 'student'}
+        dashboardLink={dashboardLink}
       />
       <div className="mx-auto w-full max-w-[1920px] px-0 sm:px-10 lg:px-16 pt-[120px] sm:pt-16 pb-12 lg:pt-20">
         {children}

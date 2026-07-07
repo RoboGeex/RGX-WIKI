@@ -27,6 +27,18 @@ export default async function KitLayout(
   const { locale, kit } = params
   let kitData = getKit(kit)
   let wiki = kitData ? getWiki(kitData.wikiSlug) : undefined
+  let currentUser: Awaited<ReturnType<typeof getCurrentUser>> | null | undefined
+
+  const resolveCurrentUser = async () => {
+    if (currentUser === undefined) {
+      try {
+        currentUser = await getCurrentUser()
+      } catch {
+        currentUser = null
+      }
+    }
+    return currentUser
+  }
 
   // Fallback for DB-only wikis: synthesize a kit from the Wiki row.
   if (!kitData) {
@@ -96,7 +108,7 @@ export default async function KitLayout(
       //  • teachers assigned to this wiki
       //  • students with an active enrollment for this wiki
       try {
-        const user = await getCurrentUser()
+        const user = await resolveCurrentUser()
         if (user) {
           if (user.role === 'admin') {
             isValid = true
@@ -139,6 +151,7 @@ export default async function KitLayout(
         defaultLessonSlug={wiki?.defaultLessonSlug}
         resourcesUrl={wiki?.resourcesUrl}
         isHubDomain={isHubDomain}
+        showStudentDashboardLink={(await resolveCurrentUser())?.role === 'student'}
       />
       <div className="mx-auto w-full max-w-[1920px] px-0 sm:px-10 lg:px-16 pt-[120px] sm:pt-16 pb-12 lg:pt-20">
         {children}

@@ -15,6 +15,7 @@ interface Props {
   defaultLessonSlug?: string
   resourcesUrl?: string
   isHubDomain?: boolean
+  showStudentDashboardLink?: boolean
 }
 
 export default function KitNavbar({
@@ -24,6 +25,7 @@ export default function KitNavbar({
   defaultLessonSlug,
   resourcesUrl,
   isHubDomain = false,
+  showStudentDashboardLink = false,
 }: Props) {
   const router = useRouter()
   const pathname = usePathname()
@@ -63,6 +65,7 @@ export default function KitNavbar({
         defaultLessonSlug={defaultLessonSlug}
         resourcesUrl={resourcesUrl}
         isHubDomain={isHubDomain}
+        showStudentDashboardLink={showStudentDashboardLink}
         onLocaleChange={handleLocaleChange}
         onMenuClick={() => setIsSidebarOpen(true)}
       />
@@ -79,4 +82,3 @@ export default function KitNavbar({
     </>
   )
 }
-

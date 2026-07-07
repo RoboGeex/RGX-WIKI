@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Search, Globe, Menu, ChevronDown } from 'lucide-react'
+import { Search, Globe, Menu, ChevronDown, LayoutDashboard } from 'lucide-react'
 import { Locale, t } from '../lib/i18n'
 import { setStoredLocale } from '../lib/unlock'
 import SearchPanel from './search-panel'
@@ -17,6 +17,7 @@ interface Props {
   defaultLessonSlug?: string
   resourcesUrl?: string
   isHubDomain?: boolean
+  showStudentDashboardLink?: boolean
   onLocaleChange: (l: Locale) => void
   onMenuClick: () => void
 }
@@ -28,6 +29,7 @@ export default function Navbar({
   defaultLessonSlug,
   resourcesUrl,
   isHubDomain = false,
+  showStudentDashboardLink = false,
   onLocaleChange,
   onMenuClick,
 }: Props) {
@@ -174,6 +176,18 @@ export default function Navbar({
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
+          {showStudentDashboardLink && (
+            <Link
+              href="/home"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/30 px-3 text-sm font-medium text-white transition hover:bg-white/10"
+              aria-label="Back to student dashboard"
+              title="Back to student dashboard"
+            >
+              <LayoutDashboard size={16} />
+              <span className="hidden lg:inline">Dashboard</span>
+            </Link>
+          )}
+
           <div className="relative hidden sm:block w-56">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
             <input

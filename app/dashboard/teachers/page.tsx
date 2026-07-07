@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
+import { Lexend } from 'next/font/google'
 import { requireAdminAccess } from '@/lib/admin-auth'
 import AdminNavbar from '../../../components/admin-navbar'
 import { prisma } from '@/lib/prisma'
 import TeachersPageClient from './TeachersPageClient'
+
+const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
 function getInitials(name: string | null | undefined, email: string) {
   if (name) {
@@ -32,9 +35,15 @@ export default async function TeachersPage() {
   }).catch(() => [])
 
   return (
-    <div className="min-h-screen bg-[#f5f5f4]">
+    <div
+      className={`${display.variable} rgx-dash min-h-screen`}
+      style={{
+        background:
+          'radial-gradient(circle at 10% 0%, rgba(240,82,63,0.08), transparent 38%), radial-gradient(circle at 92% 4%, rgba(240,82,63,0.06), transparent 36%), linear-gradient(180deg, #FDF6F4 0%, #FBF7F5 100%)',
+      }}
+    >
       <AdminNavbar userInitials={userInitials} />
-      <div className="dashboard-text-scale mx-auto max-w-7xl px-6 pt-20 pb-12">
+      <div className="dashboard-text-scale mx-auto max-w-[1400px] px-6 pt-[96px] pb-14">
         <TeachersPageClient wikis={wikis} />
       </div>
     </div>

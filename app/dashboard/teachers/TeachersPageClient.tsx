@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Lexend } from 'next/font/google'
-import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck, BookOpen } from 'lucide-react'
+import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck } from 'lucide-react'
 
 const display = Lexend({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-lexend' })
 
@@ -396,9 +396,9 @@ export default function TeachersPageClient({ wikis }: { wikis: Wiki[] }) {
                   <FieldLabel>Assigned wikis</FieldLabel>
                   <button
                     onClick={() => { setEditingId(null); setAssignedDialogTeacher(t) }}
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-[#F3D3CD] bg-[#FDF3F1] px-3.5 py-1.5 text-base font-bold text-[#E23B2E] transition hover:bg-[#FCE9E5]"
+                    className="mt-2 inline-flex w-fit items-center whitespace-nowrap rounded-lg border border-[#F3D3CD] bg-[#FDF3F1] px-3 py-1 text-sm font-bold text-[#E23B2E] transition hover:bg-[#FCE9E5]"
                   >
-                    <BookOpen size={15} /> {assigned.length} assigned
+                    {assigned.length} assigned
                   </button>
                 </div>
 

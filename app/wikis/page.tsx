@@ -386,7 +386,7 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
             </div>
           ) : (
             <>
-              <div className="grid gap-5 lg:grid-cols-3">
+              <div className="stagger-children grid gap-5 lg:grid-cols-3">
                 <Link
                   href={featured.href}
                   className="group relative overflow-hidden rounded-[2rem] bg-[#86ADC4] p-8 shadow-[0_24px_56px_-32px_rgba(43,42,81,0.55)] transition-all duration-300 hover:-translate-y-1"
@@ -578,7 +578,7 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
                     </p>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="stagger-children grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {extraCards.map((card, index) => {
                       const tones = [
                         'linear-gradient(140deg, rgba(var(--primary-rgb), 0.24) 0%, rgba(255, 255, 255, 0.7) 100%)',

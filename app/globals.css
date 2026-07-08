@@ -706,6 +706,88 @@ html {
 }
 
 /* ========== Cool & Light Animations ========== */
+
+/* --- Global motion layer: fast, subtle, everywhere --- */
+
+/* Route-change entrance: opacity ONLY. Never animate transform/filter here —
+   fixed navbars and modals live inside this wrapper and a transformed
+   ancestor becomes their containing block. */
+@keyframes pageEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.page-enter {
+  animation: pageEnter 0.2s ease-out both;
+}
+
+/* Fast feedback on every interactive element. Property list is explicit
+   (no `all`) to keep it cheap and avoid fighting inline styles from
+   dnd-kit / ProseMirror. */
+a,
+label,
+summary,
+input,
+select,
+textarea {
+  transition: color 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+button,
+[role='button'] {
+  transition: color 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease,
+    transform 0.12s ease;
+}
+
+/* Tactile press: quick scale-down on click/tap. */
+button:not(:disabled):active,
+[role='button']:active {
+  transform: scale(0.97);
+}
+
+/* Opt-in hover lift for cards and tiles. */
+.hover-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1),
+    0 4px 6px -4px rgba(15, 23, 42, 0.1);
+}
+
+/* Opt-in staggered entrance for lists/grids of cards. */
+.stagger-children > * {
+  opacity: 0;
+  animation: slideInUp 0.3s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.18s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.21s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.24s; }
+.stagger-children > *:nth-child(9) { animation-delay: 0.27s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(n + 11) { animation-delay: 0.33s; }
+
+/* Accessibility: collapse all motion for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
 @keyframes slideInUp {
   from {
     opacity: 0;

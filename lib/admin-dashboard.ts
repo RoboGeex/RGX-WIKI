@@ -42,7 +42,30 @@ export type AdminPerson = {
   createdAt: Date | string
   lastLoginAt: Date | null
   activeSessions: number | null
+  avatarUrl?: string | null
   role?: string
+}
+
+const developerPeopleSelect = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  createdAt: true,
+} as const
+
+async function getDeveloperAvatarMap(devPrisma: ReturnType<typeof getDevelopersPrisma>, ids: string[]) {
+  if (ids.length === 0) return new Map<string, string | null>()
+  try {
+    const placeholders = ids.map(() => '?').join(',')
+    const rows = await devPrisma.$queryRawUnsafe<Array<{ id: number; avatarUrl: string | null }>>(
+      `SELECT \`id\`, \`avatarUrl\` FROM \`Developer\` WHERE \`id\` IN (${placeholders})`,
+      ...ids.map((id) => Number(id)),
+    )
+    return new Map(rows.map((row) => [String(row.id), row.avatarUrl]))
+  } catch {
+    return new Map<string, string | null>()
+  }
 }
 
 export async function getAdminPeople(): Promise<{ admins: AdminPerson[]; developers: AdminPerson[] }> {
@@ -50,7 +73,7 @@ export async function getAdminPeople(): Promise<{ admins: AdminPerson[]; develop
   const adminUsers = await prisma.user.findMany({
     where: { role: 'admin' },
     orderBy: { createdAt: 'asc' },
-    select: { id: true, email: true, name: true, disabledAt: true, createdAt: true },
+    select: { id: true, email: true, name: true, avatarUrl: true, disabledAt: true, createdAt: true },
   })
 
   const enrichedAdmins: AdminPerson[] = await Promise.all(adminUsers.map(async (a) => {
@@ -67,6 +90,7 @@ export async function getAdminPeople(): Promise<{ admins: AdminPerson[]; develop
       id: String(a.id),
       email: a.email,
       name: a.name,
+      avatarUrl: a.avatarUrl,
       disabledAt: a.disabledAt,
       createdAt: a.createdAt,
       lastLoginAt: lastSession?.createdAt ?? null,
@@ -78,12 +102,17 @@ export async function getAdminPeople(): Promise<{ admins: AdminPerson[]; develop
   let devAdmins: AdminPerson[] = []
   try {
     const devPrisma = getDevelopersPrisma()
-    const devs = await devPrisma.developer.findMany({ orderBy: { id: 'asc' } })
+    const devs = await devPrisma.developer.findMany({
+      orderBy: { id: 'asc' },
+      select: developerPeopleSelect,
+    })
+    const avatarMap = await getDeveloperAvatarMap(devPrisma, devs.map((d) => String(d.id)))
     devAdmins = (devs as any[]).map((d) => ({
       source: 'developer' as const,
       id: String(d.id),
       email: d.email,
       name: d.name ?? null,
+      avatarUrl: avatarMap.get(String(d.id)) ?? null,
       disabledAt: null,
       createdAt: d.createdAt,
       lastLoginAt: null,   // Developer table has no session tracking

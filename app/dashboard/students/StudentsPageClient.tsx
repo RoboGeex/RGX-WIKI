@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Cairo } from 'next/font/google'
-import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp, MoreVertical, Pencil, UserX, Trash2, Eye } from 'lucide-react'
 import { formatUtcDate } from '@/lib/format-date'
 import PrettySelect from '@/components/ui/PrettySelect'
 
@@ -35,6 +35,7 @@ type StudentDetail = {
   student: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string }
   sections: WikiSection[]
 }
+type StudentActionTarget = StudentSummary
 
 function pct(c: number, t: number) { return t > 0 ? Math.round(c / t * 100) : 0 }
 
@@ -209,6 +210,129 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
   )
 }
 
+function StudentEditDialog({
+  target,
+  onClose,
+  onSaved,
+}: {
+  target: StudentActionTarget
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [name, setName] = useState(target.student.name || '')
+  const [email, setEmail] = useState(target.student.email)
+  const activeWikis = target.wikis.filter((w) => !w.status || w.status === 'active')
+  const [selectedWiki, setSelectedWiki] = useState(activeWikis[0]?.wikiSlug || '')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function requestPatch(body: Record<string, any>, busyKey: string) {
+    setBusy(busyKey)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/students/${target.student.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Action failed')
+      await onSaved()
+      onClose()
+    } catch (e: any) {
+      setError(e?.message || 'Action failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-[#EEF0F4] px-6 py-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <DirectoryAvatar name={target.student.name} email={target.student.email} src={target.student.avatarUrl} />
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-bold text-[#0F172A]">Edit student</h2>
+              <p className="truncate text-base text-[#64748B]">{target.student.email}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-xl p-2 text-[#94A3B8] transition-colors hover:bg-[#F1F3F7] hover:text-[#0F172A]" aria-label="Close"><X size={18} /></button>
+        </div>
+
+        <div className="grid gap-5 px-6 py-5 lg:grid-cols-[1fr_280px]">
+          <section>
+            <h3 className="text-base font-bold text-[#0F172A]">Profile</h3>
+            <div className="mt-3 grid gap-3">
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-[#475569]">Name</span>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-[44px] w-full rounded-xl border border-[#E2E6EC] px-3.5 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
+                />
+              </label>
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-[#475569]">Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-[44px] w-full rounded-xl border border-[#E2E6EC] px-3.5 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => requestPatch({ action: 'updateProfile', name, email }, 'profile')}
+                disabled={busy !== null}
+                className="mt-1 inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#F0523F] to-[#E23B2E] px-4 text-base font-bold text-white shadow-[0_8px_20px_-8px_rgba(226,59,46,0.7)] transition disabled:opacity-60"
+              >
+                {busy === 'profile' ? 'Saving...' : 'Save profile'}
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-[#E7E9EE] bg-[#FAFBFC] p-4">
+            <h3 className="text-base font-bold text-[#0F172A]">Access</h3>
+            <p className="mt-1 text-sm text-[#64748B]">Disable access without deleting progress history.</p>
+            <div className="mt-3 space-y-3">
+              <PrettySelect
+                value={selectedWiki}
+                onValueChange={setSelectedWiki}
+                ariaLabel="Student wiki"
+                options={activeWikis.length ? activeWikis.map(w => ({ value: w.wikiSlug, label: w.wikiSlug })) : [{ value: '', label: 'No active wikis' }]}
+                disabled={activeWikis.length === 0}
+              />
+              <button
+                type="button"
+                onClick={() => requestPatch({ action: 'removeFromWiki', wikiSlug: selectedWiki }, 'wiki')}
+                disabled={busy !== null || !selectedWiki}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E2E6EC] bg-white px-4 text-sm font-bold text-[#475569] transition hover:bg-[#F1F3F7] disabled:opacity-60"
+              >
+                <UserX size={16} /> {busy === 'wiki' ? 'Removing...' : 'Disable selected wiki'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Disable this student from all active wikis?')) {
+                    requestPatch({ action: 'removeFromAllWikis' }, 'all')
+                  }
+                }}
+                disabled={busy !== null || activeWikis.length === 0}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-bold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
+              >
+                <UserX size={16} /> {busy === 'all' ? 'Removing...' : 'Disable all wikis'}
+              </button>
+            </div>
+          </section>
+        </div>
+
+        {error && <p className="border-t border-[#EEF0F4] bg-red-50 px-6 py-3 text-sm font-semibold text-red-700">{error}</p>}
+      </div>
+    </div>
+  )
+}
+
 export default function StudentsPageClient({ initialStudents = null }: { initialStudents?: StudentSummary[] | null }) {
   const [students, setStudents] = useState<StudentSummary[]>(initialStudents ?? [])
   // If the server pre-loaded data we render immediately; otherwise we'll fetch
@@ -216,6 +340,9 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
   const [loading, setLoading] = useState(initialStudents == null)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editingStudent, setEditingStudent] = useState<StudentActionTarget | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [busyStudentId, setBusyStudentId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterWiki, setFilterWiki] = useState('')
   const [filterTeacher, setFilterTeacher] = useState('')
@@ -270,6 +397,28 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
     ? Math.round(students.reduce((sum, s) => sum + pct(s.totalCompleted, s.totalLessons), 0) / students.length)
     : 0
   const fullyComplete = students.filter(s => s.totalLessons > 0 && s.totalCompleted >= s.totalLessons).length
+
+  async function refreshStudents() {
+    await load()
+  }
+
+  async function deleteStudent(target: StudentActionTarget) {
+    if (!window.confirm(`Delete ${target.student.email}? This removes the student account, enrollments, sessions, and progress. This cannot be undone.`)) return
+    setBusyStudentId(target.student.id)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/students/${target.student.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Failed to delete student')
+      setSelectedId(null)
+      setEditingStudent(null)
+      await load()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to delete student')
+    } finally {
+      setBusyStudentId(null)
+    }
+  }
 
   return (
     <div className={`${display.variable} rgx-dash mx-auto max-w-[1224px] space-y-6 text-[#0F172A]`}>
@@ -410,7 +559,7 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
                   <p className="mt-2 whitespace-nowrap text-base text-[#334155]">{formatDate(s.student.createdAt)}</p>
                 </div>
 
-                <div className="flex items-center justify-end gap-4">
+                <div className="relative flex items-center justify-end gap-3">
                   <span className={`h-3 w-3 rounded-full ${dot} ring-4 ring-black/[0.03]`} title={`${complete}% complete`} />
                   <button
                     onClick={() => setSelectedId(s.student.id)}
@@ -418,6 +567,65 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
                   >
                     Details
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setOpenMenuId(openMenuId === s.student.id ? null : s.student.id)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E2E6EC] bg-white text-[#64748B] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#F3D3CD] hover:bg-[#FDF3F1] hover:text-[#E23B2E]"
+                    aria-label={`Options for ${s.student.name || s.student.email}`}
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+                  {openMenuId === s.student.id && (
+                    <div className="absolute right-0 top-12 z-20 w-56 overflow-hidden rounded-2xl border border-[#E2E6EC] bg-white p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.35)]">
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedId(s.student.id); setOpenMenuId(null) }}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#334155] transition hover:bg-[#FAFBFC]"
+                      >
+                        <Eye size={16} /> View profile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingStudent(s); setOpenMenuId(null) }}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#334155] transition hover:bg-[#FAFBFC]"
+                      >
+                        <Pencil size={16} /> Edit profile/access
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenMenuId(null)
+                          if (window.confirm(`Disable ${s.student.email} from all active wikis?`)) {
+                            setBusyStudentId(s.student.id)
+                            fetch(`/api/admin/students/${s.student.id}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'removeFromAllWikis' }),
+                            })
+                              .then(async (res) => {
+                                const data = await res.json().catch(() => null)
+                                if (!res.ok) throw new Error(data?.error || 'Failed to disable student')
+                                await load()
+                              })
+                              .catch((e) => setError(e?.message || 'Failed to disable student'))
+                              .finally(() => setBusyStudentId(null))
+                          }
+                        }}
+                        disabled={busyStudentId === s.student.id}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-amber-700 transition hover:bg-amber-50 disabled:opacity-60"
+                      >
+                        <UserX size={16} /> Disable all wikis
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setOpenMenuId(null); deleteStudent(s) }}
+                        disabled={busyStudentId === s.student.id}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                      >
+                        <Trash2 size={16} /> Delete account
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -426,6 +634,13 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
       </div>
 
       {selectedId && <StudentModal studentId={selectedId} onClose={() => setSelectedId(null)} />}
+      {editingStudent && (
+        <StudentEditDialog
+          target={editingStudent}
+          onClose={() => setEditingStudent(null)}
+          onSaved={refreshStudents}
+        />
+      )}
     </div>
   )
 }

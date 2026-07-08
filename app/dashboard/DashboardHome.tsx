@@ -14,9 +14,9 @@ const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '60
 type Stats = { teachers: number; students: number; wikis: number; activeSessions: number }
 type AdminUser = {
   source: 'user'; id: string; email: string; name: string | null
-  disabledAt: string | null; createdAt: string; lastLoginAt: string | null; activeSessions: number
+  avatarUrl?: string | null; disabledAt: string | null; createdAt: string; lastLoginAt: string | null; activeSessions: number
 }
-type DevUser = { source: 'developer'; id: string; email: string; name: string | null; createdAt: string; role: string }
+type DevUser = { source: 'developer'; id: string; email: string; name: string | null; avatarUrl?: string | null; createdAt: string; role: string }
 type WikiHealth = {
   slug: string; name: string; teacher: string | null
   enrolled: number; totalLessons: number; avgCompletion: number; totalInProgress: number
@@ -180,8 +180,8 @@ export default function DashboardHome({
   const refreshLabel = minAgo < 1 ? 'just now' : `${minAgo} min ago`
 
   const allPeople = [
-    ...admins.map(a => ({ id: a.id, name: a.name, email: a.email, role: 'admin', lastLoginAt: a.lastLoginAt, activeSessions: a.activeSessions })),
-    ...devs.map(d => ({ id: d.id, name: d.name, email: d.email, role: d.role, lastLoginAt: null as string | null, activeSessions: 0 })),
+    ...admins.map(a => ({ id: a.id, name: a.name, email: a.email, avatarUrl: a.avatarUrl, role: 'admin', lastLoginAt: a.lastLoginAt, activeSessions: a.activeSessions })),
+    ...devs.map(d => ({ id: d.id, name: d.name, email: d.email, avatarUrl: d.avatarUrl, role: d.role, lastLoginAt: null as string | null, activeSessions: 0 })),
   ]
 
   return (
@@ -217,7 +217,7 @@ export default function DashboardHome({
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="stagger-children grid grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard label="Active teachers" value={stats?.teachers ?? 0} sub="total registered"
           icon={GraduationCap} loading={loadingStats} href="/dashboard/teachers" />
         <StatCard label="Total students" value={stats?.students ?? 0} sub="enrolled across all wikis"
@@ -260,8 +260,12 @@ export default function DashboardHome({
                       <tr key={p.id} className="border-b border-[#F6EEEC] last:border-0 hover:bg-[#FCF6F5] transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarColor(p.id)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
-                              {initials(p.name, p.email)}
+                            <div className={`relative w-10 h-10 overflow-hidden rounded-xl bg-gradient-to-br ${avatarColor(p.id)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+                              {p.avatarUrl ? (
+                                <img src={p.avatarUrl} alt={p.name || p.email} className="h-full w-full object-cover" />
+                              ) : (
+                                initials(p.name, p.email)
+                              )}
                             </div>
                             <div className="min-w-0">
                               <p className="text-[15px] font-bold text-[#1A1110] truncate">{p.name || '—'}</p>

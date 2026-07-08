@@ -92,3 +92,86 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     return NextResponse.json({ error: e?.message || 'Failed' }, { status })
   }
 }
+
+async function requireStudent(id: string) {
+  const student = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, role: true },
+  })
+  if (!student || student.role !== 'student') {
+    return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+  }
+  return null
+}
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    await requireAdminAccess()
+    const missing = await requireStudent(params.id)
+    if (missing) return missing
+
+    const body = await request.json()
+    const action = typeof body?.action === 'string' ? body.action : 'updateProfile'
+
+    if (action === 'updateProfile') {
+      const name = typeof body?.name === 'string' ? body.name.trim() : undefined
+      const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : undefined
+      if (email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 })
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: params.id },
+        data: {
+          ...(name !== undefined && { name: name || null }),
+          ...(email !== undefined && { email }),
+        },
+        select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true },
+      })
+      return NextResponse.json({ ok: true, student: updated })
+    }
+
+    if (action === 'removeFromWiki') {
+      const wikiSlug = typeof body?.wikiSlug === 'string' ? body.wikiSlug.trim() : ''
+      if (!wikiSlug) return NextResponse.json({ error: 'Choose a wiki.' }, { status: 400 })
+
+      await prisma.enrollment.updateMany({
+        where: { studentId: params.id, wikiSlug, status: 'active' },
+        data: { status: 'removed', removedAt: new Date() },
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    if (action === 'removeFromAllWikis') {
+      await prisma.enrollment.updateMany({
+        where: { studentId: params.id, status: 'active' },
+        data: { status: 'removed', removedAt: new Date() },
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
+  } catch (e: any) {
+    const status = e instanceof AuthError ? e.status : e?.code === 'P2002' ? 409 : 500
+    const message = e?.code === 'P2002' ? 'That email is already in use.' : e?.message || 'Failed'
+    return NextResponse.json({ error: message }, { status })
+  }
+}
+
+export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  try {
+    await requireAdminAccess()
+    const missing = await requireStudent(params.id)
+    if (missing) return missing
+
+    await prisma.session.deleteMany({ where: { userId: params.id } })
+    await prisma.lessonProgress.deleteMany({ where: { studentId: params.id } })
+    await prisma.enrollment.deleteMany({ where: { studentId: params.id } })
+    await prisma.user.delete({ where: { id: params.id } })
+
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    const status = e instanceof AuthError ? e.status : 500
+    return NextResponse.json({ error: e?.message || 'Failed' }, { status })
+  }
+}

@@ -16,6 +16,7 @@ export async function GET() {
           id: process.env.LOCAL_DEV_ID || 'local-dev',
           email: process.env.LOCAL_DEV_EMAIL || 'info@robogeex.com',
           name: process.env.LOCAL_DEV_NAME || 'Local Developer',
+          avatarUrl: null,
           disabledAt: null,
           createdAt: now,
           lastLoginAt: null,

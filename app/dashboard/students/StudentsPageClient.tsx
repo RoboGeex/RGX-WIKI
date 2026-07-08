@@ -413,12 +413,13 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
 
                 <div className="relative flex items-center justify-end gap-3">
                   <span className={`h-3 w-3 rounded-full ${dot} ring-4 ring-black/[0.03]`} title={`${complete}% complete`} />
-                  <Link
-                    href={`/dashboard/students/${s.student.id}`}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(s.student.id)}
                     className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2 text-base font-semibold text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#F3D3CD] hover:bg-[#FDF3F1] hover:text-[#E23B2E]"
                   >
-                    Profile
-                  </Link>
+                    Details
+                  </button>
                   <button
                     type="button"
                     onClick={() => setOpenMenuId(openMenuId === s.student.id ? null : s.student.id)}

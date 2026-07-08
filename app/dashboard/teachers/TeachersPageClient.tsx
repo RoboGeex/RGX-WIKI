@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck } from 'lucide-react'
+import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck, Menu, Eye, Pencil } from 'lucide-react'
 import { formatUtcDate } from '@/lib/format-date'
 import PrettySelect from '@/components/ui/PrettySelect'
 
@@ -244,6 +244,7 @@ export default function TeachersPageClient({ wikis, initialTeachers = null }: { 
   const [showDialog, setShowDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [assignedDialogTeacher, setAssignedDialogTeacher] = useState<Teacher | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterWiki, setFilterWiki] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'disabled'>('all')
@@ -393,7 +394,7 @@ export default function TeachersPageClient({ wikis, initialTeachers = null }: { 
           const assigned = t.assignedWikiSlugs || []
           const dot = t.disabledAt ? 'bg-[#CBD5E1]' : 'bg-emerald-500'
           return (
-            <section key={t.id} className="group rounded-2xl border border-[#EAECF1] bg-white px-5 py-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F3D3CD] hover:shadow-[0_18px_40px_-24px_rgba(226,59,46,0.4)]">
+            <section key={t.id} className={`group relative rounded-2xl border border-[#EAECF1] bg-white px-5 py-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F3D3CD] hover:shadow-[0_18px_40px_-24px_rgba(226,59,46,0.4)] ${openMenuId === t.id ? 'z-40' : 'z-0 hover:z-10'}`}>
               <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_110px_160px_1fr_150px]">
                 <div className="flex items-center gap-4">
                   <DirectoryAvatar name={t.name} email={t.email} src={t.avatarUrl} />
@@ -438,7 +439,7 @@ export default function TeachersPageClient({ wikis, initialTeachers = null }: { 
                   )}
                 </div>
 
-                <div className="flex items-center justify-end gap-4">
+                <div className="relative flex items-center justify-end gap-3">
                   <span className={`h-3 w-3 rounded-full ${dot} ring-4 ring-black/[0.03]`} title={t.disabledAt ? 'Disabled' : 'Active'} />
                   <Link
                     href={`/dashboard/teachers/${t.id}`}
@@ -446,6 +447,32 @@ export default function TeachersPageClient({ wikis, initialTeachers = null }: { 
                   >
                     Profile
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => setOpenMenuId(openMenuId === t.id ? null : t.id)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E2E6EC] bg-white text-[#64748B] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#F3D3CD] hover:bg-[#FDF3F1] hover:text-[#E23B2E]"
+                    aria-label={`Options for ${t.name || t.email}`}
+                  >
+                    <Menu size={18} />
+                  </button>
+                  {openMenuId === t.id && (
+                    <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-[#E2E6EC] bg-white p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.35)]">
+                      <Link
+                        href={`/dashboard/teachers/${t.id}`}
+                        onClick={() => setOpenMenuId(null)}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#334155] transition hover:bg-[#FAFBFC]"
+                      >
+                        <Eye size={16} /> View profile
+                      </Link>
+                      <Link
+                        href={`/dashboard/teachers/${t.id}`}
+                        onClick={() => setOpenMenuId(null)}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#334155] transition hover:bg-[#FAFBFC]"
+                      >
+                        <Pencil size={16} /> Manage profile/actions
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>

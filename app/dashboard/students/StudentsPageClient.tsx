@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Cairo } from 'next/font/google'
-import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp, MoreVertical, Pencil, Eye } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp, Menu, Pencil, Eye } from 'lucide-react'
 import { formatUtcDate } from '@/lib/format-date'
 import PrettySelect from '@/components/ui/PrettySelect'
 
@@ -373,7 +373,7 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
           const teacherNames = [...new Set(s.wikis.map(w => w.teacherName || w.teacherEmail))]
           const dot = complete === 100 ? 'bg-emerald-500' : complete > 0 ? 'bg-amber-400' : 'bg-[#CBD5E1]'
           return (
-            <section key={s.student.id} className="group rounded-2xl border border-[#EAECF1] bg-white px-5 py-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F3D3CD] hover:shadow-[0_18px_40px_-24px_rgba(226,59,46,0.4)]">
+            <section key={s.student.id} className={`group relative rounded-2xl border border-[#EAECF1] bg-white px-5 py-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F3D3CD] hover:shadow-[0_18px_40px_-24px_rgba(226,59,46,0.4)] ${openMenuId === s.student.id ? 'z-40' : 'z-0 hover:z-10'}`}>
               <div className="grid items-center gap-6 lg:grid-cols-[300px_150px_190px_170px_120px_112px]">
                 <div className="flex items-center gap-4">
                   <DirectoryAvatar name={s.student.name} email={s.student.email} src={s.student.avatarUrl} />
@@ -425,10 +425,10 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
                     className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E2E6EC] bg-white text-[#64748B] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#F3D3CD] hover:bg-[#FDF3F1] hover:text-[#E23B2E]"
                     aria-label={`Options for ${s.student.name || s.student.email}`}
                   >
-                    <MoreVertical size={18} />
+                    <Menu size={18} />
                   </button>
                   {openMenuId === s.student.id && (
-                    <div className="absolute right-0 top-12 z-20 w-56 overflow-hidden rounded-2xl border border-[#E2E6EC] bg-white p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.35)]">
+                    <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-[#E2E6EC] bg-white p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.35)]">
                       <Link
                         href={`/dashboard/students/${s.student.id}`}
                         onClick={() => setOpenMenuId(null)}

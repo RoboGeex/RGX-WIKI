@@ -24,12 +24,23 @@ const serialize = (v: unknown) => (v == null ? null : JSON.parse(JSON.stringify(
 // preloaded, so switching tabs afterward is pure client state.
 export async function loadDashboardShellProps(initialTab: DashboardTab, redirectPath: string) {
   let userInitials = 'AD'
+  let userAvatarUrl: string | null = null
+  let userName: string | null = null
+  let userEmail: string | null = null
   let isAdmin = false
   try {
     const auth = await requireAdminAccess()
     isAdmin = true
-    if (auth.source === 'user') userInitials = getInitials(auth.user.name, auth.user.email)
-    else if (auth.source === 'developer') userInitials = getInitials(auth.dev.name ?? null, auth.dev.email ?? '')
+    if (auth.source === 'user') {
+      userInitials = getInitials(auth.user.name, auth.user.email)
+      userAvatarUrl = auth.user.avatarUrl
+      userName = auth.user.name
+      userEmail = auth.user.email
+    } else if (auth.source === 'developer') {
+      userInitials = getInitials(auth.dev.name ?? null, auth.dev.email ?? '')
+      userName = auth.dev.name ?? null
+      userEmail = auth.dev.email ?? null
+    }
   } catch { /* not authorised */ }
 
   if (!isAdmin) redirect(`/login?redirect=${redirectPath}`)
@@ -49,6 +60,9 @@ export async function loadDashboardShellProps(initialTab: DashboardTab, redirect
 
   return {
     userInitials,
+    userAvatarUrl,
+    userName,
+    userEmail,
     initialTab,
     stats: serialize(stats),
     people: serialize(people),

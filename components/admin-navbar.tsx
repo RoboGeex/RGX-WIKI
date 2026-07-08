@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Cairo } from 'next/font/google'
 import { Search, LogOut } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-cairo' })
 
@@ -12,6 +13,9 @@ export type DashboardTab = 'overview' | 'students' | 'teachers'
 
 interface AdminNavbarProps {
   userInitials?: string
+  userAvatarUrl?: string | null
+  userName?: string | null
+  userEmail?: string | null
   // When provided (on the single-page dashboard), the Dashboard/Students/Teachers
   // tabs switch in-page client state instead of navigating — instant, no server
   // round-trip. Omitted elsewhere (e.g. the editor), where they stay real links.
@@ -26,9 +30,53 @@ const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: s
   { label: 'Teachers',  href: '/dashboard/teachers', tab: 'teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
 ]
 
-export default function AdminNavbar({ userInitials = 'AD', activeTab, onSelectTab }: AdminNavbarProps) {
+function getInitials(name: string | null | undefined, email: string | null | undefined, fallback: string) {
+  if (name) {
+    const parts = name.trim().split(/\s+/)
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase()
+  }
+  if (email) return email.slice(0, 2).toUpperCase()
+  return fallback
+}
+
+export default function AdminNavbar({
+  userInitials = 'AD',
+  userAvatarUrl = null,
+  userName = null,
+  userEmail = null,
+  activeTab,
+  onSelectTab,
+}: AdminNavbarProps) {
   const pathname = usePathname() ?? ''
   const tabMode = Boolean(onSelectTab)
+  const [profile, setProfile] = useState<{ name: string | null; email: string | null; avatarUrl: string | null } | null>(null)
+
+  useEffect(() => {
+    if (userName || userEmail || userAvatarUrl) return
+    let cancelled = false
+    fetch('/api/admin/profile', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.account) {
+          setProfile({
+            name: data.account.name ?? null,
+            email: data.account.email ?? null,
+            avatarUrl: data.account.avatarUrl ?? null,
+          })
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [userAvatarUrl, userEmail, userName])
+
+  const displayName = userName ?? profile?.name ?? null
+  const displayEmail = userEmail ?? profile?.email ?? null
+  const displayAvatarUrl = userAvatarUrl ?? profile?.avatarUrl ?? null
+  const displayInitials = getInitials(displayName, displayEmail, userInitials)
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -90,12 +138,18 @@ export default function AdminNavbar({ userInitials = 'AD', activeTab, onSelectTa
             <LogOut size={17} />
             <span className="hidden sm:inline">Sign out</span>
           </button>
-          <div
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] flex items-center justify-center text-white text-sm font-bold shrink-0"
-            title="Signed in"
+          <Link
+            href="/dashboard/profile"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-sm font-bold text-white shadow-lg shadow-[#E23B2E]/20 ring-1 ring-white/10 transition hover:scale-[1.03] hover:ring-white/30"
+            title={displayName || displayEmail || 'Admin profile'}
+            aria-label="Admin profile"
           >
-            {userInitials}
-          </div>
+            {displayAvatarUrl ? (
+              <Image src={displayAvatarUrl} alt={displayName || displayEmail || 'Admin profile'} fill sizes="40px" className="object-cover" />
+            ) : (
+              displayInitials
+            )}
+          </Link>
         </div>
 
       </div>

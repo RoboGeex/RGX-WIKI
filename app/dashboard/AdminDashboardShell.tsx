@@ -10,6 +10,9 @@ type Wiki = { slug: string; displayName: string }
 
 type Props = {
   userInitials: string
+  userAvatarUrl?: string | null
+  userName?: string | null
+  userEmail?: string | null
   initialTab: DashboardTab
   // Seeded server data for each tab — see the individual clients.
   stats: any
@@ -41,6 +44,9 @@ const PATH_TAB: Record<string, DashboardTab> = {
 // navigation or refetch.
 export default function AdminDashboardShell({
   userInitials,
+  userAvatarUrl,
+  userName,
+  userEmail,
   initialTab,
   stats,
   people,
@@ -83,7 +89,14 @@ export default function AdminDashboardShell({
 
   return (
     <div className="min-h-screen bg-[#f5f5f4]" style={background ? { background } : undefined}>
-      <AdminNavbar userInitials={userInitials} activeTab={tab} onSelectTab={selectTab} />
+      <AdminNavbar
+        userInitials={userInitials}
+        userAvatarUrl={userAvatarUrl}
+        userName={userName}
+        userEmail={userEmail}
+        activeTab={tab}
+        onSelectTab={selectTab}
+      />
 
       {tab === 'overview' && (
         <div className="w-full max-w-[1400px] mx-auto px-6 pt-[96px] pb-14">

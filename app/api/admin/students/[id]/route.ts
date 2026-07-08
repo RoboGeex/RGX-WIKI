@@ -150,6 +150,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ ok: true })
     }
 
+    if (action === 'resetProgress') {
+      const wikiSlug = typeof body?.wikiSlug === 'string' ? body.wikiSlug.trim() : ''
+      await prisma.lessonProgress.deleteMany({
+        where: {
+          studentId: params.id,
+          ...(wikiSlug && { wikiSlug }),
+        },
+      })
+      return NextResponse.json({ ok: true })
+    }
+
     return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
   } catch (e: any) {
     const status = e instanceof AuthError ? e.status : e?.code === 'P2002' ? 409 : 500

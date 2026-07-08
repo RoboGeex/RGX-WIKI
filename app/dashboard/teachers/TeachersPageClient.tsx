@@ -291,19 +291,6 @@ export default function TeachersPageClient({ wikis, initialTeachers = null }: { 
     }
   }
 
-  async function toggleDisabled(t: Teacher) {
-    const disable = !t.disabledAt
-    if (disable && !confirm(`Disable ${t.email}? They will be signed out immediately.`)) return
-    try {
-      const res = await fetch(`/api/admin/teachers/${t.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ disabled: disable }) })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      await load()
-    } catch (e: any) {
-      alert(e.message)
-    }
-  }
-
   const filtered = teachers.filter(t => {
     if (search && !t.name?.toLowerCase().includes(search.toLowerCase()) && !t.email.toLowerCase().includes(search.toLowerCase())) return false
     if (filterWiki && !(t.assignedWikiSlugs || []).includes(filterWiki)) return false
@@ -453,12 +440,12 @@ export default function TeachersPageClient({ wikis, initialTeachers = null }: { 
 
                 <div className="flex items-center justify-end gap-4">
                   <span className={`h-3 w-3 rounded-full ${dot} ring-4 ring-black/[0.03]`} title={t.disabledAt ? 'Disabled' : 'Active'} />
-                  <button
-                    onClick={() => toggleDisabled(t)}
+                  <Link
+                    href={`/dashboard/teachers/${t.id}`}
                     className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2 text-base font-semibold text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#F3D3CD] hover:bg-[#FDF3F1] hover:text-[#E23B2E]"
                   >
-                    {t.disabledAt ? 'Enable' : 'Disable'}
-                  </button>
+                    Profile
+                  </Link>
                 </div>
               </div>
             </section>

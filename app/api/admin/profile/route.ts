@@ -16,6 +16,18 @@ function isEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
+async function getDeveloperAvatarUrl(devDb: ReturnType<typeof getDevelopersPrisma>, id: number) {
+  try {
+    const result = await devDb.$queryRawUnsafe<Array<{ avatarUrl: string | null }>>(
+      'SELECT `avatarUrl` FROM `Developer` WHERE `id` = ? LIMIT 1',
+      id,
+    )
+    return { supported: true, avatarUrl: result[0]?.avatarUrl ?? null }
+  } catch {
+    return { supported: false, avatarUrl: null }
+  }
+}
+
 export async function GET() {
   try {
     const auth = await requireAdminAccess()
@@ -33,6 +45,11 @@ export async function GET() {
       })
     }
 
+    const numericId = Number(auth.dev.id)
+    const avatarState = Number.isFinite(numericId)
+      ? await getDeveloperAvatarUrl(getDevelopersPrisma(), numericId)
+      : { supported: false, avatarUrl: null }
+
     return NextResponse.json({
       ok: true,
       account: {
@@ -40,8 +57,8 @@ export async function GET() {
         id: String(auth.dev.id),
         name: auth.dev.name ?? null,
         email: auth.dev.email,
-        avatarUrl: auth.dev.avatarUrl ?? null,
-        canUploadAvatar: Number.isFinite(Number(auth.dev.id)),
+        avatarUrl: avatarState.avatarUrl,
+        canUploadAvatar: avatarState.supported,
       },
     })
   } catch (e: any) {
@@ -117,11 +134,12 @@ export async function PATCH(request: Request) {
       data.password = newPassword
     }
 
-    const updated = await (devDb.developer as any).update({
+    const updated = await devDb.developer.update({
       where: { id: numericId },
       data,
-      select: { id: true, email: true, name: true, avatarUrl: true },
+      select: { id: true, email: true, name: true },
     })
+    const avatarState = await getDeveloperAvatarUrl(devDb, numericId)
 
     return NextResponse.json({
       ok: true,
@@ -130,8 +148,8 @@ export async function PATCH(request: Request) {
         id: String(updated.id),
         email: updated.email,
         name: updated.name,
-        avatarUrl: updated.avatarUrl ?? null,
-        canUploadAvatar: true,
+        avatarUrl: avatarState.avatarUrl,
+        canUploadAvatar: avatarState.supported,
       },
     })
   } catch (e: any) {

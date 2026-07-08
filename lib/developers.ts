@@ -12,6 +12,16 @@ type DbDeveloper = {
   lessonIds?: any
 }
 
+const developerBaseSelect = {
+  id: true,
+  email: true,
+  password: true,
+  name: true,
+  role: true,
+  wikiSlugs: true,
+  lessonIds: true,
+} as const
+
 function isLocalNoDbMode() {
   return process.env.NODE_ENV !== 'production' && process.env.USE_DB !== 'true'
 }
@@ -47,6 +57,19 @@ function normalizeDbDeveloper(row: DbDeveloper): DeveloperAssignment {
   }
 }
 
+async function addAvatarIfColumnExists(prisma: ReturnType<typeof getDevelopersPrisma>, row: DbDeveloper | null): Promise<DbDeveloper | null> {
+  if (!row?.id) return row
+  try {
+    const result = await prisma.$queryRawUnsafe<Array<{ avatarUrl: string | null }>>(
+      'SELECT `avatarUrl` FROM `Developer` WHERE `id` = ? LIMIT 1',
+      row.id,
+    )
+    return { ...row, avatarUrl: result[0]?.avatarUrl ?? null }
+  } catch {
+    return { ...row, avatarUrl: null }
+  }
+}
+
 export async function findDeveloperByCredentials(email: string, password: string): Promise<DeveloperAssignment | undefined> {
   const normalizedEmail = (email || '').trim().toLowerCase()
   const normalizedPassword = (password || '').trim()
@@ -60,9 +83,11 @@ export async function findDeveloperByCredentials(email: string, password: string
   }
 
   const prisma = getDevelopersPrisma()
-  const row = await prisma.developer.findUnique({
+  const baseRow = await prisma.developer.findUnique({
     where: { email: normalizedEmail },
+    select: developerBaseSelect,
   })
+  const row = await addAvatarIfColumnExists(prisma, baseRow as unknown as DbDeveloper | null)
   if (row && row.password === normalizedPassword) {
     return normalizeDbDeveloper(row as unknown as DbDeveloper)
   }
@@ -80,9 +105,10 @@ export async function findDeveloperById(id: string): Promise<DeveloperAssignment
 
   const prisma = getDevelopersPrisma()
   const numericId = Number(trimmed)
-  const row = Number.isFinite(numericId)
-    ? await prisma.developer.findUnique({ where: { id: numericId } })
-    : await prisma.developer.findUnique({ where: { email: trimmed.toLowerCase() } })
+  const baseRow = Number.isFinite(numericId)
+    ? await prisma.developer.findUnique({ where: { id: numericId }, select: developerBaseSelect })
+    : await prisma.developer.findUnique({ where: { email: trimmed.toLowerCase() }, select: developerBaseSelect })
+  const row = await addAvatarIfColumnExists(prisma, baseRow as unknown as DbDeveloper | null)
   if (row) return normalizeDbDeveloper(row as unknown as DbDeveloper)
   return undefined
 }

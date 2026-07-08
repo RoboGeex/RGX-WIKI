@@ -12,9 +12,30 @@ export const maxDuration = 60
 
 const MAX_BYTES = 5 * 1024 * 1024
 
+async function developerAvatarColumnExists(devDb: ReturnType<typeof getDevelopersPrisma>) {
+  try {
+    await devDb.$queryRawUnsafe('SELECT `avatarUrl` FROM `Developer` LIMIT 1')
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const auth = await requireAdminAccess()
+    let developerId: number | null = null
+    if (auth.source === 'developer') {
+      developerId = Number(auth.dev.id)
+      if (!Number.isFinite(developerId)) {
+        return NextResponse.json({ error: 'Local developer profiles cannot save profile images.' }, { status: 400 })
+      }
+      const devDb = getDevelopersPrisma()
+      if (!(await developerAvatarColumnExists(devDb))) {
+        return NextResponse.json({ error: 'Profile image storage is not ready yet. Apply the latest database migration first.' }, { status: 409 })
+      }
+    }
+
     const form = await request.formData()
     const file = form.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file selected.' }, { status: 400 })
@@ -48,12 +69,8 @@ export async function POST(request: Request) {
     if (auth.source === 'user') {
       await prisma.user.update({ where: { id: auth.user.id }, data: { avatarUrl } })
     } else {
-      const numericId = Number(auth.dev.id)
-      if (!Number.isFinite(numericId)) {
-        return NextResponse.json({ error: 'Local developer profiles cannot save profile images.' }, { status: 400 })
-      }
       const devDb = getDevelopersPrisma()
-      await (devDb.developer as any).update({ where: { id: numericId }, data: { avatarUrl } })
+      await (devDb.developer as any).update({ where: { id: developerId! }, data: { avatarUrl } })
     }
 
     return NextResponse.json({ ok: true, avatarUrl })
@@ -74,6 +91,9 @@ export async function DELETE() {
         return NextResponse.json({ error: 'Local developer profiles cannot save profile images.' }, { status: 400 })
       }
       const devDb = getDevelopersPrisma()
+      if (!(await developerAvatarColumnExists(devDb))) {
+        return NextResponse.json({ error: 'Profile image storage is not ready yet. Apply the latest database migration first.' }, { status: 409 })
+      }
       await (devDb.developer as any).update({ where: { id: numericId }, data: { avatarUrl: null } })
     }
     return NextResponse.json({ ok: true })

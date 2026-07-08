@@ -1,6 +1,4 @@
-import Link from "next/link"
-import { getWikis, getKits } from "@/lib/data"
-import { loadLessonsForKit } from "@/lib/lesson-loader"
+import { getWikis } from "@/lib/data"
 import EditorDashboardClient from "./dashboard/editor-dashboard-client"
 import AdminNavbar from '@/components/admin-navbar'
 import { getWikisFromDb } from '@/lib/server-data'
@@ -21,18 +19,12 @@ export default async function EditorPage() {
         })()
       : fileWikis
 
-  const summaries = await Promise.all(
-    wikis.map(async (wiki) => {
-      const kits = getKits(wiki.slug)
-      const kitSlugs = kits.length ? kits.map((kit) => kit.slug) : [wiki.slug]
-      let lessonCount = 0
-      for (const kitSlug of kitSlugs) {
-        const lessons = await loadLessonsForKit(kitSlug, wiki.slug)
-        lessonCount += lessons.length
-      }
-      return { wiki, lessonCount }
-    })
-  )
+  // Lesson counts are loaded client-side, per wiki, in parallel via
+  // /api/wikis/[slug]/lesson-count (see EditorDashboardClient) — using the exact
+  // same counting logic. Passing null keeps the initial server render fast;
+  // previously this page loaded and de-duplicated every lesson of every kit of
+  // every wiki just to show a count, which took many seconds against the DB.
+  const summaries = wikis.map((wiki) => ({ wiki, lessonCount: null }))
 
   return (
     <div className="min-h-screen bg-[#eef2f1]">

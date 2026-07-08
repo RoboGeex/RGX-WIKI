@@ -121,7 +121,7 @@ export default function Navbar({
         <div className="hidden md:flex items-center gap-6 flex-1 justify-center">
           <Link
             href={gettingStartedHref}
-            className={isGettingStartedActive ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'text-white/80 hover:text-primary pb-1 transition-colors'}
+            className={isGettingStartedActive ? 'text-primary/80 border-b-2 border-primary/80 pb-1' : 'link-underline text-white/80 hover:text-primary pb-1 transition-colors'}
           >
             {t('gettingStarted', safeLocale)}
           </Link>
@@ -143,7 +143,7 @@ export default function Navbar({
             {lessonsOpen && (
               <div
                 role="menu"
-                className="absolute left-0 top-full z-50 mt-3 w-80 max-h-[70vh] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_24px_60px_-24px_rgba(15,23,42,0.45)] ring-1 ring-slate-900/5"
+                className="animate-menu-in absolute left-0 top-full z-50 mt-3 w-80 max-h-[70vh] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_24px_60px_-24px_rgba(15,23,42,0.45)] ring-1 ring-slate-900/5"
               >
                 <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{t('lessons', safeLocale)}</div>
                 <div className="max-h-[calc(70vh-44px)] space-y-1 overflow-y-auto p-2">

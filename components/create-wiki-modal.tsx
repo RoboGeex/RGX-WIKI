@@ -192,8 +192,8 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+    <div className="animate-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="animate-pop bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Create New Wiki</h2>

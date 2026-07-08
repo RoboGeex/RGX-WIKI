@@ -142,7 +142,7 @@ export default function PrettySelect({
           id={menuId}
           role="listbox"
           className={cx(
-            'absolute left-0 right-0 z-[70] mt-2 max-h-72 overflow-y-auto rounded-xl border border-[#E2E6EC] bg-white p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset]',
+            'animate-menu-in absolute left-0 right-0 z-[70] mt-2 max-h-72 overflow-y-auto rounded-xl border border-[#E2E6EC] bg-white p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset]',
             menuClassName,
           )}
         >

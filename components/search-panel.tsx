@@ -37,7 +37,7 @@ export default function SearchPanel(
   if (!query) return null;
 
   return (
-    <div className="absolute top-full mt-2 w-full bg-white border rounded-xl shadow-lg overflow-hidden z-[70]">
+    <div className="animate-menu-in absolute top-full mt-2 w-full bg-white border rounded-xl shadow-lg overflow-hidden z-[70]">
       {loading && <div className="p-4 text-sm text-gray-500">Loading...</div>}
       {!loading && results.length === 0 && (
         <div className="p-4 text-sm text-gray-500">No results</div>

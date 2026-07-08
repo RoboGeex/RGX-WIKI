@@ -8,6 +8,8 @@ import LessonsReorderList from "@/components/editor/LessonsReorderList"
 import WikiPublishToggle from "@/components/editor/WikiPublishToggle"
 import WikiSettingsPanel from "@/components/editor/WikiSettingsPanel"
 import WikiAccessGate from "@/components/editor/WikiAccessGate"
+import WikiSidebar from "@/components/editor/WikiSidebar"
+import { getEditorSidebarData } from "@/lib/editor-wikis"
 import { getWikisFromDb } from "@/lib/server-data"
 import { getPrisma } from "@/lib/prisma-multi"
 import { findDeveloperById } from "@/lib/developers"
@@ -68,6 +70,8 @@ export default async function EditorWikiDashboardPage({
     ? `https://${HUB_DOMAIN}/${wiki.slug}`
     : undefined
 
+  const sidebar = await getEditorSidebarData()
+
   const kits = getKits(wiki.slug)
   const kitSummaries = kits.length
     ? kits.map((kit) => ({ slug: kit.slug, title: kit.title_en }))
@@ -86,24 +90,30 @@ export default async function EditorWikiDashboardPage({
   )
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12 space-y-8">
+    <div className="flex min-h-screen bg-[#eef2f1]">
       {/* Ensures the HTTP-only cookie is stamped for old sessions so the
           server-side wiki access check fires correctly on refresh */}
       <WikiAccessGate />
+
+      {/* Side panel: all manageable wikis, current one highlighted */}
+      <WikiSidebar wikis={sidebar.wikis} activeSlug={wiki.slug} isSuperadmin={sidebar.isSuperadmin} />
+
+      {/* Main area: the selected wiki's lessons */}
+      <main className="flex-1 min-w-0">
+        <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 lg:hidden">
           <Link href="/editor/dashboard" className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700">
-            ← Back to dashboard
+            ← All wikis
           </Link>
-          {selectedKitSlug && (
-            <>
-              <span className="text-xs text-gray-400">/</span>
-              <Link href={`/editor/dashboard/${wiki.slug}`} className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700">
-                Back to wiki
-              </Link>
-            </>
-          )}
         </div>
+        {selectedKitSlug && (
+          <div className="flex items-center gap-2">
+            <Link href={`/editor/dashboard/${wiki.slug}`} className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700">
+              ← Back to wiki
+            </Link>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-bold text-gray-900">
             {selectedKitSlug ? `${filteredKits[0]?.title} - Reorder Lessons` : wiki.displayName || wiki.slug}
@@ -170,6 +180,8 @@ export default async function EditorWikiDashboardPage({
           />
         </section>
       ))}
+        </div>
+      </main>
     </div>
   )
 }

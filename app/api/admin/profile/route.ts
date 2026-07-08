@@ -40,8 +40,8 @@ export async function GET() {
         id: String(auth.dev.id),
         name: auth.dev.name ?? null,
         email: auth.dev.email,
-        avatarUrl: null,
-        canUploadAvatar: false,
+        avatarUrl: auth.dev.avatarUrl ?? null,
+        canUploadAvatar: Number.isFinite(Number(auth.dev.id)),
       },
     })
   } catch (e: any) {
@@ -117,10 +117,10 @@ export async function PATCH(request: Request) {
       data.password = newPassword
     }
 
-    const updated = await devDb.developer.update({
+    const updated = await (devDb.developer as any).update({
       where: { id: numericId },
       data,
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, avatarUrl: true },
     })
 
     return NextResponse.json({
@@ -130,8 +130,8 @@ export async function PATCH(request: Request) {
         id: String(updated.id),
         email: updated.email,
         name: updated.name,
-        avatarUrl: null,
-        canUploadAvatar: false,
+        avatarUrl: updated.avatarUrl ?? null,
+        canUploadAvatar: true,
       },
     })
   } catch (e: any) {

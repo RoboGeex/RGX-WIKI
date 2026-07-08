@@ -41,8 +41,8 @@ export default async function AdminProfilePage() {
           id: String(auth.dev.id),
           name: auth.dev.name ?? null,
           email: auth.dev.email ?? '',
-          avatarUrl: null,
-          canUploadAvatar: false,
+          avatarUrl: auth.dev.avatarUrl ?? null,
+          canUploadAvatar: Number.isFinite(Number(auth.dev.id)),
         }
 
   return (
@@ -60,11 +60,11 @@ export default async function AdminProfilePage() {
         userEmail={account.email}
       />
 
-      <main className="mx-auto max-w-6xl px-6 pb-14 pt-[104px]">
-        <div className="mb-7">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#E23B2E]">Admin profile</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#0F172A]">Account settings</h1>
-          <p className="mt-2 max-w-2xl text-base text-[#64748B]">
+      <main className="mx-auto max-w-6xl px-6 pb-6 pt-[88px]">
+        <div className="mb-4">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E23B2E]">Admin profile</p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#0F172A]">Account settings</h1>
+          <p className="mt-1 max-w-2xl text-sm text-[#64748B]">
             Manage the admin identity used for dashboard access, profile display, and sign-in.
           </p>
         </div>

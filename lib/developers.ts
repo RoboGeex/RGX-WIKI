@@ -6,6 +6,7 @@ type DbDeveloper = {
   email: string
   password: string
   name?: string | null
+  avatarUrl?: string | null
   role?: string | null
   wikiSlugs?: any
   lessonIds?: any
@@ -39,6 +40,7 @@ function normalizeDbDeveloper(row: DbDeveloper): DeveloperAssignment {
     email: row.email,
     password: row.password,
     name: row.name || undefined,
+    avatarUrl: row.avatarUrl || null,
     role: (row.role || undefined) as any,
     wikiSlugs,
     lessonIds,

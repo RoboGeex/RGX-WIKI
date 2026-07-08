@@ -38,6 +38,7 @@ export async function loadDashboardShellProps(initialTab: DashboardTab, redirect
       userEmail = auth.user.email
     } else if (auth.source === 'developer') {
       userInitials = getInitials(auth.dev.name ?? null, auth.dev.email ?? '')
+      userAvatarUrl = auth.dev.avatarUrl ?? null
       userName = auth.dev.name ?? null
       userEmail = auth.dev.email ?? null
     }

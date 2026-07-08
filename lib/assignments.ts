@@ -8,6 +8,7 @@ export interface DeveloperAssignment {
   id: string
   email?: string
   name?: string
+  avatarUrl?: string | null
   role?: DeveloperRole
   wikiSlugs?: string[]
   lessonIds?: string[]

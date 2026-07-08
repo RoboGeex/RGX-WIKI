@@ -1,9 +1,12 @@
-import { redirect } from 'next/navigation'
+import AdminDashboardShell from '../AdminDashboardShell'
+import { loadDashboardShellProps } from '../load-dashboard-shell-props'
 
-// Teachers now lives as a tab inside the single-page dashboard. Redirect any
-// direct hits / old bookmarks to the dashboard on the teachers tab.
+// A real route (not a redirect) so bookmarks/refreshes/shared links land
+// directly here. It renders the same shell as /dashboard, with every tab's
+// data preloaded, so switching tabs afterward is pure client state.
 export const dynamic = 'force-dynamic'
 
-export default function TeachersRedirect() {
-  redirect('/dashboard?tab=teachers')
+export default async function TeachersPage() {
+  const props = await loadDashboardShellProps('teachers', '/dashboard/teachers')
+  return <AdminDashboardShell {...props} />
 }

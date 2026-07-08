@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import AdminNavbar, { type DashboardTab } from '@/components/admin-navbar'
 import DashboardHome from './DashboardHome'
 import StudentsPageClient from './students/StudentsPageClient'
@@ -20,10 +20,25 @@ type Props = {
   wikis: Wiki[]
 }
 
+const TAB_PATH: Record<DashboardTab, string> = {
+  overview: '/dashboard',
+  students: '/dashboard/students',
+  teachers: '/dashboard/teachers',
+}
+const PATH_TAB: Record<string, DashboardTab> = {
+  '/dashboard': 'overview',
+  '/dashboard/students': 'students',
+  '/dashboard/teachers': 'teachers',
+}
+
 // Single-page admin dashboard. All three tabs' data is loaded once on the
 // server and held here, so switching tabs is pure client state — instant, with
-// no navigation or refetch. The URL is kept in sync (?tab=) for deep links and
-// refreshes without triggering a server round-trip.
+// no navigation or refetch. /dashboard, /dashboard/students, and
+// /dashboard/teachers are all real routes that render this same shell (see
+// load-dashboard-shell-props), so bookmarks/refreshes/shared links work
+// normally; switching tabs afterward only rewrites the URL via the History API
+// (pushState), which Next's router never sees, so it never triggers a
+// navigation or refetch.
 export default function AdminDashboardShell({
   userInitials,
   initialTab,
@@ -35,17 +50,31 @@ export default function AdminDashboardShell({
   wikis,
 }: Props) {
   const [tab, setTab] = useState<DashboardTab>(initialTab)
+  // Tracks the current tab outside React state so pushState fires exactly once
+  // per click. (A setState updater is the wrong place for this: React can
+  // invoke updater functions more than once per update — e.g. under dev Strict
+  // Mode — which would silently push duplicate history entries and desync the
+  // Back button.)
+  const tabRef = useRef(initialTab)
 
   const selectTab = useCallback((next: DashboardTab) => {
+    if (tabRef.current === next) return
+    tabRef.current = next
+    window.history.pushState({ tab: next }, '', TAB_PATH[next])
     setTab(next)
   }, [])
 
-  // Reflect the active tab in the URL without navigating (keeps refresh/deep
-  // links working; the server reads ?tab= to pick the initial tab).
+  // Browser Back/Forward moves through the pushState entries above without a
+  // real navigation — sync our tab state to match.
   useEffect(() => {
-    const url = tab === 'overview' ? '/dashboard' : `/dashboard?tab=${tab}`
-    window.history.replaceState(window.history.state, '', url)
-  }, [tab])
+    function onPopState() {
+      const next = PATH_TAB[window.location.pathname] ?? 'overview'
+      tabRef.current = next
+      setTab(next)
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
 
   const background =
     tab === 'overview'

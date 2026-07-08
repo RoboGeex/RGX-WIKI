@@ -19,9 +19,9 @@ interface Params {
   params: { wiki: string }
 }
 
-export default async function EditorWikiDashboardPage({ 
-  params, 
-  searchParams 
+export default async function EditorWikiDashboardPage({
+  params,
+  searchParams
 }: Params & { searchParams: { kit?: string } }) {
   const { wiki: wikiSlug } = params
   const { kit: selectedKitSlug } = searchParams
@@ -64,7 +64,7 @@ export default async function EditorWikiDashboardPage({
   }
 
   // Only use absolute domain URL in production to ensure local previews work via relative paths
-  const viewBaseUrl = process.env.NODE_ENV === 'production' 
+  const viewBaseUrl = process.env.NODE_ENV === 'production'
     ? `https://${HUB_DOMAIN}/${wiki.slug}`
     : undefined
 
@@ -74,7 +74,7 @@ export default async function EditorWikiDashboardPage({
     : [{ slug: wiki.slug, title: wiki.displayName || wiki.slug }]
 
   // Filter to specific kit if provided
-  const filteredKits = selectedKitSlug 
+  const filteredKits = selectedKitSlug
     ? kitSummaries.filter(kit => kit.slug === selectedKitSlug)
     : kitSummaries
 

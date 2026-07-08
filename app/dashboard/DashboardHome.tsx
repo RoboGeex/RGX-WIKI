@@ -299,7 +299,7 @@ export default function DashboardHome({
           <div className="bg-white border border-[#F2E1DD] rounded-[1.5rem] overflow-hidden">
             <div className="px-6 py-5 border-b border-[#F3E7E4] flex items-center justify-between">
               <h3 className="text-xl font-bold text-[#1A1110]">Wiki overview</h3>
-              <Link href="/editor" className="text-[15px] font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors">Manage →</Link>
+              <Link href="/editor/dashboard" className="text-[15px] font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors">Manage →</Link>
             </div>
             {loadingWikis
               ? <div className="p-6 space-y-2.5">{[1,2,3].map(i => <div key={i} className="h-9 bg-[#F7EFED] rounded-lg animate-pulse" />)}</div>

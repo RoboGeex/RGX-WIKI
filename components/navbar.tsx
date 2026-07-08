@@ -129,14 +129,24 @@ export default function Navbar({
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setLessonsOpen((prev) => !prev)}
-              className={isLessonsPage ? 'flex items-center gap-1 text-primary/80 border-b-2 border-primary/80 pb-1' : 'flex items-center gap-1 text-white/80 hover:text-primary pb-1 transition-colors'}
+              aria-expanded={lessonsOpen}
+              aria-haspopup="menu"
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
+                isLessonsPage || lessonsOpen
+                  ? 'bg-white/10 text-primary'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`}
             >
-              {t('lessons', safeLocale)} <ChevronDown size={14} />
+              {t('lessons', safeLocale)}
+              <ChevronDown size={14} className={`transition-transform ${lessonsOpen ? 'rotate-180' : ''}`} />
             </button>
             {lessonsOpen && (
-              <div className="absolute left-0 top-full mt-2 w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg z-50">
-                <div className="p-3 text-xs uppercase tracking-wider text-gray-500">{t('lessons', safeLocale)}</div>
-                <div className="divide-y divide-gray-100">
+              <div
+                role="menu"
+                className="absolute left-0 top-full z-50 mt-3 w-80 max-h-[70vh] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_24px_60px_-24px_rgba(15,23,42,0.45)] ring-1 ring-slate-900/5"
+              >
+                <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{t('lessons', safeLocale)}</div>
+                <div className="max-h-[calc(70vh-44px)] space-y-1 overflow-y-auto p-2">
                   {(() => {
                     let displayIdx = 0;
                     return sortedLessons.map((lesson) => {
@@ -149,16 +159,17 @@ export default function Navbar({
                         <Link
                           key={lesson.id}
                           href={buildLessonLink(lesson.slug)}
-                          className={`block px-3 py-2 text-sm transition ${
+                          role="menuitem"
+                          className={`group block rounded-xl px-3 py-2.5 text-sm transition ${
                             isActive 
-                              ? "bg-primary/10 text-primary font-bold" 
-                              : "text-gray-700 hover:bg-primary/10 hover:text-primary"
+                              ? "bg-primary/10 text-primary shadow-sm"
+                              : "text-slate-700 hover:bg-slate-50 hover:text-primary"
                           }`}
                           onClick={() => setLessonsOpen(false)}
                         >
-                          <div className="font-medium">
+                          <div className="flex items-center gap-2 font-semibold">
                             {!isSpecial && <span className="mr-1">{displayIdx}.</span>}
-                            {safeLocale === 'ar' ? lesson.title_ar : lesson.title_en}
+                            <span className="min-w-0 truncate">{safeLocale === 'ar' ? lesson.title_ar : lesson.title_en}</span>
                           </div>
                           <div className="text-[10px] text-gray-400">{lesson.duration_min}m · {lesson.difficulty}</div>
                         </Link>

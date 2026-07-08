@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation'
 import { Cairo } from 'next/font/google'
 import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck } from 'lucide-react'
 import { formatUtcDate } from '@/lib/format-date'
+import PrettySelect from '@/components/ui/PrettySelect'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -65,8 +66,6 @@ function MetricCard({ icon, label, value, tint }: { icon: ReactNode; label: stri
     </div>
   )
 }
-
-const selectClass = "h-[46px] rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
 
 function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
@@ -367,15 +366,22 @@ export default function TeachersPageClient({ wikis, initialTeachers = null }: { 
             className="w-full bg-transparent text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
           />
         </label>
-        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)} className={selectClass}>
-          <option value="">All wikis</option>
-          {wikis.map(w => <option key={w.slug} value={w.slug}>{w.displayName}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className={selectClass}>
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="disabled">Disabled</option>
-        </select>
+        <PrettySelect
+          value={filterWiki}
+          onValueChange={setFilterWiki}
+          ariaLabel="Filter by wiki"
+          options={[{ value: '', label: 'All wikis' }, ...wikis.map(w => ({ value: w.slug, label: w.displayName }))]}
+        />
+        <PrettySelect
+          value={filterStatus}
+          onValueChange={(value) => setFilterStatus(value as typeof filterStatus)}
+          ariaLabel="Filter by status"
+          options={[
+            { value: 'all', label: 'All statuses' },
+            { value: 'active', label: 'Active' },
+            { value: 'disabled', label: 'Disabled' },
+          ]}
+        />
       </div>
 
       {hasFilters && (

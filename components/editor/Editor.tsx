@@ -43,6 +43,7 @@ import './hljs.css'
 import { applyDeveloperHeader, getDeveloperId, rememberDeveloperId } from './dev-identity'
 import DeveloperLogin from './DeveloperLogin'
 import Sidebar from '../sidebar'
+import PrettySelect from '@/components/ui/PrettySelect'
 import { HUB_DOMAIN } from '@/lib/domains'
 import { buildDocumentFromSections, splitDocumentBySection, type LessonSectionKey } from '@/lib/lesson-sections'
 import { readSessionStorageJson } from '@/lib/session-storage'
@@ -3629,32 +3630,32 @@ export default function WikiEditor() {
                   <label className="block text-sm font-semibold text-slate-700 mb-1">
                     {activeEditorTab === 'ar' ? 'المستوى' : 'Level'}
                   </label>
-                  <select
+                  <PrettySelect
                     value={selectedDifficultyValue}
-                    onChange={(e) => {
-                      const val = e.target.value
+                    onValueChange={(val) => {
                       setMeta((m: typeof meta) => {
                         const next = { ...m, difficulty: val }
                         try { sessionStorage.setItem('lessonMeta', JSON.stringify(next)) } catch { }
                         return next
                       })
                     }}
-                    className={`w-full px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#f05d4e] focus:border-transparent transition-all ${activeEditorTab === 'ar' ? 'text-right' : ''}`}
+                    options={[
+                      ...difficultyOptions.map((option) => ({
+                        value: option.value,
+                        label: activeEditorTab === 'ar' ? option.labelAr : option.labelEn,
+                      })),
+                      ...(showCustomDifficultyOption
+                        ? [{
+                            value: selectedDifficultyValue,
+                            label: `Custom (${selectedDifficultyValue})`,
+                          }]
+                        : []),
+                    ]}
+                    ariaLabel="Level"
+                    buttonClassName="min-h-[34px] rounded-lg border-slate-200 bg-slate-50 px-4 py-1.5 text-sm text-slate-900 focus:border-[#f05d4e] focus:ring-2 focus:ring-[#f05d4e]/20"
+                    optionClassName="text-sm"
                     dir={activeEditorTab === 'ar' ? 'rtl' : 'ltr'}
-                  >
-                    {difficultyOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {activeEditorTab === 'ar' ? option.labelAr : option.labelEn}
-                      </option>
-                    ))}
-                    {showCustomDifficultyOption && (
-                      <option value={selectedDifficultyValue}>
-                        {activeEditorTab === 'ar'
-                          ? `مخصص (${selectedDifficultyValue})`
-                          : `Custom (${selectedDifficultyValue})`}
-                      </option>
-                    )}
-                  </select>
+                  />
                   <p className="text-xs text-slate-400 mt-0.5">
                     {activeEditorTab === 'ar'
                       ? 'اختر مستوى الدرس المناسب.'

@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { Cairo } from 'next/font/google'
 import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp } from 'lucide-react'
 import { formatUtcDate } from '@/lib/format-date'
+import PrettySelect from '@/components/ui/PrettySelect'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -270,8 +271,6 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
     : 0
   const fullyComplete = students.filter(s => s.totalLessons > 0 && s.totalCompleted >= s.totalLessons).length
 
-  const selectClass = "h-[46px] rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#334155] shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
-
   return (
     <div className={`${display.variable} rgx-dash mx-auto max-w-[1224px] space-y-6 text-[#0F172A]`}>
       {/* Header */}
@@ -314,20 +313,29 @@ export default function StudentsPageClient({ initialStudents = null }: { initial
             className="w-full bg-transparent text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
           />
         </label>
-        <select value={filterWiki} onChange={e => setFilterWiki(e.target.value)} className={selectClass}>
-          <option value="">All wikis</option>
-          {allWikis.map(w => <option key={w} value={w}>{w}</option>)}
-        </select>
-        <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)} className={selectClass}>
-          <option value="">All teachers</option>
-          {allTeachers.map(([email, name]) => <option key={email} value={email}>{name}</option>)}
-        </select>
-        <select value={filterProgress} onChange={e => setFilterProgress(e.target.value)} className={selectClass}>
-          <option value="all">All progress</option>
-          <option value="not_started">Not started</option>
-          <option value="in_progress">In progress</option>
-          <option value="completed">Completed</option>
-        </select>
+        <PrettySelect
+          value={filterWiki}
+          onValueChange={setFilterWiki}
+          ariaLabel="Filter by wiki"
+          options={[{ value: '', label: 'All wikis' }, ...allWikis.map(w => ({ value: w, label: w }))]}
+        />
+        <PrettySelect
+          value={filterTeacher}
+          onValueChange={setFilterTeacher}
+          ariaLabel="Filter by teacher"
+          options={[{ value: '', label: 'All teachers' }, ...allTeachers.map(([email, name]) => ({ value: email, label: name }))]}
+        />
+        <PrettySelect
+          value={filterProgress}
+          onValueChange={setFilterProgress}
+          ariaLabel="Filter by progress"
+          options={[
+            { value: 'all', label: 'All progress' },
+            { value: 'not_started', label: 'Not started' },
+            { value: 'in_progress', label: 'In progress' },
+            { value: 'completed', label: 'Completed' },
+          ]}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-5">

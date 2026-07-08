@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, Upload, Plus, Tag } from 'lucide-react'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
+import PrettySelect from '@/components/ui/PrettySelect'
 
 interface CreateWikiModalProps {
   isOpen: boolean
@@ -21,6 +22,16 @@ type CategoryOption = {
   id: number
   name: string
 }
+
+const gradeOptions = [
+  { value: '', label: 'Select grade level' },
+  { value: 'Elementary (K-5)', label: 'Elementary (K-5)' },
+  { value: 'Middle School (6-8)', label: 'Middle School (6-8)' },
+  { value: 'High School (9-12)', label: 'High School (9-12)' },
+  { value: 'College', label: 'College' },
+  { value: 'Adult', label: 'Adult' },
+  { value: 'All Ages', label: 'All Ages' },
+]
 
 function slugifyClient(value: string) {
   return value
@@ -271,21 +282,15 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
                 <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
                   Grade Level *
                 </label>
-                <select
+                <PrettySelect
                   id="grade"
                   value={grade}
-                  onChange={(e) => setGrade(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-                  required
-                >
-                  <option value="">Select grade level</option>
-                  <option value="Elementary (K-5)">Elementary (K-5)</option>
-                  <option value="Middle School (6-8)">Middle School (6-8)</option>
-                  <option value="High School (9-12)">High School (9-12)</option>
-                  <option value="College">College</option>
-                  <option value="Adult">Adult</option>
-                  <option value="All Ages">All Ages</option>
-                </select>
+                  onValueChange={setGrade}
+                  options={gradeOptions}
+                  placeholder="Select grade level"
+                  ariaLabel="Grade level"
+                  buttonClassName="min-h-[50px] border-gray-300 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
               </div>
 
               {/* Category Tags */}

@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
 import { requireAdminAccess } from '@/lib/admin-auth'
+import { prisma } from '@/lib/prisma'
 import { getAdminStats, getAdminPeople, getWikiHealth } from '@/lib/admin-dashboard'
-import AdminNavbar from '../../components/admin-navbar'
-import DashboardHome from './DashboardHome'
+import { getAdminStudentsList } from '@/lib/admin-students'
+import { getAdminTeachersList } from '@/lib/admin-teachers'
+import AdminDashboardShell from './AdminDashboardShell'
+import type { DashboardTab } from '@/components/admin-navbar'
 
 // Always reflect the latest data — never statically cache.
 export const dynamic = 'force-dynamic'
@@ -17,7 +20,16 @@ function getInitials(name: string | null | undefined, email: string) {
   return email.slice(0, 2).toUpperCase()
 }
 
-export default async function DashboardPage() {
+function parseTab(value: string | string[] | undefined): DashboardTab {
+  const v = Array.isArray(value) ? value[0] : value
+  return v === 'students' || v === 'teachers' ? v : 'overview'
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { tab?: string | string[] }
+}) {
   let userInitials = 'AD'
   let isAdmin = false
   try {
@@ -29,32 +41,34 @@ export default async function DashboardPage() {
 
   if (!isAdmin) redirect('/login?redirect=/dashboard')
 
-  // Pre-load the dashboard datasets on the server so cards and tables arrive
-  // with data instead of skeletons. Each is independent; any that fails passes
-  // null and the client fetches it on mount (original behavior) — a pure upgrade.
-  const [initialStats, initialPeople, initialWikiHealth] = await Promise.all([
+  // Load every tab's data once, in parallel, on the server. Holding it all in
+  // the client shell is what makes tab switching instant (no per-tab
+  // navigation/refetch). Any dataset that fails passes null and its tab's
+  // client falls back to fetching on mount — a graceful degrade.
+  const [stats, people, wikiHealth, students, teachers, wikis] = await Promise.all([
     getAdminStats().catch(() => null),
     getAdminPeople().catch(() => null),
     getWikiHealth().catch(() => null),
+    getAdminStudentsList(false).catch(() => null),
+    getAdminTeachersList().catch(() => null),
+    prisma.wiki.findMany({
+      where: { isPublished: true },
+      orderBy: { displayName: 'asc' },
+      select: { slug: true, displayName: true },
+    }).catch(() => []),
   ])
   const serialize = (v: unknown) => (v == null ? null : JSON.parse(JSON.stringify(v)))
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background:
-          'radial-gradient(circle at 10% 0%, rgba(240,82,63,0.08), transparent 38%), radial-gradient(circle at 92% 4%, rgba(240,82,63,0.06), transparent 36%), linear-gradient(180deg, #FDF6F4 0%, #FBF7F5 100%)',
-      }}
-    >
-      <AdminNavbar userInitials={userInitials} />
-      <div className="w-full max-w-[1400px] mx-auto px-6 pt-[96px] pb-14">
-        <DashboardHome
-          initialStats={serialize(initialStats)}
-          initialPeople={serialize(initialPeople)}
-          initialWikiHealth={serialize(initialWikiHealth)}
-        />
-      </div>
-    </div>
+    <AdminDashboardShell
+      userInitials={userInitials}
+      initialTab={parseTab(searchParams?.tab)}
+      stats={serialize(stats)}
+      people={serialize(people)}
+      wikiHealth={serialize(wikiHealth)}
+      students={serialize(students)}
+      teachers={serialize(teachers)}
+      wikis={serialize(wikis) ?? []}
+    />
   )
 }

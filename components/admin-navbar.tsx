@@ -8,19 +8,27 @@ import { Search, LogOut } from 'lucide-react'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-cairo' })
 
+export type DashboardTab = 'overview' | 'students' | 'teachers'
+
 interface AdminNavbarProps {
   userInitials?: string
+  // When provided (on the single-page dashboard), the Dashboard/Students/Teachers
+  // tabs switch in-page client state instead of navigating — instant, no server
+  // round-trip. Omitted elsewhere (e.g. the editor), where they stay real links.
+  activeTab?: DashboardTab
+  onSelectTab?: (tab: DashboardTab) => void
 }
 
-const NAV = [
-  { label: 'Dashboard', href: '/dashboard', match: (p: string) => p === '/dashboard' },
-  { label: 'Wikis',     href: '/editor',    match: (p: string) => p.startsWith('/editor') },
-  { label: 'Students',  href: '/dashboard/students', match: (p: string) => p.startsWith('/dashboard/students') },
-  { label: 'Teachers',  href: '/dashboard/teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
+const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: string) => boolean }[] = [
+  { label: 'Dashboard', href: '/dashboard', tab: 'overview', match: (p: string) => p === '/dashboard' },
+  { label: 'Wikis',     href: '/editor',    tab: null,       match: (p: string) => p.startsWith('/editor') },
+  { label: 'Students',  href: '/dashboard?tab=students', tab: 'students', match: (p: string) => p.startsWith('/dashboard/students') },
+  { label: 'Teachers',  href: '/dashboard?tab=teachers', tab: 'teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
 ]
 
-export default function AdminNavbar({ userInitials = 'AD' }: AdminNavbarProps) {
+export default function AdminNavbar({ userInitials = 'AD', activeTab, onSelectTab }: AdminNavbarProps) {
   const pathname = usePathname() ?? ''
+  const tabMode = Boolean(onSelectTab)
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -46,14 +54,22 @@ export default function AdminNavbar({ userInitials = 'AD' }: AdminNavbarProps) {
         {/* Nav tabs */}
         <div className="flex items-center gap-1">
           {NAV.map(item => {
-            const active = item.match(pathname)
+            const active = tabMode && item.tab ? activeTab === item.tab : item.match(pathname)
+            const className = `px-4 py-2 rounded-xl text-[15px] font-semibold transition-colors whitespace-nowrap ${
+              active
+                ? 'bg-gradient-to-r from-[#F0523F] to-[#E23B2E] text-white shadow-lg shadow-[#E23B2E]/25'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`
+            // In tab mode, dashboard tabs switch in-page state instantly.
+            if (tabMode && item.tab) {
+              return (
+                <button key={item.label} type="button" onClick={() => onSelectTab!(item.tab!)} className={className}>
+                  {item.label}
+                </button>
+              )
+            }
             return (
-              <Link key={item.label} href={item.href}
-                className={`px-4 py-2 rounded-xl text-[15px] font-semibold transition-colors whitespace-nowrap ${
-                  active
-                    ? 'bg-gradient-to-r from-[#F0523F] to-[#E23B2E] text-white shadow-lg shadow-[#E23B2E]/25'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}>
+              <Link key={item.label} href={item.href} className={className}>
                 {item.label}
               </Link>
             )

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { ArrowLeft, BookOpen, Plus } from 'lucide-react'
 import CreateWikiModal from '@/components/create-wiki-modal'
 
@@ -9,14 +10,18 @@ export type SidebarWiki = { slug: string; displayName: string }
 
 type Props = {
   wikis: SidebarWiki[]
-  activeSlug?: string
   isSuperadmin: boolean
 }
 
 // Left panel of the editor wikis screen: every wiki the developer can manage,
-// with the open one highlighted. Replaces the old top-bar + tile-grid flow.
-export default function WikiSidebar({ wikis, activeSlug, isSuperadmin }: Props) {
+// with the open one highlighted. Rendered from the /editor/dashboard layout so
+// it persists across wiki switches; the active slug therefore comes from the
+// URL, not props.
+export default function WikiSidebar({ wikis, isSuperadmin }: Props) {
   const [createOpen, setCreateOpen] = useState(false)
+  const pathname = usePathname()
+  const rawSlug = pathname?.match(/^\/editor\/dashboard\/([^/?]+)/)?.[1]
+  const activeSlug = rawSlug ? decodeURIComponent(rawSlug) : undefined
 
   return (
     <>

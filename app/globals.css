@@ -721,6 +721,13 @@ html {
   animation: pageEnter 0.2s ease-out both;
 }
 
+/* Every hard load fades in once; SPA navigations only re-fade where a
+   segment template.tsx opts in (wiki pages), so persistent UI like the
+   editor sidebar never remounts. */
+body {
+  animation: pageEnter 0.2s ease-out both;
+}
+
 /* Fast feedback on every interactive element. Property list is explicit
    (no `all`) to keep it cheap and avoid fighting inline styles from
    dnd-kit / ProseMirror. */

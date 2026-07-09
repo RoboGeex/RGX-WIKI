@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, CheckCircle2, Loader2, Mail, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { AlertTriangle, Camera, CheckCircle2, Loader2, Mail, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 
 type Account = {
   source: 'user' | 'developer'
@@ -17,11 +17,48 @@ type Props = {
   account: Account
 }
 
+type ConfirmState = {
+  title: string
+  body: string
+  confirmLabel: string
+  tone: 'danger' | 'warning'
+  onConfirm: () => void
+}
+
 function initials(name: string | null, email: string) {
   const source = name?.trim() || email
   const parts = source.split(/\s+/)
   if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
   return source.slice(0, 2).toUpperCase()
+}
+
+// Same in-app confirm pattern used on the student/teacher profile pages —
+// keeps destructive actions off the browser's native confirm() dialog.
+function ConfirmDialog({ confirm, busy, onClose }: { confirm: ConfirmState; busy: boolean; onClose: () => void }) {
+  return (
+    <div className="animate-backdrop fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/35 px-4 backdrop-blur-sm">
+      <div className="animate-pop w-full max-w-md rounded-2xl border border-white/70 bg-white p-5 shadow-[0_24px_80px_-24px_rgba(15,23,42,0.55)]">
+        <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${confirm.tone === 'danger' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'}`}>
+          <AlertTriangle size={24} />
+        </div>
+        <h2 className="text-xl font-extrabold text-[#0F172A]">{confirm.title}</h2>
+        <p className="mt-2 text-base leading-7 text-[#64748B]">{confirm.body}</p>
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-[#E2E6EC] bg-white px-4 py-2 text-base font-bold text-[#334155] disabled:opacity-60">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={confirm.onConfirm}
+            className={`rounded-xl px-4 py-2 text-base font-extrabold text-white shadow-[0_8px_20px_-10px_rgba(15,23,42,0.5)] disabled:opacity-60 ${confirm.tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}`}
+          >
+            {busy ? 'Working...' : confirm.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function AdminProfileClient({ account: initialAccount }: Props) {
@@ -38,6 +75,7 @@ export default function AdminProfileClient({ account: initialAccount }: Props) {
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null)
 
   async function saveProfile() {
     setSavingProfile(true)
@@ -131,23 +169,31 @@ export default function AdminProfileClient({ account: initialAccount }: Props) {
     }
   }
 
-  async function removeAvatar() {
-    if (!window.confirm('Remove your profile image?')) return
-    setAvatarBusy(true)
-    setError(null)
-    setMessage(null)
-    try {
-      const res = await fetch('/api/admin/profile/avatar', { method: 'DELETE' })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(data?.error || 'Could not remove profile image.')
-      setAccount((current) => ({ ...current, avatarUrl: null }))
-      setMessage('Profile image removed.')
-      router.refresh()
-    } catch (e: any) {
-      setError(e?.message || 'Could not remove profile image.')
-    } finally {
-      setAvatarBusy(false)
-    }
+  function removeAvatar() {
+    setConfirm({
+      title: 'Remove profile picture?',
+      body: 'Your avatar will go back to showing your initials. You can upload a new picture anytime.',
+      confirmLabel: 'Remove picture',
+      tone: 'danger',
+      onConfirm: async () => {
+        setAvatarBusy(true)
+        setError(null)
+        setMessage(null)
+        try {
+          const res = await fetch('/api/admin/profile/avatar', { method: 'DELETE' })
+          const data = await res.json().catch(() => null)
+          if (!res.ok) throw new Error(data?.error || 'Could not remove profile image.')
+          setAccount((current) => ({ ...current, avatarUrl: null }))
+          setMessage('Profile image removed.')
+          router.refresh()
+        } catch (e: any) {
+          setError(e?.message || 'Could not remove profile image.')
+        } finally {
+          setAvatarBusy(false)
+          setConfirm(null)
+        }
+      },
+    })
   }
 
   return (
@@ -320,6 +366,8 @@ export default function AdminProfileClient({ account: initialAccount }: Props) {
           </form>
         </section>
       </div>
+
+      {confirm && <ConfirmDialog confirm={confirm} busy={avatarBusy} onClose={() => !avatarBusy && setConfirm(null)} />}
     </div>
   )
 }

@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import { Search, LogOut } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Search, LogOut, GraduationCap, Users, BookOpen, Loader2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import type { AdminSearchResult } from '@/app/api/admin/search/route'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-cairo' })
 
@@ -30,6 +31,12 @@ const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: s
   { label: 'Teachers',  href: '/dashboard/teachers', tab: 'teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
 ]
 
+const CATEGORY_META = {
+  student: { label: 'Students', icon: GraduationCap },
+  teacher: { label: 'Teachers', icon: Users },
+  wiki: { label: 'Wikis', icon: BookOpen },
+} as const
+
 function getInitials(name: string | null | undefined, email: string | null | undefined, fallback: string) {
   if (name) {
     const parts = name.trim().split(/\s+/)
@@ -39,6 +46,158 @@ function getInitials(name: string | null | undefined, email: string | null | und
   }
   if (email) return email.slice(0, 2).toUpperCase()
   return fallback
+}
+
+// Quick-search over students/teachers/wikis, backed by /api/admin/search.
+// Shared by every admin dashboard via AdminNavbar, so it works the same on
+// the overview, students, teachers, and wikis screens.
+function AdminSearch() {
+  const router = useRouter()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<AdminSearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  // ⌘K / Ctrl+K focuses and opens the search from anywhere on the page.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setOpen(true)
+        inputRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // Close on outside click.
+  useEffect(() => {
+    function onPointerDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [])
+
+  // Debounced fetch against the admin search API.
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setResults([])
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    const handle = setTimeout(() => {
+      fetch(`/api/admin/search?q=${encodeURIComponent(trimmed)}`)
+        .then((res) => (res.ok ? res.json() : { results: [] }))
+        .then((data) => {
+          setResults(Array.isArray(data.results) ? data.results : [])
+          setActiveIndex(0)
+        })
+        .catch(() => setResults([]))
+        .finally(() => setLoading(false))
+    }, 250)
+    return () => clearTimeout(handle)
+  }, [query])
+
+  function navigateTo(result: AdminSearchResult) {
+    setOpen(false)
+    setQuery('')
+    setResults([])
+    router.push(result.href)
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Escape') {
+      setOpen(false)
+      inputRef.current?.blur()
+      return
+    }
+    if (!results.length) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((i) => (i + 1) % results.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((i) => (i - 1 + results.length) % results.length)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const target = results[activeIndex]
+      if (target) navigateTo(target)
+    }
+  }
+
+  const showDropdown = open && query.trim().length > 0
+  const grouped = (['student', 'teacher', 'wiki'] as const)
+    .map((category) => ({ category, items: results.filter((r) => r.category === category) }))
+    .filter((g) => g.items.length > 0)
+
+  return (
+    <div ref={containerRef} className="relative hidden sm:block">
+      <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-white/15 text-[15px] text-white/70 focus-within:border-white/30 transition-colors">
+        <Search size={15} className="shrink-0 text-white/50" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          placeholder="Search"
+          className="w-36 bg-transparent text-[15px] text-white placeholder:text-white/50 outline-none"
+        />
+        {!query && <kbd className="text-xs bg-white/10 text-white/60 px-1.5 py-0.5 rounded ml-1 shrink-0">⌘K</kbd>}
+      </div>
+
+      {showDropdown && (
+        <div className="animate-menu-in absolute right-0 top-full z-50 mt-2 w-80 max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_24px_60px_-24px_rgba(15,23,42,0.45)]">
+          {loading && (
+            <div className="flex items-center gap-2 px-3 py-4 text-sm text-slate-500">
+              <Loader2 size={14} className="animate-spin" /> Searching…
+            </div>
+          )}
+          {!loading && results.length === 0 && (
+            <div className="px-3 py-4 text-sm text-slate-500">No matches for "{query}"</div>
+          )}
+          {!loading && grouped.map(({ category, items }) => {
+            const meta = CATEGORY_META[category]
+            const Icon = meta.icon
+            return (
+              <div key={category} className="mb-1 last:mb-0">
+                <div className="flex items-center gap-1.5 px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  <Icon size={12} /> {meta.label}
+                </div>
+                {items.map((item) => {
+                  const globalIndex = results.indexOf(item)
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => navigateTo(item)}
+                      onMouseEnter={() => setActiveIndex(globalIndex)}
+                      className={`flex w-full flex-col items-start rounded-xl px-3 py-2 text-left transition-colors ${
+                        activeIndex === globalIndex ? 'bg-slate-100' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="truncate text-sm font-semibold text-slate-900">{item.title}</span>
+                      <span className="truncate text-xs text-slate-500">{item.subtitle}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function AdminNavbar({
@@ -126,11 +285,7 @@ export default function AdminNavbar({
 
         {/* Right */}
         <div className="ml-auto flex items-center gap-2.5">
-          <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl border border-white/15 text-[15px] text-white/50 cursor-pointer hover:border-white/30 transition-colors">
-            <Search size={15} />
-            <span>Search</span>
-            <kbd className="text-xs bg-white/10 text-white/60 px-1.5 py-0.5 rounded ml-1">⌘K</kbd>
-          </div>
+          <AdminSearch />
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 text-[15px] font-semibold transition-colors"

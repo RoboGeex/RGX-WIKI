@@ -342,9 +342,9 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
     >
       {/* Navbar */}
       <nav className="sticky top-0 z-40 bg-[#1A1110]/95 backdrop-blur border-b border-black/20">
-        <div className="max-w-5xl mx-auto px-5 h-[72px] flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-5 h-[84px] flex items-center justify-between">
           <Link href="/home" className="flex items-center gap-2">
-            <Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} priority className="h-11 w-auto" />
+            <Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} priority className="h-14 w-auto" />
           </Link>
 
           <div className="flex items-center gap-1.5">

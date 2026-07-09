@@ -84,7 +84,6 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
       .then(d => {
         if (d.error) throw new Error(d.error)
         setData(d)
-        if (d.sections?.length > 0) setOpenWiki(d.sections[0].wikiSlug)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))

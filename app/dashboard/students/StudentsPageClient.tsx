@@ -120,7 +120,6 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
   useEffect(() => {
     fetch(`/api/admin/students/${studentId}`).then(r => r.json()).then(d => {
       setData(d)
-      if (d.sections?.length) setOpenWiki(d.sections[0].wikiSlug)
     }).finally(() => setLoading(false))
   }, [studentId])
 

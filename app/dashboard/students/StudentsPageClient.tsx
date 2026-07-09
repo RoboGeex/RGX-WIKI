@@ -8,6 +8,7 @@ import { Cairo } from 'next/font/google'
 import { ChevronLeft, ChevronRight, Search, X, CheckCircle2, Clock, Circle, BookOpen, Users, RefreshCw, GraduationCap, TrendingUp, Menu, Pencil, Eye } from 'lucide-react'
 import { formatUtcDate } from '@/lib/format-date'
 import PrettySelect from '@/components/ui/PrettySelect'
+import { useFitScale, fitStyle } from '@/components/ui/use-fit-scale'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -111,6 +112,7 @@ function MetricCard({ icon, label, value, tint }: { icon: ReactNode; label: stri
 }
 
 function StudentModal({ studentId, onClose }: { studentId: string; onClose: () => void }) {
+  const { ref: panelRef, scale } = useFitScale<HTMLDivElement>()
   const [data, setData] = useState<StudentDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [openWiki, setOpenWiki] = useState<string | null>(null)
@@ -124,7 +126,7 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
 
   return (
     <div className="animate-backdrop fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="animate-pop flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+      <div ref={panelRef} style={fitStyle(scale)} className="animate-fade-in flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#EEF0F4] px-6 py-5">
           {data ? (
             <div className="flex min-w-0 items-center gap-3">
@@ -138,7 +140,7 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
           <button onClick={onClose} className="rounded-xl p-2 text-[#94A3B8] transition-colors hover:bg-[#F1F3F7] hover:text-[#0F172A]" aria-label="Close"><X size={18} /></button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto bg-[#FAFBFC] px-6 py-5">
+        <div className="space-y-3 bg-[#FAFBFC] px-6 py-5">
           {loading && <p className="py-8 text-center text-base text-[#64748B]">Loading…</p>}
           {data?.sections.length === 0 && <p className="rounded-2xl border border-dashed border-[#E2E6EC] bg-white py-10 text-center text-base text-[#64748B]">No enrollments yet.</p>}
           {data?.sections.map(section => (

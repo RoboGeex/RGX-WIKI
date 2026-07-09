@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { X, Upload, Plus, Tag } from 'lucide-react'
 import { applyDeveloperHeader } from '@/components/editor/dev-identity'
 import PrettySelect from '@/components/ui/PrettySelect'
+import { useFitScale, fitStyle } from '@/components/ui/use-fit-scale'
 
 interface CreateWikiModalProps {
   isOpen: boolean
@@ -42,6 +43,7 @@ function slugifyClient(value: string) {
 }
 
 export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWikiModalProps) {
+  const { ref: panelRef, scale } = useFitScale<HTMLDivElement>()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
@@ -193,7 +195,7 @@ export default function CreateWikiModal({ isOpen, onClose, onSubmit }: CreateWik
 
   return (
     <div className="animate-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="animate-pop bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+      <div ref={panelRef} style={fitStyle(scale)} className="animate-fade-in bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Create New Wiki</h2>

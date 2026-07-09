@@ -9,6 +9,7 @@ import { Cairo } from 'next/font/google'
 import { Check, ChevronLeft, Plus, X, Search, Users, GraduationCap, RefreshCw, UserCheck, Menu, Eye, Pencil } from 'lucide-react'
 import { formatUtcDate } from '@/lib/format-date'
 import PrettySelect from '@/components/ui/PrettySelect'
+import { useFitScale, fitStyle } from '@/components/ui/use-fit-scale'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -68,6 +69,7 @@ function MetricCard({ icon, label, value, tint }: { icon: ReactNode; label: stri
 }
 
 function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onClose: () => void; onCreated: () => void }) {
+  const { ref: panelRef, scale } = useFitScale<HTMLFormElement>()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -102,13 +104,13 @@ function CreateTeacherDialog({ wikis, onClose, onCreated }: { wikis: Wiki[]; onC
 
   return (
     <div className={`${display.variable} rgx-dash fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm`} onClick={onClose}>
-      <form onSubmit={handleSubmit} className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+      <form ref={panelRef} style={fitStyle(scale)} onSubmit={handleSubmit} className="animate-fade-in flex w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between border-b border-[#EEF0F4] px-6 py-5">
           <h2 className="text-xl font-bold text-[#0F172A]">Add teacher</h2>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-[#94A3B8] transition-colors hover:bg-[#F1F3F7] hover:text-[#0F172A]" aria-label="Close"><X size={18} /></button>
         </div>
 
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+        <div className="space-y-5 px-6 py-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label>
               <span className="mb-1.5 block text-sm font-semibold text-[#475569]">Full name</span>
@@ -188,12 +190,13 @@ function AssignedWikisDialog({
   teacher: Teacher; wikis: Wiki[]; editing: boolean
   onEdit: () => void; onSave: (slugs: string[]) => void; onClose: () => void
 }) {
+  const { ref: panelRef, scale } = useFitScale<HTMLDivElement>()
   const assigned = teacher.assignedWikiSlugs || []
   const assignedWikis = assigned.map(slug => wikis.find(w => w.slug === slug)?.displayName || slug)
 
   return (
     <div className={`${display.variable} rgx-dash fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm`} onClick={onClose}>
-      <div className="flex max-h-[86vh] w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+      <div ref={panelRef} style={fitStyle(scale)} className="animate-fade-in flex w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#EEF0F4] px-6 py-5">
           <div className="flex min-w-0 items-center gap-3">
             <DirectoryAvatar name={teacher.name} email={teacher.email} src={teacher.avatarUrl} />
@@ -205,7 +208,7 @@ function AssignedWikisDialog({
           <button onClick={onClose} className="rounded-xl p-2 text-[#94A3B8] transition-colors hover:bg-[#F1F3F7] hover:text-[#0F172A]" aria-label="Close"><X size={18} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-[#FAFBFC] px-6 py-5">
+        <div className="bg-[#FAFBFC] px-6 py-5">
           {editing ? (
             <WikiEditor teacher={teacher} wikis={wikis} onSave={onSave} onCancel={onClose} />
           ) : assignedWikis.length > 0 ? (

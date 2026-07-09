@@ -19,7 +19,7 @@ export default async function PropertiesPage({
     if (devId) {
       const developer = await findDeveloperById(devId)
       if (developer && !canManageWiki(developer, wikiSlug)) {
-        redirect('/editor/dashboard')
+        redirect('/editor')
       }
     }
   }

@@ -254,7 +254,7 @@ export default function WikiSettingsPanel({
       setSlugSuccess(true)
       // URL is now invalid — redirect to the new wiki dashboard
       setTimeout(() => {
-        router.push(`/editor/dashboard/${trimmed}`)
+        router.push(`/editor/${trimmed}`)
       }, 800)
     } catch (e: any) {
       setSlugError(e.message)

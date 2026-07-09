@@ -2813,7 +2813,7 @@ export default function WikiEditor() {
             Please contact an administrator to request access.
           </p>
           <button
-            onClick={() => router.push(`/editor/dashboard/${developer?.wikiSlugs?.[0] || 'student-kit'}`)}
+            onClick={() => router.push(`/editor/${developer?.wikiSlugs?.[0] || 'student-kit'}`)}
             className="w-full py-3.5 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
           >
             Return to Dashboard
@@ -2849,7 +2849,7 @@ export default function WikiEditor() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
             <NextLink
-              href={`/editor/dashboard/${meta.wikiSlug || 'student-kit'}`}
+              href={`/editor/${meta.wikiSlug || 'student-kit'}`}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600 flex-shrink-0"
               title="Back to wiki"
             >

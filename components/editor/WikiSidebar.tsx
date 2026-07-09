@@ -13,14 +13,15 @@ type Props = {
   isSuperadmin: boolean
 }
 
-// Left panel of the editor dashboard: every wiki the developer can manage,
-// with the open one highlighted. The active slug comes from the URL, not props.
+// Left panel of the editor wikis screen: every wiki the developer can manage,
+// with the open one highlighted. Rendered from the /editor (wikis) layout so it
+// persists across wiki switches; the active slug comes from the URL, not props.
+// (The /editor/<segment> match also catches reserved segments like
+// /editor/lesson, but those never equal a wiki slug in the list.)
 export default function WikiSidebar({ wikis, isSuperadmin }: Props) {
   const [createOpen, setCreateOpen] = useState(false)
   const pathname = usePathname()
-  const rawSlug =
-    pathname?.match(/^\/editor\/dashboard\/([^/?]+)/)?.[1] ??
-    pathname?.match(/^\/editor\/([^/?]+)/)?.[1]
+  const rawSlug = pathname?.match(/^\/editor\/([^/?]+)/)?.[1]
   const activeSlug = rawSlug ? decodeURIComponent(rawSlug) : undefined
 
   return (
@@ -49,7 +50,7 @@ export default function WikiSidebar({ wikis, isSuperadmin }: Props) {
             return (
               <Link
                 key={wiki.slug}
-                href={`/editor/dashboard/${wiki.slug}`}
+                href={`/editor/${wiki.slug}`}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 hover:ps-4 ${
                   isActive
                     ? 'bg-primary/10 text-primary font-semibold'

@@ -25,7 +25,7 @@ interface AdminNavbarProps {
 
 const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: string) => boolean }[] = [
   { label: 'Dashboard', href: '/dashboard', tab: 'overview', match: (p: string) => p === '/dashboard' },
-  { label: 'Wikis',     href: '/editor/dashboard', tab: null, match: (p: string) => p.startsWith('/editor') },
+  { label: 'Wikis',     href: '/editor', tab: null, match: (p: string) => p.startsWith('/editor') },
   { label: 'Students',  href: '/dashboard/students', tab: 'students', match: (p: string) => p.startsWith('/dashboard/students') },
   { label: 'Teachers',  href: '/dashboard/teachers', tab: 'teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
 ]

@@ -156,7 +156,7 @@ export default function EditorDashboardClient({ initialSummaries }: EditorDashbo
         {filteredSummaries.map(({ wiki, lessonCount }) => (
           <Link
             key={wiki.slug}
-            href={`/editor/dashboard/${wiki.slug}`}
+            href={`/editor/${wiki.slug}`}
             className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-primary/40 hover:shadow"
           >
             <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">Wiki</div>

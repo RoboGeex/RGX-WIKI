@@ -261,7 +261,7 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
               <Link href="/wikis" className="text-[var(--primary)]">
                 Wikis
               </Link>
-              <Link href="/editor/dashboard" className="transition-colors hover:text-[var(--text-primary)]">
+              <Link href="/editor" className="transition-colors hover:text-[var(--text-primary)]">
                 Mentors
               </Link>
               <Link href="/dashboard" className="transition-colors hover:text-[var(--text-primary)]">
@@ -548,7 +548,7 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
                   </p>
                   <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
                     <Link
-                      href="/editor/dashboard"
+                      href="/editor"
                       className="inline-flex h-12 items-center justify-center rounded-xl px-7 text-sm font-bold text-white"
                       style={{
                         background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
@@ -637,7 +637,7 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
           </div>
           <div className="flex flex-wrap items-center gap-5 text-xs font-bold uppercase tracking-[0.15em]">
             <Link href="/wikis">Documentation</Link>
-            <Link href="/editor/dashboard">Support</Link>
+            <Link href="/editor">Support</Link>
             <Link href="/dashboard">Privacy Policy</Link>
             <Link href="/dashboard">Terms of Service</Link>
           </div>

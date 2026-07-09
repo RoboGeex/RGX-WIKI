@@ -571,7 +571,7 @@ export default function SegmentEditor({
     if (!isOwner && !isAdmin) {
       setIsAuthorized(false)
       // Redirect to dashboard
-      const dashboardUrl = `/editor/dashboard/${wikiSlug || 'student-kit'}`
+      const dashboardUrl = `/editor/${wikiSlug || 'student-kit'}`
       router.push(dashboardUrl)
     }
   }, [isOwner, isAdmin, wikiSlug, router])
@@ -1323,7 +1323,7 @@ export default function SegmentEditor({
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link 
-              href={`/editor/dashboard/${wikiSlug}`}
+              href={`/editor/${wikiSlug}`}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
               title="Back to wiki"
             >

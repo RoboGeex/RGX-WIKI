@@ -56,7 +56,7 @@ export default function SegmentEditorPage() {
             const hasAccess =
               isSuperAdmin || (dev?.wikiSlugs ?? []).includes(wikiSlug)
             if (!hasAccess) {
-              window.location.href = '/editor/dashboard'
+              window.location.href = '/editor'
               return
             }
           }

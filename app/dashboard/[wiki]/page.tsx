@@ -67,7 +67,7 @@ export default async function WikiDashboardPage({ params }: Params) {
               <div className="flex items-center gap-2">
                 {lessons.length > 0 && (
                   <Link
-                    href={`/editor/dashboard/${wiki.slug}?kit=${kit.slug}`}
+                    href={`/editor/${wiki.slug}?kit=${kit.slug}`}
                     className="px-3 py-1.5 text-xs rounded-md border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
                   >
                     Reorder Lessons

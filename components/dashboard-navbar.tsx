@@ -82,7 +82,7 @@ export default function DashboardNavbar({ locale, wikiSlug, kitSlug }: Props) {
       description: 'Overview & Management'
     },
     {
-      href: '/editor/dashboard',
+      href: '/editor',
       label: 'Editor',
       icon: Edit3,
       description: 'Create & Edit Content'

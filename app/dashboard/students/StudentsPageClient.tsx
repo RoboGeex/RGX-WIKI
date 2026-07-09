@@ -123,8 +123,8 @@ function StudentModal({ studentId, onClose }: { studentId: string; onClose: () =
   }, [studentId])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
+    <div className="animate-backdrop fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="animate-pop flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[#E7E9EE] bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.5)]" onClick={e => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#EEF0F4] px-6 py-5">
           {data ? (
             <div className="flex min-w-0 items-center gap-3">

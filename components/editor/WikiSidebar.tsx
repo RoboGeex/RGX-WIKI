@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, BookOpen, Plus } from 'lucide-react'
+import { BookOpen, Plus } from 'lucide-react'
 import CreateWikiModal from '@/components/create-wiki-modal'
 
 export type SidebarWiki = { slug: string; displayName: string }
@@ -14,10 +14,11 @@ type Props = {
 }
 
 // Left panel of the editor wikis screen: every wiki the developer can manage,
-// with the open one highlighted. Rendered from the /editor (wikis) layout so it
-// persists across wiki switches; the active slug comes from the URL, not props.
-// (The /editor/<segment> match also catches reserved segments like
-// /editor/lesson, but those never equal a wiki slug in the list.)
+// with the open one highlighted. Rendered from the /editor (wikis) layout —
+// alongside the top bar — so both persist across wiki switches; the active
+// slug comes from the URL, not props. (The /editor/<segment> match also
+// catches reserved segments like /editor/lesson, but those never equal a
+// wiki slug in the list.)
 export default function WikiSidebar({ wikis, isSuperadmin }: Props) {
   const [createOpen, setCreateOpen] = useState(false)
   const pathname = usePathname()
@@ -26,16 +27,9 @@ export default function WikiSidebar({ wikis, isSuperadmin }: Props) {
 
   return (
     <>
-      <aside className="hidden lg:flex w-72 shrink-0 flex-col sticky top-0 h-screen bg-white border-r border-gray-200">
+      <aside className="hidden lg:flex w-72 shrink-0 flex-col sticky top-[72px] h-[calc(100vh-72px)] bg-white border-r border-gray-200">
         <div className="px-5 pt-6 pb-4 border-b border-gray-100">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <ArrowLeft size={14} />
-            Dashboard
-          </Link>
-          <h1 className="mt-2 text-xl font-bold text-gray-900">Wikis</h1>
+          <h1 className="text-xl font-bold text-gray-900">Wikis</h1>
           <p className="mt-1 text-xs text-gray-500">Pick a wiki to manage its lessons.</p>
         </div>
 

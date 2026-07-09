@@ -270,46 +270,54 @@ export default function AdminProfileClient({ account: initialAccount }: Props) {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold text-[#475569]">Current password</span>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="h-[42px] w-full rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold text-[#475569]">New password</span>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="h-[42px] w-full rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold text-[#475569]">Confirm password</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-[42px] w-full rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
-              />
-            </label>
-          </div>
+          {/* autoComplete="off" plus new-password on every field (including
+              "current") stops browsers from silently autofilling a saved
+              login password into these boxes — they must start empty and
+              only hold what the user actually types here. */}
+          <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); savePassword() }}>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold text-[#475569]">Current password</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="h-[42px] w-full rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold text-[#475569]">New password</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="h-[42px] w-full rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold text-[#475569]">Confirm password</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="h-[42px] w-full rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
+                />
+              </label>
+            </div>
 
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={savePassword}
-              disabled={savingPassword}
-              className="inline-flex h-10 min-w-[150px] items-center justify-center rounded-xl border border-[#1A1110] bg-[#1A1110] px-5 text-sm font-bold text-white transition hover:bg-[#30201E] disabled:opacity-60"
-            >
-              {savingPassword ? <Loader2 size={18} className="animate-spin" /> : 'Change password'}
-            </button>
-          </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="submit"
+                disabled={savingPassword}
+                className="inline-flex h-10 min-w-[150px] items-center justify-center rounded-xl border border-[#1A1110] bg-[#1A1110] px-5 text-sm font-bold text-white transition hover:bg-[#30201E] disabled:opacity-60"
+              >
+                {savingPassword ? <Loader2 size={18} className="animate-spin" /> : 'Change password'}
+              </button>
+            </div>
+          </form>
         </section>
       </div>
     </div>

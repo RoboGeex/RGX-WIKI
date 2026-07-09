@@ -4,9 +4,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import { Search, LogOut, GraduationCap, Users, BookOpen, Loader2 } from 'lucide-react'
+import { Search, GraduationCap, Users, BookOpen, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { AdminSearchResult } from '@/app/api/admin/search/route'
+import SignOutButton from '@/components/sign-out-button'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-cairo' })
 
@@ -237,11 +238,6 @@ export default function AdminNavbar({
   const displayAvatarUrl = userAvatarUrl ?? profile?.avatarUrl ?? null
   const displayInitials = getInitials(displayName, displayEmail, userInitials)
 
-  async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    window.location.href = '/login'
-  }
-
   return (
     <nav className={`${display.variable} rgx-dash bg-[#1A1110] fixed top-0 left-0 right-0 z-40 border-b border-black/30`}>
       <div className="w-full px-6 h-[72px] flex items-center gap-5">
@@ -286,13 +282,12 @@ export default function AdminNavbar({
         {/* Right */}
         <div className="ml-auto flex items-center gap-2.5">
           <AdminSearch />
-          <button
-            onClick={handleLogout}
+          <SignOutButton
+            iconSize={17}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 text-[15px] font-semibold transition-colors"
           >
-            <LogOut size={17} />
             <span className="hidden sm:inline">Sign out</span>
-          </button>
+          </SignOutButton>
           <Link
             href="/dashboard/profile"
             className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-sm font-bold text-white shadow-lg shadow-[#E23B2E]/20 ring-1 ring-white/10 transition hover:scale-[1.03] hover:ring-white/30"

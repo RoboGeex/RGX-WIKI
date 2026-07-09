@@ -35,6 +35,7 @@ export default async function AdminProfilePage() {
           email: auth.user.email,
           avatarUrl: auth.user.avatarUrl,
           canUploadAvatar: true,
+          passwordMaskLength: 8,
         }
       : {
           source: 'developer' as const,
@@ -43,6 +44,7 @@ export default async function AdminProfilePage() {
           email: auth.dev.email ?? '',
           avatarUrl: auth.dev.avatarUrl ?? null,
           canUploadAvatar: Number.isFinite(Number(auth.dev.id)),
+          passwordMaskLength: auth.dev.password?.length || 8,
         }
 
   return (

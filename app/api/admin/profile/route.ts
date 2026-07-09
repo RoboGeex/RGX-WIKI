@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { AuthError, hashPassword, verifyPassword } from '@/lib/auth'
+import { AuthError, hashPassword } from '@/lib/auth'
 import { requireAdminAccess } from '@/lib/admin-auth'
 import { getDevelopersPrisma } from '@/lib/prisma-developers'
 
@@ -41,6 +41,7 @@ export async function GET() {
           email: auth.user.email,
           avatarUrl: auth.user.avatarUrl,
           canUploadAvatar: true,
+          passwordMaskLength: 8,
         },
       })
     }
@@ -59,6 +60,7 @@ export async function GET() {
         email: auth.dev.email,
         avatarUrl: avatarState.avatarUrl,
         canUploadAvatar: avatarState.supported,
+        passwordMaskLength: auth.dev.password?.length || 8,
       },
     })
   } catch (e: any) {
@@ -73,7 +75,6 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const name = cleanText(body?.name)
     const email = cleanEmail(body?.email)
-    const currentPassword = typeof body?.currentPassword === 'string' ? body.currentPassword : ''
     const newPassword = typeof body?.newPassword === 'string' ? body.newPassword : ''
 
     if (email !== undefined && (!email || !isEmail(email))) {
@@ -86,7 +87,7 @@ export async function PATCH(request: Request) {
     if (auth.source === 'user') {
       const current = await prisma.user.findUnique({
         where: { id: auth.user.id },
-        select: { id: true, passwordHash: true },
+        select: { id: true },
       })
       if (!current) throw new AuthError('Not signed in', 401)
 
@@ -94,9 +95,6 @@ export async function PATCH(request: Request) {
       if (name !== undefined) data.name = name || null
       if (email !== undefined) data.email = email
       if (newPassword) {
-        if (!currentPassword || !(await verifyPassword(currentPassword, current.passwordHash))) {
-          return NextResponse.json({ error: 'Current password is incorrect.' }, { status: 400 })
-        }
         data.passwordHash = await hashPassword(newPassword)
       }
 
@@ -108,7 +106,7 @@ export async function PATCH(request: Request) {
 
       return NextResponse.json({
         ok: true,
-        account: { source: 'user', ...updated, canUploadAvatar: true },
+        account: { source: 'user', ...updated, canUploadAvatar: true, passwordMaskLength: 8 },
       })
     }
 
@@ -128,9 +126,6 @@ export async function PATCH(request: Request) {
     if (name !== undefined) data.name = name || null
     if (email !== undefined) data.email = email
     if (newPassword) {
-      if (!currentPassword || current.password !== currentPassword.trim()) {
-        return NextResponse.json({ error: 'Current password is incorrect.' }, { status: 400 })
-      }
       data.password = newPassword
     }
 
@@ -150,6 +145,7 @@ export async function PATCH(request: Request) {
         name: updated.name,
         avatarUrl: avatarState.avatarUrl,
         canUploadAvatar: avatarState.supported,
+        passwordMaskLength: newPassword ? newPassword.length : current.password.length,
       },
     })
   } catch (e: any) {

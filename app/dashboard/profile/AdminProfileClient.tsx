@@ -11,6 +11,7 @@ type Account = {
   email: string
   avatarUrl: string | null
   canUploadAvatar: boolean
+  passwordMaskLength: number
 }
 
 type Props = {
@@ -67,7 +68,6 @@ export default function AdminProfileClient({ account: initialAccount }: Props) {
   const [account, setAccount] = useState(initialAccount)
   const [name, setName] = useState(initialAccount.name || '')
   const [email, setEmail] = useState(initialAccount.email)
-  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
@@ -122,11 +122,10 @@ export default function AdminProfileClient({ account: initialAccount }: Props) {
       const res = await fetch('/api/admin/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ newPassword }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Could not change password.')
-      setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
       setMessage('Password changed.')
@@ -312,24 +311,23 @@ export default function AdminProfileClient({ account: initialAccount }: Props) {
             </div>
             <div>
               <h2 className="text-lg font-extrabold text-[#0F172A]">Password</h2>
-              <p className="text-xs text-[#64748B]">Use at least 8 characters. Your current password is required.</p>
+              <p className="text-xs text-[#64748B]">Use at least 8 characters.</p>
             </div>
           </div>
 
-          {/* autoComplete="off" plus new-password on every field (including
-              "current") stops browsers from silently autofilling a saved
-              login password into these boxes — they must start empty and
-              only hold what the user actually types here. */}
+          {/* autoComplete="off" plus new-password stops browsers from silently
+              autofilling a saved login password into the editable fields. */}
           <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); savePassword() }}>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="block">
                 <span className="mb-1 block text-sm font-bold text-[#475569]">Current password</span>
                 <input
                   type="password"
-                  autoComplete="new-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="h-[42px] w-full rounded-xl border border-[#E2E6EC] bg-white px-4 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10"
+                  value={'*'.repeat(Math.max(account.passwordMaskLength || 8, 1))}
+                  readOnly
+                  tabIndex={-1}
+                  aria-readonly="true"
+                  className="h-[42px] w-full cursor-not-allowed rounded-xl border border-[#E2E6EC] bg-[#F8FAFC] px-4 text-base text-[#64748B] outline-none"
                 />
               </label>
               <label className="block">

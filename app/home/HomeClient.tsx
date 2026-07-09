@@ -4,7 +4,8 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Cairo } from 'next/font/google'
-import { Home, Layout, LogOut, GraduationCap, ArrowRight, Check, Pencil, Camera, Loader2, Trash2 } from 'lucide-react'
+import { Home, Layout, GraduationCap, ArrowRight, Check, Pencil, Camera, Loader2, Trash2 } from 'lucide-react'
+import SignOutButton from '@/components/sign-out-button'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
 
@@ -160,12 +161,9 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
               </Link>
             )}
 
-            <form action="/api/auth/logout" method="post" className="ml-1">
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white/75 hover:text-white hover:bg-white/10 text-[15px] font-semibold transition-colors">
-                <LogOut size={18} />
+            <SignOutButton className="ml-1 flex items-center gap-2 px-4 py-2.5 rounded-xl text-white/75 hover:text-white hover:bg-white/10 text-[15px] font-semibold transition-colors">
                 <span className="hidden sm:inline">Sign out</span>
-              </button>
-            </form>
+            </SignOutButton>
           </div>
         </div>
       </nav>

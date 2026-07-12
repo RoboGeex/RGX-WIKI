@@ -23,11 +23,12 @@ interface AdminNavbarProps {
   // round-trip. Omitted elsewhere (e.g. the editor), where they stay real links.
   activeTab?: DashboardTab
   onSelectTab?: (tab: DashboardTab) => void
+  sidebarMode?: boolean
 }
 
 const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: string) => boolean }[] = [
   { label: 'Dashboard', href: '/dashboard', tab: 'overview', match: (p: string) => p === '/dashboard' },
-  { label: 'Wikis',     href: '/editor', tab: null, match: (p: string) => p.startsWith('/editor') },
+  { label: 'Wikis',     href: '/wikis', tab: null, match: (p: string) => p.startsWith('/wikis') || p.startsWith('/editor') },
   { label: 'Students',  href: '/dashboard/students', tab: 'students', match: (p: string) => p.startsWith('/dashboard/students') },
   { label: 'Teachers',  href: '/dashboard/teachers', tab: 'teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
 ]
@@ -215,9 +216,11 @@ export default function AdminNavbar({
   userEmail = null,
   activeTab,
   onSelectTab,
+  sidebarMode = false,
 }: AdminNavbarProps) {
   const pathname = usePathname() ?? ''
   const tabMode = Boolean(onSelectTab)
+  const useSidebar = sidebarMode || tabMode
   const [profile, setProfile] = useState<{ name: string | null; email: string | null; avatarUrl: string | null } | null>(null)
 
   useEffect(() => {
@@ -245,7 +248,7 @@ export default function AdminNavbar({
   const displayAvatarUrl = userAvatarUrl ?? profile?.avatarUrl ?? null
   const displayInitials = getInitials(displayName, displayEmail, userInitials)
 
-  if (tabMode) {
+  if (useSidebar) {
     return (
       <>
         <header className={`${display.variable} rgx-dash fixed inset-x-0 top-0 z-40 flex h-[68px] items-center border-b border-[#eadfdb] bg-white/95 px-4 backdrop-blur lg:hidden`}>
@@ -269,7 +272,7 @@ export default function AdminNavbar({
               const active = item.tab ? activeTab === item.tab : item.match(pathname)
               const Icon = NAV_ICONS[item.label as keyof typeof NAV_ICONS]
               const className = `flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] font-semibold transition-all ${active ? 'bg-[#F0523F] text-white shadow-[0_12px_28px_-16px_rgba(240,82,63,.9)]' : 'text-white/60 hover:bg-white/[0.07] hover:text-white'}`
-              if (item.tab) return <button key={item.label} type="button" onClick={() => onSelectTab!(item.tab!)} className={className}><Icon size={18} /><span>{item.label}</span></button>
+              if (item.tab && onSelectTab) return <button key={item.label} type="button" onClick={() => onSelectTab(item.tab!)} className={className}><Icon size={18} /><span>{item.label}</span></button>
               return <Link key={item.label} href={item.href} className={className}><Icon size={18} /><span>{item.label}</span></Link>
             })}
           </nav>
@@ -293,7 +296,7 @@ export default function AdminNavbar({
             const active = item.tab ? activeTab === item.tab : item.match(pathname)
             const Icon = NAV_ICONS[item.label as keyof typeof NAV_ICONS]
             const cn = `flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold ${active ? 'bg-[#F0523F] text-white' : 'text-white/55'}`
-            if (item.tab) return <button key={item.label} onClick={() => onSelectTab!(item.tab!)} className={cn}><Icon size={17} />{item.label}</button>
+            if (item.tab && onSelectTab) return <button key={item.label} onClick={() => onSelectTab(item.tab!)} className={cn}><Icon size={17} />{item.label}</button>
             return <Link key={item.label} href={item.href} className={cn}><Icon size={17} />{item.label}</Link>
           })}
         </nav>

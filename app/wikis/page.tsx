@@ -1,9 +1,10 @@
 ﻿import { getKits, getWikis } from '@/lib/data'
 import { getWikisFromDb } from '@/lib/server-data'
 import Link from 'next/link'
-import { ArrowRight, Bell, Cpu, Hand, Play, Search, Sparkles } from 'lucide-react'
+import { ArrowRight, Cpu, Hand, Play, Search, Sparkles } from 'lucide-react'
 import { Lexend, Manrope } from 'next/font/google'
 import type { CSSProperties } from 'react'
+import AdminNavbar from '@/components/admin-navbar'
 
 export const dynamic = 'force-dynamic'
 
@@ -244,64 +245,9 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
           'radial-gradient(circle at 15% 12%, rgba(var(--primary-rgb), 0.16), transparent 42%), radial-gradient(circle at 84% 8%, rgba(var(--secondary-rgb), 0.18), transparent 38%), linear-gradient(180deg, #FAEFED 0%, var(--bg) 38%, #FBEAE8 100%)',
       }}
     >
-      <header className="sticky top-0 z-50 px-4 pt-4 sm:px-6 lg:px-10">
-        <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between rounded-[1.3rem] bg-white/70 px-4 py-3 shadow-[0_24px_60px_-44px_rgba(43,42,81,0.6)] backdrop-blur-3xl sm:px-6">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-3">
-              <img src="/images/robogeex-logo.png" alt="RoboGeex" className="h-9 w-9 rounded-xl" />
-              <span className={`${displayFont.className} text-lg font-bold tracking-tight text-[var(--text-primary)]`}>
-                RoboGeex
-              </span>
-            </Link>
+      <AdminNavbar sidebarMode />
 
-            <nav className="hidden items-center gap-6 text-sm font-semibold text-[var(--text-secondary)] lg:flex">
-              <Link href="/" className="transition-colors hover:text-[var(--text-primary)]">
-                Home
-              </Link>
-              <Link href="/wikis" className="text-[var(--primary)]">
-                Wikis
-              </Link>
-              <Link href="/editor" className="transition-colors hover:text-[var(--text-primary)]">
-                Mentors
-              </Link>
-              <Link href="/dashboard" className="transition-colors hover:text-[var(--text-primary)]">
-                Pricing
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden h-11 min-w-[220px] items-center gap-2 rounded-full bg-[#F8EFED] px-4 text-[#9E726B] shadow-[inset_0_1px_2px_rgba(73,24,19,0.08)] md:flex">
-              <Search size={16} />
-              <input
-                type="search"
-                aria-label="Find a wiki"
-                placeholder="Find a wiki..."
-                className="w-full bg-transparent text-sm font-medium text-[var(--text-secondary)] placeholder:text-[#B58A83] focus:outline-none"
-              />
-            </div>
-            <Link
-              href="/signup"
-              className="inline-flex h-11 items-center rounded-full px-6 text-sm font-bold text-white"
-              style={{
-                background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                boxShadow: '0 18px 32px -20px rgba(var(--primary-rgb), 0.72)',
-              }}
-            >
-              Sign Up
-            </Link>
-            <button
-              type="button"
-              aria-label="Notifications"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#F8EFED] text-[var(--text-secondary)] transition-transform hover:-translate-y-0.5"
-            >
-              <Bell size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="pb-16 pt-6 sm:pt-8 lg:pb-20">
+      <main className="pb-28 pt-[88px] lg:ml-[272px] lg:pb-20 lg:pt-8">
         <section className="mx-auto w-full max-w-[1240px] px-4 sm:px-6 lg:px-10">
           <div
             className="relative overflow-hidden rounded-[2.2rem] px-6 pb-16 pt-16 text-center shadow-[0_34px_80px_-56px_rgba(43,42,81,0.65)] sm:px-10 sm:pt-20 lg:pb-20"
@@ -625,7 +571,7 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
       </main>
 
       <footer
-        className="mt-12 px-4 py-9 sm:px-6 lg:px-10"
+        className="mt-12 px-4 pb-28 pt-9 sm:px-6 lg:ml-[272px] lg:px-10 lg:pb-9"
         style={{ background: 'linear-gradient(180deg, #F9E8E5 0%, var(--surface) 100%)' }}
       >
         <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-5 text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-between">
@@ -646,4 +592,3 @@ export default async function WikisLandingPage({ searchParams }: WikisPageProps)
     </div>
   )
 }
-

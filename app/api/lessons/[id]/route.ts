@@ -303,64 +303,70 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const existing = await findLessonMatch(prisma, wikiSlug, id)
     if (!existing) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
 
-    const lessonKey = (existing as any).lessonKey || existing.id
+    // Collect EVERY row of this lesson family so delete removes all versions
+    // (draft + published + slug-collision forks). We cannot rely on lessonKey
+    // alone: rows imported before the lessonKey column have it empty, and forks
+    // live under `-published` / `--draft-1` ids with a different key — matching
+    // only by lessonKey left the published (or forked) rows behind. Match by the
+    // id root (fork suffixes stripped), the lessonKey, and the slug root.
+    const stripForkSuffix = (value: string | null | undefined) =>
+      (value || '').trim().replace(/(-published|--draft(-\d+)?|-draft-v\d+)$/, '')
+    const rootId = stripForkSuffix(existing.id)
+    const rootSlug = stripLegacyDraftSuffix((existing as any).slug)
+    const familyKey = ((existing as any).lessonKey || '').trim()
+    const belongsToFamily = (row: any) =>
+      (rootId && stripForkSuffix(row.id) === rootId) ||
+      (familyKey && ((row.lessonKey || '').trim() === familyKey)) ||
+      (rootSlug && stripLegacyDraftSuffix(row.slug) === rootSlug)
+
     let familyRows: any[] = []
     try {
-      familyRows = await prisma.lesson.findMany({
-        where: { wikiSlug: existing.wikiSlug, lessonKey },
+      const rows = await prisma.lesson.findMany({
+        where: { wikiSlug: existing.wikiSlug },
+        select: {
+          id: true,
+          slug: true,
+          lessonKey: true,
+          title_en: true,
+          status: true,
+          version: true,
+          updatedAt: true,
+          createdAt: true,
+        },
       })
-      familyRows = sortVersionRowsDesc(familyRows)
+      familyRows = rows.filter(belongsToFamily)
     } catch (error: any) {
       if (!isLegacyLessonReadSchemaError(error)) throw error
-      const baseId = stripLegacyDraftSuffix((existing as any)?.id)
-      const baseSlug = stripLegacyDraftSuffix((existing as any)?.slug)
-      const legacyRows = await prisma.lesson.findMany({
-        where: {
-          wikiSlug: existing.wikiSlug,
-          OR: [
-            ...(baseId ? [{ id: baseId }, { id: toLegacyDraftValue(baseId) }] : []),
-            ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
-          ],
-        },
+      const rows = await prisma.lesson.findMany({
+        where: { wikiSlug: existing.wikiSlug },
         select: legacyLessonReadSelect,
       })
-      familyRows = sortVersionRowsDesc(legacyRows.map(mapLegacyLessonRow))
+      familyRows = rows.map(mapLegacyLessonRow).filter(belongsToFamily)
     }
     if (!Array.isArray(familyRows) || familyRows.length === 0) {
       familyRows = [existing]
     }
 
     const latest = sortVersionRowsDesc(familyRows)[0]
-    const slug = latest?.slug || existing.slug
-    if (slug === 'getting-started' || slug === 'resources') {
+    const guardSlug = stripLegacyDraftSuffix(latest?.slug || existing.slug)
+    if (guardSlug === 'getting-started' || guardSlug === 'resources') {
       return NextResponse.json(
         { error: 'The "Getting Started" and "Resources" lessons cannot be deleted as they are required system lessons.' },
         { status: 400 }
       )
     }
 
-    try {
-      await prisma.lesson.deleteMany({
-        where: { wikiSlug: existing.wikiSlug, lessonKey },
-      })
-    } catch (error: any) {
-      if (!isLessonKeyUnsupportedError(error)) throw error
-      const baseId = stripLegacyDraftSuffix((existing as any)?.id)
-      const baseSlug = stripLegacyDraftSuffix((existing as any)?.slug)
-      await prisma.lesson.deleteMany({
-        where: {
-          wikiSlug: existing.wikiSlug,
-          OR: [
-            ...(baseId ? [{ id: baseId }, { id: toLegacyDraftValue(baseId) }] : []),
-            ...(baseSlug ? [{ slug: baseSlug }, { slug: toLegacyDraftValue(baseSlug) }] : []),
-          ],
-        },
-      })
-    }
+    const idsToDelete = Array.from(
+      new Set(familyRows.map((row: any) => row.id).filter(Boolean))
+    )
+    await prisma.lesson.deleteMany({
+      where: { wikiSlug: existing.wikiSlug, id: { in: idsToDelete } },
+    })
 
     return NextResponse.json({
       ok: true,
-      deleted: lessonKey,
+      deleted: rootId || existing.id,
+      deletedIds: idsToDelete,
       title: latest?.title_en || existing.title_en,
     })
   } catch (e: any) {

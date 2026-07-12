@@ -1,4 +1,3 @@
-import AdminNavbar from '@/components/admin-navbar'
 import WikiSidebar from '@/components/editor/WikiSidebar'
 import { getEditorSidebarData } from '@/lib/editor-wikis'
 
@@ -14,7 +13,6 @@ export default async function EditorDashboardLayout({
 
   return (
     <div className="min-h-screen bg-[#eef2f1]">
-      <AdminNavbar sidebarMode />
       <div className="flex pb-24 pt-[68px] lg:ml-[272px] lg:pb-0 lg:pt-0">
         <WikiSidebar wikis={sidebar.wikis} isSuperadmin={sidebar.isSuperadmin} />
         <main className="flex-1 min-w-0">{children}</main>

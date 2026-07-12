@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import AdminNavbar, { type DashboardTab } from '@/components/admin-navbar'
+import { useEffect, useRef, useState } from 'react'
+import { type DashboardTab } from '@/components/admin-navbar'
 import DashboardHome from './DashboardHome'
 import StudentsPageClient from './students/StudentsPageClient'
 import TeachersPageClient from './teachers/TeachersPageClient'
@@ -23,11 +23,6 @@ type Props = {
   wikis: Wiki[]
 }
 
-const TAB_PATH: Record<DashboardTab, string> = {
-  overview: '/dashboard',
-  students: '/dashboard/students',
-  teachers: '/dashboard/teachers',
-}
 const PATH_TAB: Record<string, DashboardTab> = {
   '/dashboard': 'overview',
   '/dashboard/students': 'students',
@@ -43,10 +38,6 @@ const PATH_TAB: Record<string, DashboardTab> = {
 // (pushState), which Next's router never sees, so it never triggers a
 // navigation or refetch.
 export default function AdminDashboardShell({
-  userInitials,
-  userAvatarUrl,
-  userName,
-  userEmail,
   initialTab,
   stats,
   people,
@@ -63,13 +54,6 @@ export default function AdminDashboardShell({
   // Back button.)
   const tabRef = useRef(initialTab)
 
-  const selectTab = useCallback((next: DashboardTab) => {
-    if (tabRef.current === next) return
-    tabRef.current = next
-    window.history.pushState({ tab: next }, '', TAB_PATH[next])
-    setTab(next)
-  }, [])
-
   // Browser Back/Forward moves through the pushState entries above without a
   // real navigation — sync our tab state to match.
   useEffect(() => {
@@ -79,7 +63,17 @@ export default function AdminDashboardShell({
       setTab(next)
     }
     window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
+    function onTabChange(event: Event) {
+      const next = (event as CustomEvent<DashboardTab>).detail
+      if (!next) return
+      tabRef.current = next
+      setTab(next)
+    }
+    window.addEventListener('admin-tab-change', onTabChange)
+    return () => {
+      window.removeEventListener('popstate', onPopState)
+      window.removeEventListener('admin-tab-change', onTabChange)
+    }
   }, [])
 
   const background =
@@ -89,15 +83,6 @@ export default function AdminDashboardShell({
 
   return (
     <div className="min-h-screen bg-[#f7f6f4]" style={background ? { background } : undefined}>
-      <AdminNavbar
-        userInitials={userInitials}
-        userAvatarUrl={userAvatarUrl}
-        userName={userName}
-        userEmail={userEmail}
-        activeTab={tab}
-        onSelectTab={selectTab}
-      />
-
       {tab === 'overview' && (
         <main className="w-full px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:w-[calc(100%-272px)] lg:px-10 lg:pb-16 lg:pt-10">
           <div className="mx-auto max-w-[1280px]">

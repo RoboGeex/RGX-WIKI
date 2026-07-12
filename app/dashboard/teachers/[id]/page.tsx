@@ -1,6 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import AdminNavbar from '@/components/admin-navbar'
 import { requireAdminAccess } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import TeacherProfileClient, { type TeacherProfileData } from './TeacherProfileClient'
@@ -8,12 +7,6 @@ import TeacherProfileClient, { type TeacherProfileData } from './TeacherProfileC
 export const dynamic = 'force-dynamic'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
-
-function initials(name: string | null | undefined, email: string) {
-  const source = name?.trim() || email
-  const parts = source.split(/\s+/)
-  return parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase() : source.slice(0, 2).toUpperCase()
-}
 
 export default async function TeacherProfilePage({ params }: { params: { id: string } }) {
   let auth: Awaited<ReturnType<typeof requireAdminAccess>>
@@ -114,11 +107,6 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
     lastLoginAt: lastSession?.createdAt ?? null,
   })) as TeacherProfileData
 
-  const account =
-    auth.source === 'user'
-      ? { name: auth.user.name, email: auth.user.email, avatarUrl: auth.user.avatarUrl }
-      : { name: auth.dev.name ?? null, email: auth.dev.email ?? '', avatarUrl: auth.dev.avatarUrl ?? null }
-
   return (
     <div
       className={`${display.variable} rgx-dash min-h-screen text-[#0F172A]`}
@@ -127,13 +115,6 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
           'radial-gradient(circle at 10% 0%, rgba(240,82,63,0.08), transparent 38%), radial-gradient(circle at 92% 4%, rgba(240,82,63,0.06), transparent 36%), linear-gradient(180deg, #FDF6F4 0%, #FBF7F5 100%)',
       }}
     >
-      <AdminNavbar
-        sidebarMode
-        userInitials={initials(account.name, account.email)}
-        userAvatarUrl={account.avatarUrl}
-        userName={account.name}
-        userEmail={account.email}
-      />
       <main className="px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:px-10 lg:pb-8 lg:pt-10">
         <div className="mx-auto max-w-7xl"><TeacherProfileClient profile={profile} /></div>
       </main>

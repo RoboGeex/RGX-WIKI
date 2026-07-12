@@ -2,6 +2,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import type { Metadata } from 'next';
+import AdminChrome from './admin-chrome';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans`} suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers><AdminChrome>{children}</AdminChrome></Providers>
       </body>
     </html>
   );

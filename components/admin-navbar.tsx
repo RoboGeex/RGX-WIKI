@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import { Search, GraduationCap, Users, BookOpen, Loader2, LayoutDashboard, PanelLeft, LogOut } from 'lucide-react'
+import { Search, GraduationCap, Users, BookOpen, Loader2, LayoutDashboard, PanelLeft } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { AdminSearchResult } from '@/app/api/admin/search/route'
 import SignOutButton from '@/components/sign-out-button'
@@ -287,7 +287,7 @@ export default function AdminNavbar({
               </span>
               <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{displayName || 'Administrator'}</span><span className="block truncate text-xs text-white/40">{displayEmail || 'Manage profile'}</span></span>
             </Link>
-            <SignOutButton iconSize={16} className="mt-2 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/50 transition hover:bg-white/[0.06] hover:text-white"><LogOut size={16} />Sign out</SignOutButton>
+            <SignOutButton iconSize={16} className="mt-2 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/50 transition hover:bg-white/[0.06] hover:text-white">Sign out</SignOutButton>
           </div>
         </aside>
 

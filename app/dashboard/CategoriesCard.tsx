@@ -92,14 +92,14 @@ export default function CategoriesCard() {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="h-full overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_16px_44px_-34px_rgba(15,23,42,.45)]">
+      <div className="flex items-center justify-between px-6 pb-4 pt-6">
         <div className="flex items-center gap-2">
-          <Tag size={14} className="text-gray-500" />
-          <h3 className="text-sm font-semibold text-gray-900">Wiki categories</h3>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Tag size={16} /></div>
+          <div><p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">Organization</p><h3 className="text-lg font-extrabold text-slate-950">Wiki categories</h3></div>
         </div>
         {!loading && (
-          <span className="text-xs text-gray-400">
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">
             {categories.length} total
           </span>
         )}
@@ -107,7 +107,7 @@ export default function CategoriesCard() {
 
       {/* Add row (superadmin only) */}
       {isSuperadmin && (
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50">
+        <div className="border-y border-slate-100 bg-slate-50/70 px-5 py-3">
           <div className="flex gap-2">
             <input
               type="text"

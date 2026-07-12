@@ -27,7 +27,7 @@ export default function WikiSidebar({ wikis, isSuperadmin }: Props) {
 
   return (
     <>
-      <aside className="hidden lg:flex w-72 shrink-0 flex-col sticky top-[72px] h-[calc(100vh-72px)] bg-white border-r border-gray-200">
+      <aside className="hidden lg:flex w-72 shrink-0 flex-col sticky top-0 h-screen bg-white border-r border-gray-200">
         <div className="px-5 pt-6 pb-4 border-b border-gray-100">
           <h1 className="text-xl font-bold text-gray-900">Wikis</h1>
           <p className="mt-1 text-xs text-gray-500">Pick a wiki to manage its lessons.</p>

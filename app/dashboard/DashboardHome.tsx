@@ -67,24 +67,30 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 // ── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, icon: Icon, href, loading }: {
+function StatCard({ label, value, sub, icon: Icon, href, loading, tone }: {
   label: string; value: number | string; sub: string
-  icon: any; href?: string; loading: boolean
+  icon: any; href?: string; loading: boolean; tone: 'blue' | 'violet' | 'emerald' | 'amber'
 }) {
+  const tones = {
+    blue: 'bg-blue-50 text-blue-600 ring-blue-100',
+    violet: 'bg-violet-50 text-violet-600 ring-violet-100',
+    emerald: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
+    amber: 'bg-amber-50 text-amber-600 ring-amber-100',
+  }
   const inner = (
-    <div className="h-full bg-white border border-[#F2E1DD] rounded-[1.5rem] p-6 hover:border-[#E23B2E]/40 hover:shadow-[0_24px_50px_-42px_rgba(226,59,46,0.55)] transition-all group">
-      <div className="flex items-center justify-between mb-5">
-        <div className="w-12 h-12 rounded-xl bg-[#FDEDEA] flex items-center justify-center text-[#E23B2E]">
+    <div className="group h-full rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_8px_30px_-24px_rgba(15,23,42,.35)] transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,.35)]">
+      <div className="mb-5 flex items-center justify-between">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ${tones[tone]}`}>
           <Icon size={22} />
         </div>
-        {href && <ChevronRight size={20} className="text-[#DEC7C2] group-hover:text-[#E23B2E] transition-colors" />}
+        {href && <ChevronRight size={19} className="text-slate-300 transition-colors group-hover:text-slate-600" />}
       </div>
       {loading
-        ? <div className="h-11 w-16 bg-[#F5EAE7] rounded-lg animate-pulse mb-2" />
-        : <p className="text-5xl font-extrabold text-[#1A1110] leading-none mb-2">{value}</p>
+        ? <div className="mb-2 h-10 w-16 animate-pulse rounded-lg bg-slate-100" />
+        : <p className="mb-2 text-4xl font-extrabold leading-none tracking-tight text-slate-950">{value}</p>
       }
-      <p className="text-base font-bold text-[#1A1110]">{label}</p>
-      <p className="text-sm text-[#8B6B65] mt-0.5">{sub}</p>
+      <p className="text-base font-bold text-slate-900">{label}</p>
+      <p className="mt-0.5 text-sm text-slate-500">{sub}</p>
     </div>
   )
   return href ? <Link href={href} className="block h-full">{inner}</Link> : <div className="h-full">{inner}</div>
@@ -94,13 +100,13 @@ function StatCard({ label, value, sub, icon: Icon, href, loading }: {
 function MiniProgress({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="w-20 h-2 bg-[#F3E7E4] rounded-full overflow-hidden">
+      <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#F0523F] to-[#E23B2E]"
+          className="h-full rounded-full bg-emerald-500"
           style={{ width: `${Math.max(value, 2)}%` }}
         />
       </div>
-      <span className="text-sm font-bold text-[#6B4F4A] w-9 text-right">{value}%</span>
+      <span className="w-9 text-right text-sm font-bold text-slate-600">{value}%</span>
     </div>
   )
 }
@@ -173,6 +179,12 @@ export default function DashboardHome({
 
   const totalPeople = admins.length + devs.length
   const activeNow   = admins.filter(a => a.activeSessions > 0).length
+  const totalEnrollments = wikiHealth.reduce((sum, wiki) => sum + wiki.enrolled, 0)
+  const learnersInProgress = wikiHealth.reduce((sum, wiki) => sum + wiki.totalInProgress, 0)
+  const averageCompletion = wikiHealth.length
+    ? Math.round(wikiHealth.reduce((sum, wiki) => sum + wiki.avgCompletion, 0) / wikiHealth.length)
+    : 0
+  const healthyWikis = wikiHealth.filter((wiki) => wiki.avgCompletion >= 50).length
 
   const dayName  = refreshedAt.toLocaleDateString('en-US', { weekday: 'long' })
   const dateStr  = refreshedAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
@@ -185,23 +197,19 @@ export default function DashboardHome({
   ]
 
   return (
-    <div className={`${display.variable} rgx-dash dashboard-text-scale space-y-9 text-[#1A1110]`}>
+    <div className={`${display.variable} rgx-dash dashboard-text-scale space-y-7 text-slate-950`}>
 
       {/* Page header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#1A1110]">Dashboard</h1>
-            <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />All systems
-            </span>
-          </div>
+          <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-slate-400">Overview</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">Academy dashboard</h1>
           {/* Built from the current clock (new Date()/Date.now()), which differs
               between server render and client hydration — suppress the mismatch. */}
           <p className="text-base text-[#8B6B65]" suppressHydrationWarning>{dayName} · {dateStr} · last refresh {refreshLabel}</p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
-          <button onClick={loadAll} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#EBD9D5] text-[15px] font-semibold text-[#6B4F4A] hover:bg-white transition-colors">
+          <button onClick={loadAll} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[15px] font-semibold text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-900">
             <RefreshCw size={16} /> Refresh
           </button>
           {isSuperadmin && (
@@ -217,22 +225,38 @@ export default function DashboardHome({
       </div>
 
       {/* Stat cards */}
-      <div className="stagger-children grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Active teachers" value={stats?.teachers ?? 0} sub="total registered"
-          icon={GraduationCap} loading={loadingStats} href="/dashboard/teachers" />
+          icon={GraduationCap} loading={loadingStats} href="/dashboard/teachers" tone="blue" />
         <StatCard label="Total students" value={stats?.students ?? 0} sub="enrolled across all wikis"
-          icon={Users} loading={loadingStats} href="/dashboard/students" />
+          icon={Users} loading={loadingStats} href="/dashboard/students" tone="violet" />
         <StatCard label="Published wikis" value={stats?.wikis ?? 0} sub="live this month"
-          icon={BookOpen} loading={loadingStats} />
+          icon={BookOpen} loading={loadingStats} tone="emerald" />
         <StatCard label="Admin sessions" value={stats?.activeSessions ?? 0} sub="currently active"
-          icon={Activity} loading={loadingStats} />
+          icon={Activity} loading={loadingStats} tone="amber" />
       </div>
 
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-[0_18px_44px_-30px_rgba(15,23,42,.75)]">
+        <div className="grid lg:grid-cols-[1.2fr_3fr]">
+          <div className="border-b border-white/10 p-6 lg:border-b-0 lg:border-r">
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-white/40">Learning pulse</p>
+            <h2 className="mt-2 text-2xl font-extrabold">How the academy is moving</h2>
+            <p className="mt-2 text-sm leading-6 text-white/55">Participation and content-health signals across published wikis.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4">
+            <div className="border-b border-r border-white/10 p-5 sm:border-b-0"><p className="text-3xl font-extrabold">{averageCompletion}%</p><p className="mt-1 text-sm text-white/50">Average completion</p></div>
+            <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r"><p className="text-3xl font-extrabold">{totalEnrollments}</p><p className="mt-1 text-sm text-white/50">Wiki enrollments</p></div>
+            <div className="border-r border-white/10 p-5"><p className="text-3xl font-extrabold">{learnersInProgress}</p><p className="mt-1 text-sm text-white/50">Learning now</p></div>
+            <div className="p-5"><p className="text-3xl font-extrabold">{healthyWikis}<span className="text-lg text-white/35">/{wikiHealth.length}</span></p><p className="mt-1 text-sm text-white/50">Wikis above 50%</p></div>
+          </div>
+        </div>
+      </section>
+
       {/* Bottom: two columns */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
 
         {/* Left: Admins & editors */}
-        <div className="xl:col-span-3 bg-white border border-[#F2E1DD] rounded-[1.5rem] overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white xl:col-span-3">
           <div className="px-6 py-5 border-b border-[#F3E7E4] flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-[#1A1110]">Admins &amp; editors</h2>
@@ -296,7 +320,7 @@ export default function DashboardHome({
         <div className="xl:col-span-2 space-y-6">
 
           {/* Wiki overview */}
-          <div className="bg-white border border-[#F2E1DD] rounded-[1.5rem] overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="px-6 py-5 border-b border-[#F3E7E4] flex items-center justify-between">
               <h3 className="text-xl font-bold text-[#1A1110]">Wiki overview</h3>
               <Link href="/editor" className="text-[15px] font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors">Manage →</Link>
@@ -325,7 +349,7 @@ export default function DashboardHome({
           <CategoriesCard />
 
           {/* Needs attention — flagged lessons */}
-          <div className="bg-white border border-[#F2E1DD] rounded-[1.5rem] overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="px-6 py-5 border-b border-[#F3E7E4] flex items-center justify-between">
               <h3 className="text-xl font-bold text-[#1A1110]">Needs attention</h3>
               {!loadingWikis && flaggedLessons.length > 0 && (

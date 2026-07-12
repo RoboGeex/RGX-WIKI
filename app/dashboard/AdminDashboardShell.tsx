@@ -76,13 +76,8 @@ export default function AdminDashboardShell({
     }
   }, [])
 
-  const background =
-    tab === 'overview'
-      ? 'radial-gradient(circle at 10% 0%, rgba(240,82,63,0.08), transparent 38%), radial-gradient(circle at 92% 4%, rgba(240,82,63,0.06), transparent 36%), linear-gradient(180deg, #FDF6F4 0%, #FBF7F5 100%)'
-      : undefined
-
   return (
-    <div className="min-h-screen bg-[#f7f6f4]" style={background ? { background } : undefined}>
+    <div className="min-h-screen bg-[#f4f6f8]">
       {tab === 'overview' && (
         <main className="w-full px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:w-[calc(100%-272px)] lg:px-10 lg:pb-16 lg:pt-10">
           <div className="mx-auto max-w-[1280px]">

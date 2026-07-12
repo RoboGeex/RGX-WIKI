@@ -163,6 +163,12 @@ export function hasUnpublishedLessonChanges(
   if (!draft || !published) return false
   if (hasLessonContentChanges(draft, published)) return true
 
+  // When both rows carry their body the content comparison above is
+  // authoritative. Timestamps drift for non-edit reasons (lock heartbeats,
+  // no-op autosaves), so the heuristic below only applies to body-less list
+  // rows where content can't be fully compared.
+  if (Array.isArray((draft as any).body) && Array.isArray((published as any).body)) return false
+
   const draftUpdatedAt = toTimestamp((draft as VersionedLessonLike).updatedAt)
   const publishedAt =
     toTimestamp((published as VersionedLessonLike).publishedAt) ||

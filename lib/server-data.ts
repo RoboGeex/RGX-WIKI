@@ -95,7 +95,9 @@ function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], publ
 
   const grouped = groupLessonsByKey(rows)
   return collapsed.map((lesson) => {
-    const versions = grouped.get(lesson.lessonKey || lesson.id) || []
+    // Look up with the same key the grouping used — getLessonKey strips the
+    // legacy "--draft" suffix, a raw `lessonKey || id` lookup would miss.
+    const versions = grouped.get(getLessonKey(lesson)) || []
     const latestDraft = pickLatestDraft(versions)
     const latestPublished = pickLatestPublished(versions)
     const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt)

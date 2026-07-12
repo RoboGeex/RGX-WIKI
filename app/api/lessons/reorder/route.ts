@@ -88,18 +88,62 @@ export async function POST(req: Request) {
     const remaining = allLessons.filter(lesson => !seenRootSlugs.has(getRootSlug(lesson.slug)))
     const finalOrder = [...ordered, ...remaining]
     
-    // Perform reorder in a single transaction
+    // Update every row of each lesson's family, not just the exact
+    // slug/slug--draft pair: legacy drafts can carry bumped suffixes
+    // ("--draft-1") or a renamed slug, and a missed row keeps a stale `order`
+    // — which diverges the editor and wiki ordering and shows a phantom
+    // "Changed" badge (order participates in the content comparison).
+    type LessonRowMeta = { id: string; slug: string | null; lessonKey?: string | null }
+    let allRows: LessonRowMeta[]
+    try {
+      allRows = (await prisma.$queryRawUnsafe(
+        'SELECT `id`, `slug`, `lessonKey` FROM `Lesson` WHERE `wikiSlug` = ?',
+        wikiSlug
+      )) as LessonRowMeta[]
+    } catch {
+      // lessonKey column doesn't exist on legacy wiki DBs
+      allRows = (await prisma.$queryRawUnsafe(
+        'SELECT `id`, `slug` FROM `Lesson` WHERE `wikiSlug` = ?',
+        wikiSlug
+      )) as LessonRowMeta[]
+    }
+
+    const claimed = new Set<string>()
+    const updates: { ids: string[]; order: number }[] = []
+    finalOrder.forEach((lesson, idx) => {
+      const candidates = new Set(
+        [
+          getRootSlug(lesson.slug || ''),
+          getRootSlug((lesson as any).id || ''),
+          ((lesson as any).lessonKey || '').trim(),
+        ].filter(Boolean)
+      )
+      const ids = allRows
+        .filter((row) => !claimed.has(row.id))
+        .filter((row) => {
+          const rowKey = typeof row.lessonKey === 'string' ? row.lessonKey.trim() : ''
+          return (
+            (rowKey !== '' && candidates.has(rowKey)) ||
+            candidates.has(getRootSlug(row.slug || '')) ||
+            candidates.has(getRootSlug(row.id || ''))
+          )
+        })
+        .map((row) => row.id)
+      ids.forEach((id) => claimed.add(id))
+      if (ids.length > 0) updates.push({ ids, order: idx + 1 })
+    })
+
+    // Raw SQL on purpose: an ORM update would bump @updatedAt on draft rows,
+    // which the unpublished-changes heuristic reads as an edit.
     await prisma.$transaction(
-      finalOrder.map((lesson, idx) => {
-        const baseSlug = getRootSlug(lesson.slug)
-        return prisma.$executeRawUnsafe(
-          "UPDATE Lesson SET `order` = ? WHERE (slug = ? OR slug = ?) AND wikiSlug = ?",
-          idx + 1,
-          baseSlug,
-          `${baseSlug}${LEGACY_DRAFT_SUFFIX}`,
-          wikiSlug
+      updates.map(({ ids, order }) =>
+        prisma.$executeRawUnsafe(
+          `UPDATE \`Lesson\` SET \`order\` = ? WHERE \`wikiSlug\` = ? AND \`id\` IN (${ids.map(() => '?').join(', ')})`,
+          order,
+          wikiSlug,
+          ...ids
         )
-      })
+      )
     )
 
     revalidatePath('/', 'layout')

@@ -14,6 +14,7 @@ import {
   collapseLessonsForPublic,
   getLessonKey,
   groupLessonsByKey,
+  hasLessonContentChanges,
   hasUnpublishedLessonChanges,
   pickLatestDraft,
   pickLatestPublished,
@@ -178,7 +179,9 @@ function enrichLessonsWithPublishState(rows: any[], collapsed: any[], publishedO
 
   const grouped = groupLessonsByKey(rows)
   return collapsed.map((lesson) => {
-    const versions = grouped.get(lesson.lessonKey || lesson.id) || []
+    // Look up with the same key the grouping used — getLessonKey strips the
+    // legacy "--draft" suffix, a raw `lessonKey || id` lookup would miss.
+    const versions = grouped.get(getLessonKey(lesson)) || []
     const latestDraft = pickLatestDraft(versions)
     const latestPublished = pickLatestPublished(versions)
     const hasPublishedVersion = Boolean(latestPublished)
@@ -944,6 +947,19 @@ async function saveLegacyLessonInDb(
         publishedAt: null,
       }
 
+      // No-op saves must not touch the row: rewriting identical content bumps
+      // updatedAt past publishedAt and flags a phantom "Changed".
+      if (latestDraft && !hasLessonContentChanges(draftData, latestDraft)) {
+        return {
+          row: latestDraft,
+          isUpdate: true,
+          lastPublishedAt: latestPublished?.publishedAt || null,
+          hasUnpublishedChanges: latestPublished
+            ? hasLessonContentChanges(latestDraft, latestPublished)
+            : false,
+        }
+      }
+
       const row = latestDraft
         ? await updateLegacyLessonRow(tx, {
             id: latestDraft.id,
@@ -1235,7 +1251,9 @@ export async function POST(req: Request) {
             isUpdate: legacySaved.isUpdate,
             lastPublishedAt: legacySaved.lastPublishedAt || null,
             hasUnpublishedChanges:
-              legacySaved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(legacySaved.lastPublishedAt),
+              typeof (legacySaved as any).hasUnpublishedChanges === 'boolean'
+                ? (legacySaved as any).hasUnpublishedChanges
+                : legacySaved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(legacySaved.lastPublishedAt),
             lesson: {
               id: legacySaved.row.id,
               lessonKey: legacySaved.row.id,
@@ -1329,6 +1347,20 @@ export async function POST(req: Request) {
           if (requestedStatus === LESSON_STATUS.DRAFT) {
             const lockSource = latestDraft || latestPublished || latestAny
             ensureLockAndVersionOrThrow(lockSource, clientVersion, developer?.id)
+
+            // No-op saves must not touch the row: rewriting identical content
+            // bumps updatedAt past publishedAt (phantom "Changed") and
+            // inflates the version for no reason.
+            if (latestDraft && !hasLessonContentChanges(baseData, latestDraft)) {
+              return {
+                row: latestDraft,
+                isUpdate: true,
+                lastPublishedAt: latestPublished?.publishedAt || null,
+                hasUnpublishedChanges: latestPublished
+                  ? hasLessonContentChanges(latestDraft, latestPublished)
+                  : false,
+              }
+            }
 
             const row = latestDraft
               ? await tx.lesson.update({
@@ -1458,7 +1490,9 @@ export async function POST(req: Request) {
           isUpdate: saved.isUpdate,
           lastPublishedAt: saved.lastPublishedAt || null,
           hasUnpublishedChanges:
-            saved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(saved.lastPublishedAt),
+            typeof (saved as any).hasUnpublishedChanges === 'boolean'
+              ? (saved as any).hasUnpublishedChanges
+              : saved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(saved.lastPublishedAt),
           lesson: {
             id: saved.row.id,
             lessonKey: saved.row.lessonKey || saved.row.id,
@@ -1494,7 +1528,9 @@ export async function POST(req: Request) {
               isUpdate: legacySaved.isUpdate,
               lastPublishedAt: legacySaved.lastPublishedAt || null,
               hasUnpublishedChanges:
-                legacySaved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(legacySaved.lastPublishedAt),
+                typeof (legacySaved as any).hasUnpublishedChanges === 'boolean'
+                  ? (legacySaved as any).hasUnpublishedChanges
+                  : legacySaved.row.status !== LESSON_STATUS.PUBLISHED && Boolean(legacySaved.lastPublishedAt),
               lesson: {
                 id: legacySaved.row.id,
                 lessonKey: legacySaved.row.id,
@@ -1604,6 +1640,28 @@ export async function POST(req: Request) {
       let isUpdate = false
 
       if (desiredStatus === LESSON_STATUS.DRAFT) {
+        // Mirror the DB paths: skip no-op saves so identical content doesn't
+        // churn the stored version/updatedAt.
+        if (latestDraft && !hasLessonContentChanges(baseData, latestDraft)) {
+          return NextResponse.json({
+            ok: true,
+            isUpdate: true,
+            lastPublishedAt: lastPublishedAt || null,
+            hasUnpublishedChanges: latestPublished
+              ? hasLessonContentChanges(latestDraft, latestPublished)
+              : false,
+            lesson: {
+              id: latestDraft.id,
+              lessonKey: latestDraft.lessonKey || latestDraft.id,
+              slug: latestDraft.slug,
+              order: latestDraft.order,
+              ownerId: latestDraft.ownerId || developer?.id || null,
+              status: lastPublishedAt ? LESSON_STATUS.PUBLISHED : LESSON_STATUS.DRAFT,
+              version: latestDraft.version || 1,
+            },
+          })
+        }
+
         const row = latestDraft
           ? (() => {
               const index = list.findIndex((item) => item.id === latestDraft.id)

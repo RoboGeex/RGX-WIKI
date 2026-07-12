@@ -5,7 +5,7 @@ import { Wiki, Kit, Material, Module, LessonBodyItem, Lesson } from '@/lib/types
 import kitsData from '@/data/kits.json'
 import wikisData from '@/data/wikis.json'
 import { getPrisma } from '@/lib/prisma-multi'
-import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, groupLessonsByKey, hasUnpublishedLessonChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
+import { LESSON_STATUS, collapseLessonsForEditor, collapseLessonsForPublic, getLessonKey, groupLessonsByKey, hasUnpublishedLessonChanges, pickLatestDraft, pickLatestPublished } from '@/lib/lesson-versions'
 import { normalizeSlug, stripLegacyDraftSuffix, LEGACY_DRAFT_SUFFIX, DEFAULT_LESSON_SLUG, RESOURCES_LESSON_SLUG } from './wikiPaths'
 import { HUB_DOMAIN } from '@/lib/domains'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
@@ -376,7 +376,9 @@ function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], incl
 
   const grouped = groupLessonsByKey(rows)
   return collapsed.map((lesson) => {
-    const versions = grouped.get(lesson.lessonKey || lesson.id) || []
+    // Look up with the same key the grouping used — getLessonKey strips the
+    // legacy "--draft" suffix, a raw `lessonKey || id` lookup would miss.
+    const versions = grouped.get(getLessonKey(lesson)) || []
     const latestDraft = pickLatestDraft(versions)
     const latestPublished = pickLatestPublished(versions)
     const lastPublishedAt = toIsoDate((latestPublished as any)?.publishedAt)

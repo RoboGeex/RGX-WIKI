@@ -175,16 +175,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden: You do not have permission to edit (or lock) this lesson' }, { status: 403 })
     }
 
-    // Acquire or renew lock
+    // Acquire or renew lock. Raw SQL on purpose: a Prisma update would bump
+    // @updatedAt on the draft row, which the unpublished-changes heuristic
+    // reads as an edit — merely opening a lesson flagged it "Changed".
     const newLockTime = new Date(now.getTime() + lockDuration)
-    await prisma.lesson.update({
-      where: { id: lesson.id },
-      data: {
-        activeEditorId: actorId,
-        lockedUntil: newLockTime
-      },
-      select: { id: true }
-    })
+    await prisma.$executeRawUnsafe(
+      'UPDATE `Lesson` SET `activeEditorId` = ?, `lockedUntil` = ? WHERE `id` = ?',
+      actorId,
+      newLockTime,
+      lesson.id
+    )
 
     return NextResponse.json({
       locked: false,
@@ -288,14 +288,12 @@ export async function DELETE(req: Request) {
     const lesson = pickEditableVersion(familyRows)
 
     if (lesson?.activeEditorId === actorId) {
-      await prisma.lesson.update({
-        where: { id: lesson.id },
-        data: {
-          activeEditorId: null,
-          lockedUntil: null
-        },
-        select: { id: true }
-      })
+      // Raw SQL for the same reason as lock acquisition: don't bump @updatedAt,
+      // or closing the editor marks the lesson "Changed".
+      await prisma.$executeRawUnsafe(
+        'UPDATE `Lesson` SET `activeEditorId` = NULL, `lockedUntil` = NULL WHERE `id` = ?',
+        lesson.id
+      )
     }
 
     return NextResponse.json({ success: true })

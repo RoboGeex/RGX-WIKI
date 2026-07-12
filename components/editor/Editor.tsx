@@ -950,6 +950,11 @@ export default function WikiEditor() {
   const pendingPublishCountRef = useRef(0)
   const captionFocusActiveRef = useRef(false)
   const autosavePauseUntilRef = useRef(0)
+  // Signature of the last content actually written to the server. Autosaves
+  // whose content matches are skipped — a re-save of identical content bumps
+  // the draft row's updatedAt past publishedAt and falsely flags the lesson
+  // as "Changed" right after publishing.
+  const lastSavedSignatureRef = useRef<string | null>(null)
   const imageCaptionDraftsRef = useRef<Map<string, string>>(new Map())
   const videoCaptionDraftsRef = useRef<Map<string, string>>(new Map())
 
@@ -2264,6 +2269,26 @@ export default function WikiEditor() {
         return
       }
 
+      // Skip no-op draft saves: identical content re-saved after a publish
+      // moves draft.updatedAt past publishedAt and shows a phantom "Changed"
+      // badge. Publishing always goes through.
+      const contentSignature = JSON.stringify({
+        id: meta.id || generatedId,
+        wikiSlug: payload.wikiSlug,
+        order: payload.order,
+        slug: payload.slug,
+        title_en: payload.title_en,
+        title_ar: payload.title_ar,
+        coverImage: payload.coverImage,
+        duration_min: payload.duration_min,
+        difficulty: payload.difficulty,
+        body: payload.body,
+      })
+      if (!wantsPublish && !meta.isNew && lastSavedSignatureRef.current === contentSignature) {
+        setStatus('Synced')
+        return meta
+      }
+
       const headers = applyDeveloperHeader({ 'Content-Type': 'application/json' })
       const payloadWithOwner = {
         ...payload,
@@ -2282,6 +2307,8 @@ export default function WikiEditor() {
         const detail = Array.isArray(data.missing) && data.missing.length ? ` (missing: ${data.missing.join(', ')})` : ''
         throw new Error((data.error || 'Failed') + detail)
       }
+
+      lastSavedSignatureRef.current = contentSignature
 
       const savedLesson = data?.lesson ?? {}
       const isUpdate = Boolean(data?.isUpdate)
@@ -2367,6 +2394,20 @@ export default function WikiEditor() {
   }
 
   function publish(statusOverride?: 'draft' | 'published') {
+    // A pending autosave firing after the publish would re-save the same
+    // content as a draft and immediately flag the lesson "Changed" — cancel
+    // it; the publish itself persists the current content.
+    if (statusOverride === 'published') {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current)
+        autosaveTimerRef.current = null
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
+      setAutosaveCountdown(null)
+    }
     pendingPublishCountRef.current += 1
     setIsSaving(true)
 

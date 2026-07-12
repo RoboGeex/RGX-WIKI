@@ -112,13 +112,14 @@ export default async function StudentProfilePage({ params }: { params: { id: str
       }}
     >
       <AdminNavbar
+        sidebarMode
         userInitials={initials(account.name, account.email)}
         userAvatarUrl={account.avatarUrl}
         userName={account.name}
         userEmail={account.email}
       />
-      <main className="mx-auto max-w-7xl px-6 pb-8 pt-[88px]">
-        <StudentProfileClient profile={profile} />
+      <main className="px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:px-10 lg:pb-8 lg:pt-10">
+        <div className="mx-auto max-w-7xl"><StudentProfileClient profile={profile} /></div>
       </main>
     </div>
   )

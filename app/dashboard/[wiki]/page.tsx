@@ -4,6 +4,7 @@ import { Cairo } from "next/font/google"
 import { getWiki, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { buildLessonHref } from "@/lib/wikiPaths"
+import AdminNavbar from "@/components/admin-navbar"
 
 export const dynamic = "force-dynamic"
 
@@ -31,7 +32,10 @@ export default async function WikiDashboardPage({ params }: Params) {
   )
 
   return (
-    <div className={`${display.variable} rgx-dash mx-auto max-w-5xl px-6 py-8 space-y-8`}>
+    <div className={`${display.variable} rgx-dash min-h-screen bg-[#f7f6f4]`}>
+      <AdminNavbar sidebarMode />
+      <main className="space-y-8 px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:px-10 lg:pb-10 lg:pt-10">
+      <div className="mx-auto max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <Link href="/dashboard" className="text-xs uppercase tracking-widest text-gray-500 hover:text-gray-700 inline-flex items-center">
@@ -153,6 +157,8 @@ export default async function WikiDashboardPage({ params }: Params) {
           </div>
         </section>
       ))}
+      </div>
+      </main>
     </div>
   )
 }

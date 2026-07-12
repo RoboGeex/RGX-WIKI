@@ -56,13 +56,15 @@ export default async function AdminProfilePage() {
       }}
     >
       <AdminNavbar
+        sidebarMode
         userInitials={getInitials(account.name, account.email)}
         userAvatarUrl={account.avatarUrl}
         userName={account.name}
         userEmail={account.email}
       />
 
-      <main className="mx-auto max-w-6xl px-6 pb-6 pt-[88px]">
+      <main className="px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:px-10 lg:pb-8 lg:pt-10">
+        <div className="mx-auto max-w-6xl">
         <div className="mb-4">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E23B2E]">Admin profile</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#0F172A]">Account settings</h1>
@@ -71,6 +73,7 @@ export default async function AdminProfilePage() {
           </p>
         </div>
         <AdminProfileClient account={account} />
+        </div>
       </main>
     </div>
   )

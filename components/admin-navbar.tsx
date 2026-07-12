@@ -220,6 +220,7 @@ export default function AdminNavbar({
 }: AdminNavbarProps) {
   const pathname = usePathname() ?? ''
   const router = useRouter()
+  const [navigationPath, setNavigationPath] = useState(pathname)
   const tabMode = Boolean(onSelectTab)
   const useSidebar = sidebarMode || tabMode
   const [profile, setProfile] = useState<{ name: string | null; email: string | null; avatarUrl: string | null } | null>(null)
@@ -244,6 +245,22 @@ export default function AdminNavbar({
     }
   }, [userAvatarUrl, userEmail, userName])
 
+  useEffect(() => {
+    setNavigationPath(pathname)
+  }, [pathname])
+
+  useEffect(() => {
+    function syncPath() {
+      setNavigationPath(window.location.pathname)
+    }
+    window.addEventListener('popstate', syncPath)
+    window.addEventListener('admin-tab-change', syncPath)
+    return () => {
+      window.removeEventListener('popstate', syncPath)
+      window.removeEventListener('admin-tab-change', syncPath)
+    }
+  }, [])
+
   const displayName = userName ?? profile?.name ?? null
   const displayEmail = userEmail ?? profile?.email ?? null
   const displayAvatarUrl = userAvatarUrl ?? profile?.avatarUrl ?? null
@@ -255,8 +272,9 @@ export default function AdminNavbar({
       onSelectTab(item.tab)
       return
     }
-    if (pathname === '/dashboard' || pathname === '/dashboard/students' || pathname === '/dashboard/teachers') {
+    if (navigationPath === '/dashboard' || navigationPath === '/dashboard/students' || navigationPath === '/dashboard/teachers') {
       window.history.pushState({ tab: item.tab }, '', item.href)
+      setNavigationPath(item.href)
       window.dispatchEvent(new CustomEvent('admin-tab-change', { detail: item.tab }))
       return
     }
@@ -284,7 +302,7 @@ export default function AdminNavbar({
           <div className="mt-6 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">Workspace</div>
           <nav className="mt-2 space-y-1">
             {NAV.map((item) => {
-              const active = item.tab && activeTab ? activeTab === item.tab : item.match(pathname)
+              const active = item.tab && activeTab ? activeTab === item.tab : item.match(navigationPath)
               const Icon = NAV_ICONS[item.label as keyof typeof NAV_ICONS]
               const className = `flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] font-semibold transition-all ${active ? 'bg-[#F0523F] text-white shadow-[0_12px_28px_-16px_rgba(240,82,63,.9)]' : 'text-white/60 hover:bg-white/[0.07] hover:text-white'}`
               if (item.tab) return <button key={item.label} type="button" onClick={() => selectDashboardTab(item)} className={className}><Icon size={18} /><span>{item.label}</span></button>
@@ -308,7 +326,7 @@ export default function AdminNavbar({
 
         <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border border-black/10 bg-[#1A1110]/95 p-1.5 shadow-2xl backdrop-blur lg:hidden">
           {NAV.map((item) => {
-            const active = item.tab && activeTab ? activeTab === item.tab : item.match(pathname)
+            const active = item.tab && activeTab ? activeTab === item.tab : item.match(navigationPath)
             const Icon = NAV_ICONS[item.label as keyof typeof NAV_ICONS]
             const cn = `flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold ${active ? 'bg-[#F0523F] text-white' : 'text-white/55'}`
             if (item.tab) return <button key={item.label} onClick={() => selectDashboardTab(item)} className={cn}><Icon size={17} />{item.label}</button>

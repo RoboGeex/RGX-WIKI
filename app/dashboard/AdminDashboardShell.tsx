@@ -88,7 +88,7 @@ export default function AdminDashboardShell({
       : undefined
 
   return (
-    <div className="min-h-screen bg-[#f5f5f4]" style={background ? { background } : undefined}>
+    <div className="min-h-screen bg-[#f7f6f4]" style={background ? { background } : undefined}>
       <AdminNavbar
         userInitials={userInitials}
         userAvatarUrl={userAvatarUrl}
@@ -99,21 +99,23 @@ export default function AdminDashboardShell({
       />
 
       {tab === 'overview' && (
-        <div className="w-full max-w-[1400px] mx-auto px-6 pt-[96px] pb-14">
-          <DashboardHome initialStats={stats} initialPeople={people} initialWikiHealth={wikiHealth} />
-        </div>
+        <main className="w-full px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:w-[calc(100%-272px)] lg:px-10 lg:pb-16 lg:pt-10">
+          <div className="mx-auto max-w-[1280px]">
+            <DashboardHome initialStats={stats} initialPeople={people} initialWikiHealth={wikiHealth} />
+          </div>
+        </main>
       )}
 
       {tab === 'students' && (
-        <div className="dashboard-text-scale mx-auto max-w-7xl px-6 pt-20 pb-12">
-          <StudentsPageClient initialStudents={students} />
-        </div>
+        <main className="dashboard-text-scale w-full px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:w-[calc(100%-272px)] lg:px-10 lg:pb-12 lg:pt-10">
+          <div className="mx-auto max-w-[1280px]"><StudentsPageClient initialStudents={students} /></div>
+        </main>
       )}
 
       {tab === 'teachers' && (
-        <div className="dashboard-text-scale mx-auto max-w-7xl px-6 pt-20 pb-12">
-          <TeachersPageClient wikis={wikis} initialTeachers={teachers} />
-        </div>
+        <main className="dashboard-text-scale w-full px-4 pb-28 pt-[88px] sm:px-6 lg:ml-[272px] lg:w-[calc(100%-272px)] lg:px-10 lg:pb-12 lg:pt-10">
+          <div className="mx-auto max-w-[1280px]"><TeachersPageClient wikis={wikis} initialTeachers={teachers} /></div>
+        </main>
       )}
     </div>
   )

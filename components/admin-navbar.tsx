@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import { Search, GraduationCap, Users, BookOpen, Loader2 } from 'lucide-react'
+import { Search, GraduationCap, Users, BookOpen, Loader2, LayoutDashboard, PanelLeft, LogOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { AdminSearchResult } from '@/app/api/admin/search/route'
 import SignOutButton from '@/components/sign-out-button'
@@ -31,6 +31,13 @@ const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: s
   { label: 'Students',  href: '/dashboard/students', tab: 'students', match: (p: string) => p.startsWith('/dashboard/students') },
   { label: 'Teachers',  href: '/dashboard/teachers', tab: 'teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
 ]
+
+const NAV_ICONS = {
+  Dashboard: LayoutDashboard,
+  Wikis: BookOpen,
+  Students: GraduationCap,
+  Teachers: Users,
+}
 
 const CATEGORY_META = {
   student: { label: 'Students', icon: GraduationCap },
@@ -237,6 +244,62 @@ export default function AdminNavbar({
   const displayEmail = userEmail ?? profile?.email ?? null
   const displayAvatarUrl = userAvatarUrl ?? profile?.avatarUrl ?? null
   const displayInitials = getInitials(displayName, displayEmail, userInitials)
+
+  if (tabMode) {
+    return (
+      <>
+        <header className={`${display.variable} rgx-dash fixed inset-x-0 top-0 z-40 flex h-[68px] items-center border-b border-[#eadfdb] bg-white/95 px-4 backdrop-blur lg:hidden`}>
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1A1110] text-white"><PanelLeft size={19} /></span>
+            <span className="text-[15px] font-extrabold text-[#1A1110]">Admin workspace</span>
+          </Link>
+          <Link href="/dashboard/profile" className="relative ml-auto flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-[#E94B3C] text-sm font-bold text-white">
+            {displayAvatarUrl ? <Image src={displayAvatarUrl} alt={displayName || 'Admin profile'} fill sizes="40px" className="object-cover" /> : displayInitials}
+          </Link>
+        </header>
+
+        <aside className={`${display.variable} rgx-dash fixed inset-y-0 left-0 z-40 hidden w-[272px] flex-col border-r border-white/10 bg-[#1A1110] px-4 py-5 text-white lg:flex`}>
+          <Link href="/dashboard" className="flex h-14 items-center px-2">
+            <Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={176} height={50} priority className="h-12 w-auto" />
+          </Link>
+
+          <div className="mt-6 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">Workspace</div>
+          <nav className="mt-2 space-y-1">
+            {NAV.map((item) => {
+              const active = item.tab ? activeTab === item.tab : item.match(pathname)
+              const Icon = NAV_ICONS[item.label as keyof typeof NAV_ICONS]
+              const className = `flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] font-semibold transition-all ${active ? 'bg-[#F0523F] text-white shadow-[0_12px_28px_-16px_rgba(240,82,63,.9)]' : 'text-white/60 hover:bg-white/[0.07] hover:text-white'}`
+              if (item.tab) return <button key={item.label} type="button" onClick={() => onSelectTab!(item.tab!)} className={className}><Icon size={18} /><span>{item.label}</span></button>
+              return <Link key={item.label} href={item.href} className={className}><Icon size={18} /><span>{item.label}</span></Link>
+            })}
+          </nav>
+
+          <div className="mt-7 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">Find anything</div>
+          <div className="mt-2 [&>div]:!block [&_input]:w-full"><AdminSearch /></div>
+
+          <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.055] p-3">
+            <Link href="/dashboard/profile" className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-white/[0.06]">
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#F0523F] to-[#E23B2E] text-sm font-bold text-white">
+                {displayAvatarUrl ? <Image src={displayAvatarUrl} alt={displayName || 'Admin profile'} fill sizes="40px" className="object-cover" /> : displayInitials}
+              </span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{displayName || 'Administrator'}</span><span className="block truncate text-xs text-white/40">{displayEmail || 'Manage profile'}</span></span>
+            </Link>
+            <SignOutButton iconSize={16} className="mt-2 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/50 transition hover:bg-white/[0.06] hover:text-white"><LogOut size={16} />Sign out</SignOutButton>
+          </div>
+        </aside>
+
+        <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border border-black/10 bg-[#1A1110]/95 p-1.5 shadow-2xl backdrop-blur lg:hidden">
+          {NAV.map((item) => {
+            const active = item.tab ? activeTab === item.tab : item.match(pathname)
+            const Icon = NAV_ICONS[item.label as keyof typeof NAV_ICONS]
+            const cn = `flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold ${active ? 'bg-[#F0523F] text-white' : 'text-white/55'}`
+            if (item.tab) return <button key={item.label} onClick={() => onSelectTab!(item.tab!)} className={cn}><Icon size={17} />{item.label}</button>
+            return <Link key={item.label} href={item.href} className={cn}><Icon size={17} />{item.label}</Link>
+          })}
+        </nav>
+      </>
+    )
+  }
 
   return (
     <nav className={`${display.variable} rgx-dash bg-[#1A1110] fixed top-0 left-0 right-0 z-40 border-b border-black/30`}>

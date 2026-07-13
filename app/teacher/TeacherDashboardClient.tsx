@@ -334,49 +334,59 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
   const displayName = user.name || user.email
 
   return (
-    <div
-      className={`${display.variable} rgx-dash min-h-screen text-[#1A1110]`}
-      style={{
-        background:
-          'radial-gradient(circle at 12% 0%, rgba(240,82,63,0.10), transparent 40%), radial-gradient(circle at 90% 5%, rgba(240,82,63,0.08), transparent 38%), linear-gradient(180deg, #FDF6F4 0%, #FBF7F5 40%, #FBF6F4 100%)',
-      }}
-    >
-      {/* Navbar */}
-      <nav className="sticky top-0 z-40 bg-[#1A1110]/95 backdrop-blur border-b border-black/20">
-        <div className="max-w-5xl mx-auto px-5 h-[84px] flex items-center justify-between">
-          <Link href="/home" className="flex items-center gap-2">
-            <Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={184} height={64} priority className="h-14 w-auto" />
-          </Link>
+    <div className={`${display.variable} rgx-dash min-h-screen bg-[#f4f6f8] text-[#1A1110]`}>
+      <header className="fixed inset-x-0 top-0 z-40 flex h-[68px] items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
+        <Link href="/home"><Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={150} height={44} priority className="h-11 w-auto" /></Link>
+        <div className="ml-auto"><Avatar name={user.name} email={user.email} size="sm" /></div>
+      </header>
 
-          <div className="flex items-center gap-1.5">
-            <Link href="/home" className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white/75 hover:text-white hover:bg-white/10 text-[15px] font-semibold transition-colors">
-              <Home size={18} />
-              <span className="hidden sm:inline">Home</span>
-            </Link>
-            <Link href="/teacher" className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white bg-white/10 border border-white/15 text-[15px] font-semibold">
-              <Layout size={18} />
-              <span className="hidden sm:inline">My classes</span>
-            </Link>
-            <SignOutButton className="ml-1 flex items-center gap-2 px-4 py-2.5 rounded-xl text-white/75 hover:text-white hover:bg-white/10 text-[15px] font-semibold transition-colors">
-                <span className="hidden sm:inline">Sign out</span>
-            </SignOutButton>
-          </div>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[272px] flex-col border-r border-white/10 bg-[#1A1110] px-4 py-5 text-white lg:flex">
+        <Link href="/home" className="flex h-14 items-center px-2"><Image src="/images/robogeex-logo.png" alt="RoboGeex Academy" width={176} height={50} priority className="h-12 w-auto" /></Link>
+        <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">Workspace</p>
+        <nav className="mt-2 space-y-1">
+          <Link href="/home" className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-semibold text-white/60 transition hover:bg-white/[0.07] hover:text-white"><Home size={18} /> Home</Link>
+          <Link href="/teacher" className="flex items-center gap-3 rounded-xl bg-[#F0523F] px-3.5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_28px_-16px_rgba(240,82,63,.9)]"><Layout size={18} /> My classes</Link>
+        </nav>
+        <p className="mt-7 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">Assigned classes</p>
+        <div className="mt-2 flex-1 space-y-1 overflow-y-auto">
+          {wikis.length === 0 ? <p className="px-3 py-3 text-sm leading-5 text-white/40">No classes assigned yet.</p> : wikis.map((wiki) => (
+            <button key={wiki.slug} type="button" onClick={() => setWikiSlug(wiki.slug)} className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${wikiSlug === wiki.slug ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/[0.06] hover:text-white'}`}>
+              <span className={`h-2 w-2 shrink-0 rounded-full ${wikiSlug === wiki.slug ? 'bg-[#F0523F]' : 'bg-white/20'}`} /><span className="truncate">{wiki.displayName}</span>
+            </button>
+          ))}
         </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-3">
+          <div className="flex items-center gap-3 p-1.5"><Avatar name={user.name} email={user.email} size="sm" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{displayName}</p><p className="truncate text-xs text-white/40">{user.email}</p></div></div>
+          <SignOutButton iconSize={16} className="mt-2 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/50 transition hover:bg-white/[0.06] hover:text-white">Sign out</SignOutButton>
+        </div>
+      </aside>
+
+      <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-3 rounded-2xl border border-black/10 bg-[#1A1110]/95 p-1.5 shadow-2xl backdrop-blur lg:hidden">
+        <Link href="/home" className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold text-white/55"><Home size={17} />Home</Link>
+        <Link href="/teacher" className="flex flex-col items-center gap-1 rounded-xl bg-[#F0523F] py-2 text-[10px] font-bold text-white"><Layout size={17} />Classes</Link>
+        <SignOutButton iconSize={17} className="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[10px] font-bold text-white/55">Sign out</SignOutButton>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-5 pt-10 pb-16 space-y-8">
+      <main className="w-full px-4 pb-28 pt-[92px] sm:px-6 lg:ml-[272px] lg:w-[calc(100%-272px)] lg:pb-16 lg:pt-10 xl:px-10">
+        <div className="mx-auto max-w-[1180px] space-y-8">
 
         {/* Header */}
         <div>
-          <Link href="/home" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors mb-3">
+          <Link href="/home" className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#B08981] transition-colors hover:text-[#E23B2E] lg:hidden">
             <ChevronLeft size={16} /> Back to home
           </Link>
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#1A1110]">My classes</h1>
           <p className="text-lg text-[#8B6B65] mt-2">Manage invites and track your students’ progress.</p>
         </div>
 
+        <div className="hidden justify-end lg:flex">
+          <button onClick={load} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[15px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
+
         {/* Course tabs */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 lg:hidden">
           {wikis.map((w) => (
             <button
               key={w.slug}
@@ -629,7 +639,8 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </main>
       {selectedStudent && (
         <ProgressDialog student={selectedStudent} onClose={() => setSelectedStudent(null)} />
       )}

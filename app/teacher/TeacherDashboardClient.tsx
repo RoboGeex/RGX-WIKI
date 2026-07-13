@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Cairo } from 'next/font/google'
-import { Home, Layout, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Eye, Clock, Circle, X, Download } from 'lucide-react'
+import { Home, Layout, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Clock, Circle, X, Download } from 'lucide-react'
 import SignOutButton from '@/components/sign-out-button'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
@@ -86,11 +86,14 @@ function formatDate(value: string | null | undefined) {
 function ProgressBar({ progress }: { progress: Student['progress'] }) {
   const pct = progressPct(progress)
   return (
-    <div className="flex min-w-[190px] items-center gap-3">
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#F1E4E1]">
-        <div className="h-full rounded-full bg-gradient-to-r from-[#F0523F] to-[#E23B2E]" style={{ width: `${Math.max(pct, progress.completed > 0 ? 4 : 0)}%` }} />
+    <div className="min-w-[180px]">
+      <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+        <span className="font-medium text-slate-500">{progress.completed} of {progress.total} lessons</span>
+        <span className="font-semibold tabular-nums text-slate-700">{pct}%</span>
       </div>
-      <span className="w-10 text-right text-sm font-bold text-[#1A1110]">{pct}%</span>
+      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full rounded-full bg-slate-700" style={{ width: `${Math.max(pct, progress.completed > 0 ? 4 : 0)}%` }} />
+      </div>
     </div>
   )
 }
@@ -468,13 +471,13 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
         </div>
 
         {/* Students */}
-        <div className="rounded-[1.7rem] border border-[#F2E1DD] bg-white shadow-[0_24px_50px_-42px_rgba(226,59,46,0.5)] p-7">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold text-[#1A1110]">Students &amp; progress</h2>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+            <div><h2 className="text-lg font-bold text-slate-900">Students</h2><p className="mt-0.5 text-sm text-slate-500">{activeStudents.length} active · {formerStudents.length} former</p></div>
             <button
               onClick={exportStudentsToExcel}
               disabled={students.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#EBD9D5] bg-white px-4 py-2 text-sm font-bold text-[#6B4F4A] transition-colors hover:bg-[#FBF3F1] disabled:cursor-not-allowed disabled:opacity-45"
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
             >
               <Download size={15} /> Export Excel
             </button>
@@ -499,22 +502,20 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
           )}
 
           {!loading && activeStudents.length > 0 && (
-            <div className="overflow-x-auto -mx-2">
-              <table className="w-full min-w-[760px]">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px]">
                 <thead>
-                  <tr className="text-left text-[13px] font-bold uppercase tracking-wide text-[#B08981] border-b-2 border-[#F3E7E4]">
-                    <th className="py-3 px-2 w-8">#</th>
-                    <th className="py-3 px-2">Student</th>
-                    <th className="py-3 px-2">Joined</th>
-                    <th className="py-3 px-2">Progress</th>
-                    <th className="py-3 px-2 text-right"></th>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="px-5 py-2.5">Student</th>
+                    <th className="px-4 py-2.5">Joined</th>
+                    <th className="px-4 py-2.5">Progress</th>
+                    <th className="px-5 py-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {activeStudents.map((s, i) => (
-                    <tr key={s.enrollmentId} className="border-b border-[#F6EEEC] last:border-0 hover:bg-[#FCF6F5] transition-colors">
-                      <td className="py-3.5 px-2 text-[#C6A39C] font-semibold">{i + 1}</td>
-                      <td className="py-3.5 px-2">
+                <tbody className="divide-y divide-slate-100">
+                  {activeStudents.map((s) => (
+                    <tr key={s.enrollmentId} className="transition-colors hover:bg-slate-50/70">
+                      <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar name={s.student.name} email={s.student.email} src={s.student.avatarUrl} size="sm" />
                           <div className="min-w-0">
@@ -523,33 +524,22 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-2 text-[15px] text-[#8B6B65] whitespace-nowrap">{new Date(s.joinedAt).toLocaleDateString()}</td>
-                      <td className="py-3.5 px-2">
-                        <div className="space-y-2">
-                          <ProgressBar progress={s.progress} />
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-                              <Check size={12} /> {s.progress.completed} done
-                            </span>
-                            <span className="text-xs font-semibold text-[#8B6B65]">
-                              {s.progress.total} total
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-2 text-right">
-                        <div className="flex justify-end gap-3">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-500">{new Date(s.joinedAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3"><ProgressBar progress={s.progress} /></td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => setSelectedStudent(s)}
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-[#6B4F4A] hover:text-[#1A1110] transition-colors"
+                            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                           >
-                            <Eye size={15} /> View progress
+                            View
                           </button>
                           <button
                             onClick={() => removeStudent(s)}
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-[#B08981] hover:text-[#E23B2E] transition-colors"
+                            className="rounded-md p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                            aria-label={`Remove ${s.student.name || s.student.email}`}
                           >
-                            <Trash2 size={15} /> Remove
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -575,23 +565,20 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
               </p>
 
               {showFormer && (
-                <div className="overflow-x-auto -mx-2 mt-3">
-                  <table className="w-full min-w-[760px]">
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full min-w-[620px]">
                     <thead>
-                      <tr className="text-left text-[13px] font-bold uppercase tracking-wide text-[#B08981] border-b-2 border-[#F3E7E4]">
-                        <th className="py-3 px-2 w-8">#</th>
-                        <th className="py-3 px-2">Student</th>
-                        <th className="py-3 px-2">Joined</th>
-                        <th className="py-3 px-2">Status</th>
-                        <th className="py-3 px-2">Progress</th>
-                        <th className="py-3 px-2 text-right"></th>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <th className="px-5 py-2.5">Student</th>
+                        <th className="px-4 py-2.5">Status</th>
+                        <th className="px-4 py-2.5">Progress</th>
+                        <th className="px-5 py-2.5 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {formerStudents.map((s, i) => (
-                        <tr key={s.enrollmentId} className="border-b border-[#F6EEEC] last:border-0 hover:bg-[#FCF6F5] transition-colors opacity-80">
-                          <td className="py-3.5 px-2 text-[#C6A39C] font-semibold">{i + 1}</td>
-                          <td className="py-3.5 px-2">
+                    <tbody className="divide-y divide-slate-100">
+                      {formerStudents.map((s) => (
+                        <tr key={s.enrollmentId} className="opacity-80 transition-colors hover:bg-slate-50/70">
+                          <td className="px-5 py-3">
                             <div className="flex items-center gap-3">
                               <Avatar name={s.student.name} email={s.student.email} src={s.student.avatarUrl} size="sm" />
                               <div className="min-w-0">
@@ -600,8 +587,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
                               </div>
                             </div>
                           </td>
-                          <td className="py-3.5 px-2 text-[15px] text-[#8B6B65] whitespace-nowrap">{new Date(s.joinedAt).toLocaleDateString()}</td>
-                          <td className="py-3.5 px-2 whitespace-nowrap">
+                          <td className="whitespace-nowrap px-4 py-3">
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EBE9] px-2.5 py-1 text-xs font-bold text-[#8B6B65]">
                               <Power size={12} /> {enrollmentStatusLabel(s.status)}
                             </span>
@@ -609,25 +595,13 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
                               <p className="mt-1 text-xs text-[#B08981]">{new Date(s.removedAt).toLocaleDateString()}</p>
                             )}
                           </td>
-                          <td className="py-3.5 px-2">
-                            <div className="space-y-2">
-                              <ProgressBar progress={s.progress} />
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-                                  <Check size={12} /> {s.progress.completed} done
-                                </span>
-                                <span className="text-xs font-semibold text-[#8B6B65]">
-                                  {s.progress.total} total
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-2 text-right">
+                          <td className="px-4 py-3"><ProgressBar progress={s.progress} /></td>
+                          <td className="px-5 py-3 text-right">
                             <button
                               onClick={() => setSelectedStudent(s)}
-                              className="inline-flex items-center gap-1 text-sm font-semibold text-[#6B4F4A] hover:text-[#1A1110] transition-colors"
+                              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
-                              <Eye size={15} /> View progress
+                              View
                             </button>
                           </td>
                         </tr>

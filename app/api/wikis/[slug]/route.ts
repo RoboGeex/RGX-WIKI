@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
 import { getPrisma } from '@/lib/prisma-multi'
+import { getDevelopersPrisma } from '@/lib/prisma-developers'
 import { findDeveloperById } from '@/lib/developers'
 
 export const dynamic = 'force-dynamic'
@@ -76,7 +77,6 @@ async function ensureWikiColumns(): Promise<void> {
   // Additive columns — check existence individually then add only if missing.
   const additive: Array<{ name: string; ddl: string }> = [
     { name: 'isPublished',          ddl: 'ALTER TABLE Wiki ADD COLUMN isPublished BOOLEAN NOT NULL DEFAULT TRUE' },
-    { name: 'scheduledDeletionAt',  ddl: 'ALTER TABLE Wiki ADD COLUMN scheduledDeletionAt DATETIME(3) NULL' },
     { name: 'tags',                 ddl: 'ALTER TABLE Wiki ADD COLUMN tags JSON NULL' },
   ]
 
@@ -129,11 +129,27 @@ async function patchFileWiki(slug: string, fields: Record<string, unknown>): Pro
   }
 }
 
+/** Drop a wiki entirely from wikis.json (used by hard delete). */
+async function removeFileWiki(slug: string): Promise<void> {
+  const filePath = path.join(process.cwd(), 'data', 'wikis.json')
+  try {
+    const raw = await fs.readFile(filePath, 'utf-8')
+    const wikis: any[] = JSON.parse(raw)
+    await fs.writeFile(
+      filePath,
+      JSON.stringify(wikis.filter((w) => w?.slug !== slug), null, 2),
+      'utf-8',
+    )
+  } catch (err: any) {
+    if (isReadOnlyFsError(err)) return
+    console.warn('[wiki route] file delete skipped:', err?.message)
+  }
+}
+
 type WikiUpdates = {
   isPublished?: boolean
   displayName?: string
   picture?: string
-  scheduledDeletionAt?: Date | null
   tags?: string[]
   /** New primary-key value — triggers a cascading rename of all lesson rows too */
   newSlug?: string
@@ -173,15 +189,6 @@ async function applyWikiUpdates(slug: string, updates: WikiUpdates): Promise<num
       Number(await prisma.$executeRawUnsafe('UPDATE Wiki SET tags = ? WHERE slug = ?', tagsJson, slug)),
     )
   }
-  if ('scheduledDeletionAt' in updates) {
-    affected = Math.max(
-      affected,
-      updates.scheduledDeletionAt === null
-        ? Number(await prisma.$executeRawUnsafe('UPDATE Wiki SET scheduledDeletionAt = NULL WHERE slug = ?', slug))
-        : Number(await prisma.$executeRaw`UPDATE Wiki SET scheduledDeletionAt = ${updates.scheduledDeletionAt} WHERE slug = ${slug}`),
-    )
-  }
-
   // ── Slug rename (last, after all other fields are set) ─────────────────────
   if (updates.newSlug && updates.newSlug !== slug) {
     const newSlug = updates.newSlug
@@ -368,9 +375,16 @@ export async function PATCH(
 
 // ── DELETE /api/wikis/[slug] ──────────────────────────────────────────────────
 //
-//  Superadmin only.
-//    • No body / {}           → schedule deletion 7 days out, unpublish immediately
-//    • { undo: true }         → cancel scheduled deletion, restore published state
+//  Superadmin only. Permanently and immediately deletes the wiki AND every
+//  lesson inside it. There is no grace period and no undo — the caller is
+//  expected to have confirmed intent (multiple warnings) before hitting this.
+//
+//  Cleanup order:
+//    1. All lessons in the wiki's own DB          (the whole point — required)
+//    2. The Wiki registry row in the hub DB       (required)
+//    3. Best-effort: assets, access codes, team membership, enrollment data,
+//       and the wikis.json entry. Failures here are logged but don't fail the
+//       request, since the wiki itself is already gone.
 
 export async function DELETE(
   req: Request,
@@ -386,28 +400,67 @@ export async function DELETE(
     if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (actor.role !== 'superadmin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    await ensureWikiColumns()
+    // ── 1. Delete every lesson in this wiki (the wiki's own DB) ───────────────
+    const wikiPrisma: any = getPrisma(slug)
+    const lessonResult = await wikiPrisma.lesson.deleteMany({ where: { wikiSlug: slug } })
+    const lessonsDeleted = Number(lessonResult?.count ?? 0)
 
-    const body = await req.json().catch(() => ({}))
-
-    // ── Undo deletion ───────────────────────────────────────────────────────
-    if (body?.undo === true) {
-      await applyWikiUpdates(slug, { scheduledDeletionAt: null, isPublished: true })
-      await patchFileWiki(slug, { isPublished: true })
-      return NextResponse.json({ ok: true, slug, undone: true })
+    // Ancillary wiki-scoped rows in the same DB — best effort.
+    for (const cleanup of [
+      () => wikiPrisma.asset.deleteMany({ where: { wikiSlug: slug } }),
+      () => wikiPrisma.accessCode.deleteMany({ where: { wikiSlug: slug } }),
+    ]) {
+      try {
+        await cleanup()
+      } catch (err: any) {
+        console.warn(`[wiki route] cleanup skipped for "${slug}":`, err?.message || err)
+      }
     }
 
-    // ── Schedule deletion ───────────────────────────────────────────────────
-    const scheduledDeletionAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    await applyWikiUpdates(slug, { scheduledDeletionAt, isPublished: false })
-    await patchFileWiki(slug, { isPublished: false })
+    // ── 2. Remove the Wiki registry row from the hub DB ──────────────────────
+    const hubPrisma: any = getPrisma()
+    await hubPrisma.$executeRawUnsafe('DELETE FROM Wiki WHERE slug = ?', slug)
 
-    return NextResponse.json({
-      ok: true,
-      slug,
-      scheduledDeletionAt: scheduledDeletionAt.toISOString(),
-    })
+    // ── 3. Best-effort cleanup of references elsewhere ───────────────────────
+    // Enrollment data (teacher/student system) keyed by this wiki.
+    for (const cleanup of [
+      () => hubPrisma.lessonProgress.deleteMany({ where: { wikiSlug: slug } }),
+      () => hubPrisma.enrollment.deleteMany({ where: { wikiSlug: slug } }),
+      () => hubPrisma.enrollmentLink.deleteMany({ where: { wikiSlug: slug } }),
+    ]) {
+      try {
+        await cleanup()
+      } catch (err: any) {
+        console.warn(`[wiki route] enrollment cleanup skipped for "${slug}":`, err?.message || err)
+      }
+    }
+
+    // Strip the wiki from every developer's assigned wikiSlugs so it stops
+    // appearing in their editor sidebar.
+    try {
+      const devPrisma = getDevelopersPrisma()
+      const developers = await devPrisma.developer.findMany({ select: { id: true, wikiSlugs: true } })
+      await Promise.all(
+        developers.map((dev) => {
+          const current = Array.isArray(dev.wikiSlugs)
+            ? (dev.wikiSlugs as unknown[]).filter((v): v is string => typeof v === 'string')
+            : []
+          if (!current.includes(slug)) return null
+          return devPrisma.developer.update({
+            where: { id: dev.id },
+            data: { wikiSlugs: current.filter((s) => s !== slug) },
+          })
+        }),
+      )
+    } catch (err: any) {
+      console.warn(`[wiki route] developer membership cleanup skipped for "${slug}":`, err?.message || err)
+    }
+
+    // Remove the wiki from the on-disk registry file.
+    await removeFileWiki(slug)
+
+    return NextResponse.json({ ok: true, slug, deleted: true, lessonsDeleted })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed to process deletion' }, { status: 500 })
+    return NextResponse.json({ error: e?.message || 'Failed to delete wiki' }, { status: 500 })
   }
 }

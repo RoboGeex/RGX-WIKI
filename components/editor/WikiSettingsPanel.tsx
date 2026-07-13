@@ -6,7 +6,6 @@ import {
   Check,
   Pencil,
   Plus,
-  RotateCcw,
   Save,
   Settings,
   Tag,
@@ -36,7 +35,6 @@ type Props = {
   wikiSlug: string
   initialDisplayName: string
   initialPicture?: string
-  initialScheduledDeletionAt?: string | null
   initialTags?: string[]
 }
 
@@ -46,7 +44,6 @@ export default function WikiSettingsPanel({
   wikiSlug,
   initialDisplayName,
   initialPicture,
-  initialScheduledDeletionAt,
   initialTags,
 }: Props) {
   const router = useRouter()
@@ -106,15 +103,13 @@ export default function WikiSettingsPanel({
   const [creatingCategory, setCreatingCategory] = useState(false)
   const [categoryError, setCategoryError] = useState<string | null>(null)
 
-  // Delete
+  // Delete — two-step: a warning screen, then a typed-slug + checkbox confirm
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [deleteAcknowledged, setDeleteAcknowledged] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [scheduledDeletionAt, setScheduledDeletionAt] = useState<string | null>(
-    initialScheduledDeletionAt ?? null,
-  )
-  const [undoing, setUndoing] = useState(false)
 
   // ── Load developer role on open ────────────────────────────────────────────
 
@@ -362,10 +357,18 @@ export default function WikiSettingsPanel({
     }
   }
 
-  // ── Delete / Undo ──────────────────────────────────────────────────────────
+  // ── Delete ───────────────────────────────────────────────────────────────
 
-  const handleScheduleDelete = async () => {
-    if (deleteConfirmText !== wikiSlug) return
+  const openDeleteDialog = () => {
+    setDeleteStep(1)
+    setDeleteConfirmText("")
+    setDeleteAcknowledged(false)
+    setDeleteError(null)
+    setShowDeleteDialog(true)
+  }
+
+  const handleDeleteWiki = async () => {
+    if (deleteConfirmText !== wikiSlug || !deleteAcknowledged) return
     setDeleting(true)
     setDeleteError(null)
     try {
@@ -375,12 +378,11 @@ export default function WikiSettingsPanel({
       })
       if (!res.ok) {
         const err = await res.json().catch(() => null)
-        throw new Error(err?.error || "Failed to schedule deletion")
+        throw new Error(err?.error || "Failed to delete wiki")
       }
-      const data = await res.json()
-      setScheduledDeletionAt(data.scheduledDeletionAt)
+      // Wiki (and all its lessons) are gone — leave this now-dead page.
       setShowDeleteDialog(false)
-      handleClose()
+      router.push("/editor")
     } catch (e: any) {
       setDeleteError(e.message)
     } finally {
@@ -388,38 +390,7 @@ export default function WikiSettingsPanel({
     }
   }
 
-  const handleUndoDelete = async () => {
-    setUndoing(true)
-    try {
-      const res = await fetch(`/api/wikis/${wikiSlug}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(applyDeveloperHeader() as Record<string, string>),
-        },
-        body: JSON.stringify({ undo: true }),
-      })
-      if (!res.ok) throw new Error("Failed to undo")
-      setScheduledDeletionAt(null)
-      router.refresh()
-    } catch {
-      // silently fail — user can try again
-    } finally {
-      setUndoing(false)
-    }
-  }
-
   // ── Derived ────────────────────────────────────────────────────────────────
-
-  const daysLeft =
-    scheduledDeletionAt !== null
-      ? Math.max(
-          0,
-          Math.ceil(
-            (new Date(scheduledDeletionAt).getTime() - Date.now()) / 86_400_000,
-          ),
-        )
-      : null
 
   const nonSuperadminDevs = developers.filter((d) => d.role !== "superadmin")
 
@@ -427,28 +398,6 @@ export default function WikiSettingsPanel({
 
   return (
     <>
-      {/* ── Deletion banner (always visible when scheduled) ── */}
-      {scheduledDeletionAt && daysLeft !== null && daysLeft > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm">
-          <AlertTriangle size={15} className="shrink-0 text-red-500" />
-          <span className="text-red-700">
-            This wiki will be permanently deleted in{" "}
-            <strong>
-              {daysLeft} day{daysLeft !== 1 ? "s" : ""}
-            </strong>
-            .
-          </span>
-          <button
-            onClick={handleUndoDelete}
-            disabled={undoing}
-            className="ml-auto flex shrink-0 items-center gap-1.5 text-xs font-semibold text-red-700 underline hover:text-red-900 disabled:opacity-60"
-          >
-            <RotateCcw size={12} />
-            {undoing ? "Undoing…" : "Undo"}
-          </button>
-        </div>
-      )}
-
       {/* ── Settings trigger button ── */}
       <button
         type="button"
@@ -858,27 +807,18 @@ export default function WikiSettingsPanel({
               {devRole === "superadmin" && (
                 <section className="rounded-xl border border-red-200 bg-red-50 p-5">
                   <h3 className="mb-1 text-sm font-semibold text-red-700">Danger Zone</h3>
-                  <p className="mb-4 text-xs text-red-400">
-                    Destructive actions. These cannot be undone after the 7-day grace period.
+                  <p className="mb-4 text-xs text-red-500">
+                    Deleting this wiki permanently removes it <strong>and every lesson
+                    inside it</strong>. This happens immediately and <strong>cannot be
+                    undone</strong>.
                   </p>
                   <button
-                    onClick={() => {
-                      setDeleteConfirmText("")
-                      setDeleteError(null)
-                      setShowDeleteDialog(true)
-                    }}
-                    disabled={!!scheduledDeletionAt}
-                    className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={openDeleteDialog}
+                    className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
                   >
                     <Trash2 size={15} />
-                    {scheduledDeletionAt ? "Deletion Scheduled" : "Delete Wiki"}
+                    Delete Wiki
                   </button>
-                  {scheduledDeletionAt && daysLeft !== null && (
-                    <p className="mt-2 text-xs text-red-400">
-                      Permanently deleted in {daysLeft} day{daysLeft !== 1 ? "s" : ""}. Use
-                      the banner above to undo.
-                    </p>
-                  )}
                 </section>
               )}
             </div>
@@ -900,50 +840,101 @@ export default function WikiSettingsPanel({
                 <h3 className="text-base font-bold text-gray-900">
                   Delete "{initialDisplayName}"?
                 </h3>
-                <p className="mt-1 text-sm text-gray-600">
-                  The wiki and <strong>all its lessons</strong> will be permanently deleted
-                  after a <strong>7-day grace period</strong>. During this window you can
-                  restore it from the banner at the top of the page.
-                </p>
+                {deleteStep === 1 ? (
+                  <p className="mt-1 text-sm text-gray-600">
+                    This will <strong>permanently delete this wiki and every lesson inside
+                    it</strong>. The action is immediate and <strong>cannot be undone</strong> —
+                    there is no grace period and no way to restore it afterwards.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Last step. Confirm below that you want to permanently delete
+                    <strong> "{initialDisplayName}"</strong> and all of its lessons.
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Slug confirmation input */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Type the wiki slug to confirm:{" "}
-                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
-                  {wikiSlug}
-                </code>
-              </label>
-              <input
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder={wikiSlug}
-                autoFocus
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
-              />
-            </div>
+            {deleteStep === 1 ? (
+              <>
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                  Everything in this wiki — all lessons, drafts, and their history — will be
+                  erased. Enrolled students and assigned team members will lose access.
+                </div>
+                {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteDialog(false)}
+                    className="flex-1 rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeleteError(null)
+                      setDeleteStep(2)
+                    }}
+                    className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Slug confirmation input */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Type the wiki slug to confirm:{" "}
+                    <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
+                      {wikiSlug}
+                    </code>
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={wikiSlug}
+                    autoFocus
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+                  />
+                </div>
 
-            {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
+                {/* Explicit acknowledgement */}
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={deleteAcknowledged}
+                    onChange={(e) => setDeleteAcknowledged(e.target.checked)}
+                    className="mt-0.5 rounded border-gray-300"
+                  />
+                  <span>
+                    I understand this permanently deletes the wiki and all its lessons, and
+                    cannot be undone.
+                  </span>
+                </label>
 
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteDialog(false)}
-                className="flex-1 rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleScheduleDelete}
-                disabled={deleteConfirmText !== wikiSlug || deleting}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {deleting ? "Scheduling…" : "Schedule Deletion"}
-              </button>
-            </div>
+                {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteStep(1)}
+                    disabled={deleting}
+                    className="flex-1 rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleDeleteWiki}
+                    disabled={deleteConfirmText !== wikiSlug || !deleteAcknowledged || deleting}
+                    className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deleting ? "Deleting…" : "Delete Forever"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

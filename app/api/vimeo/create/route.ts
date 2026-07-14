@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireAdminAccess } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,15 @@ function getVimeoFolderUri(wikiSlug?: string) {
 }
 
 export async function POST(req: Request) {
+    // Restrict Vimeo video creation to authenticated editors so the account's
+    // API quota can't be abused anonymously. Editor callers send the
+    // `rgx_dev_id` cookie automatically (same-origin) — no UX change.
+    try {
+        await requireAdminAccess()
+    } catch {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     try {
         const { fileName, size, wikiSlug } = await req.json()
         const token = process.env.VIMEO_ACCESS_TOKEN

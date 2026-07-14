@@ -1,10 +1,8 @@
+import { resolveDeveloperId } from '@/lib/dev-session'
+
+// Authorization trusts ONLY the signed `rgx_dev_id` cookie. The old
+// `x-developer-id` header is no longer accepted as proof of identity (except in
+// local no-DB dev mode, handled inside resolveDeveloperId).
 export function getActorIdFromRequest(req: Request): string | undefined {
-  const headers = (req as any)?.headers as Headers | undefined
-  if (!headers) return undefined
-  const raw =
-    headers.get('x-user-id') ||
-    headers.get('x-actor-id') ||
-    headers.get('x-developer-id') ||
-    headers.get('x-dev-id')
-  return raw ? raw.trim() || undefined : undefined
+  return resolveDeveloperId(req)
 }

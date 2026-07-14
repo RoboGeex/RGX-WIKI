@@ -1,6 +1,5 @@
 ﻿import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { cookies } from "next/headers"
 import { getWiki, getKits } from "@/lib/data"
 import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { HUB_DOMAIN } from "@/lib/domains"
@@ -11,6 +10,7 @@ import WikiAccessGate from "@/components/editor/WikiAccessGate"
 import { getWikisFromDb } from "@/lib/server-data"
 import { findDeveloperById } from "@/lib/developers"
 import { canManageWiki } from "@/lib/assignments"
+import { getVerifiedDeveloperId } from "@/lib/dev-session"
 
 export const dynamic = "force-dynamic"
 
@@ -35,7 +35,7 @@ export default async function EditorWikiDashboardPage({
   // localStorage value, so we can verify permissions here before rendering.
   // If the cookie is absent (old session pre-dating this check), the
   // client-side EditorAuthGate handles the unauthenticated case gracefully.
-  const devId = cookies().get('rgx_dev_id')?.value
+  const devId = getVerifiedDeveloperId()
   if (devId) {
     const developer = await findDeveloperById(devId)
     if (developer && !canManageWiki(developer, wikiSlug)) {

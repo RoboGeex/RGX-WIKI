@@ -4,6 +4,7 @@ import { promises as fs } from 'fs'
 import { getPrisma } from '@/lib/prisma-multi'
 import { getDevelopersPrisma } from '@/lib/prisma-developers'
 import { findDeveloperById } from '@/lib/developers'
+import { resolveDeveloperId } from '@/lib/dev-session'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -11,14 +12,7 @@ export const runtime = 'nodejs'
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 function getActorId(req: Request): string | undefined {
-  const h = (req as any)?.headers as Headers | undefined
-  if (!h) return undefined
-  const raw =
-    h.get('x-user-id') ||
-    h.get('x-actor-id') ||
-    h.get('x-developer-id') ||
-    h.get('x-dev-id')
-  return raw ? raw.trim() || undefined : undefined
+  return resolveDeveloperId(req)
 }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────

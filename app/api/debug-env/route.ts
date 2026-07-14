@@ -1,9 +1,13 @@
 
 import { NextResponse } from 'next/server'
+import { isDebugAuthorized } from '@/lib/debug-guard'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!isDebugAuthorized(req)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   return NextResponse.json({
     USE_DB: process.env.USE_DB,
     USE_SHARED_DB: process.env.USE_SHARED_DB,

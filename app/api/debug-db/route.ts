@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { isDebugAuthorized } from '@/lib/debug-guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -14,7 +15,10 @@ if (g.prismaClients) {
   console.log('[debug-db] Flushed Prisma client cache')
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!isDebugAuthorized(req)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   // Test every DATABASE_URL_* variable that is set
   const results: Record<string, any> = {}
 

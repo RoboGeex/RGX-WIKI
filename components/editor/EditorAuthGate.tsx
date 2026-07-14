@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { getDeveloperId, rememberDeveloperId } from "./dev-identity"
+import { getDeveloperId, rememberDeveloperId, clearDeveloperId } from "./dev-identity"
 
 export default function EditorAuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -19,7 +19,29 @@ export default function EditorAuthGate({ children }: { children: React.ReactNode
     if (id) rememberDeveloperId(id)
 
     if (id) {
-      setMounted(true)
+      // Confirm the signed `rgx_dev_id` cookie is present and valid. A legacy
+      // session (unsigned cookie) still has the localStorage id but no valid
+      // cookie, so its API calls would fail — send it to a fresh login instead
+      // of rendering an editor that can't save.
+      fetch("/api/developers/me", { cache: "no-store" })
+        .then((res) => {
+          if (cancelled) return
+          if (res.ok) {
+            setMounted(true)
+            return
+          }
+          if (res.status === 401 || res.status === 403) {
+            clearDeveloperId()
+            setDevId(undefined)
+            setMounted(true) // triggers the redirect-to-login effect below
+            return
+          }
+          // Transient (5xx) error — don't lock the editor out.
+          setMounted(true)
+        })
+        .catch(() => {
+          if (!cancelled) setMounted(true)
+        })
       return
     }
 

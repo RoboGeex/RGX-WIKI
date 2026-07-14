@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { authenticate, createSession, SESSION_COOKIE, sessionCookieDomain } from '@/lib/auth'
 import { findDeveloperByCredentials } from '@/lib/developers'
+import { signDeveloperSession } from '@/lib/dev-session'
 
 const COOKIE_OPTS = (expiresAt?: Date) => ({
   httpOnly: true,
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
           user: { id: String(dev.id), email: dev.email, name: dev.name ?? null, role: 'editor' },
           developerId: String(dev.id),
         })
-        res.cookies.set('rgx_dev_id', String(dev.id), COOKIE_OPTS())
+        res.cookies.set('rgx_dev_id', signDeveloperSession(String(dev.id)), COOKIE_OPTS())
         return res
       }
       return NextResponse.json({ error: 'Invalid local developer email or password' }, { status: 401 })
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
         user: { id: String(dev.id), email: dev.email, name: dev.name ?? null, role: 'editor' },
         developerId: String(dev.id),
       })
-      res.cookies.set('rgx_dev_id', String(dev.id), COOKIE_OPTS())
+      res.cookies.set('rgx_dev_id', signDeveloperSession(String(dev.id)), COOKIE_OPTS())
       return res
     }
 

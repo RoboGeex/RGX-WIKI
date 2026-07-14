@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
 import Client from 'ssh2-sftp-client'
+import { requireAdminAccess } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -86,6 +87,15 @@ async function uploadVideoToVimeo(buffer: Buffer, opts: { fileName: string; mime
 }
 
 export async function POST(req: Request) {
+  // Only authenticated editors (developer cookie or admin session) may upload.
+  // Every legitimate caller is an editor component on a same-origin request,
+  // so the existing `rgx_dev_id` cookie is sent automatically — no UX change.
+  try {
+    await requireAdminAccess()
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const form = await req.formData()
     const file = form.get('file') as File | null

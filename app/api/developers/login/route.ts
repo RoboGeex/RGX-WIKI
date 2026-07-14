@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { findDeveloperByCredentials } from '@/lib/developers'
+import { signDeveloperSession } from '@/lib/dev-session'
 
 export async function POST(request: Request) {
   try {
@@ -29,7 +30,8 @@ export async function POST(request: Request) {
 
     // Set an HTTP-only cookie so server components can verify identity
     // and enforce wiki-level access control without a client round-trip.
-    res.cookies.set('rgx_dev_id', String(dev.id), {
+    // The value is signed (HMAC) so the developer id cannot be spoofed.
+    res.cookies.set('rgx_dev_id', signDeveloperSession(String(dev.id)), {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',

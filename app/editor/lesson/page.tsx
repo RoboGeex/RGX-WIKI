@@ -1,8 +1,8 @@
 import dynamic from 'next/dynamic'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { findDeveloperById } from '@/lib/developers'
 import { canManageWiki } from '@/lib/assignments'
+import { getVerifiedDeveloperId } from '@/lib/dev-session'
 import WikiAccessGate from '@/components/editor/WikiAccessGate'
 
 const WikiEditor = dynamic(() => import('@/components/editor/Editor'), { ssr: false })
@@ -15,7 +15,7 @@ export default async function EditorLessonPage({
   const wikiSlug = (searchParams.wiki || searchParams.kit || '').trim()
 
   if (wikiSlug) {
-    const devId = cookies().get('rgx_dev_id')?.value
+    const devId = getVerifiedDeveloperId()
     if (devId) {
       const developer = await findDeveloperById(devId)
       if (developer && !canManageWiki(developer, wikiSlug)) {

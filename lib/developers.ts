@@ -1,5 +1,26 @@
+import bcrypt from 'bcryptjs'
 import type { DeveloperAssignment } from '@/lib/assignments'
 import { getDevelopersPrisma } from '@/lib/prisma-developers'
+
+// Developer passwords were historically stored in plaintext. This comparison
+// accepts BOTH a bcrypt hash and a legacy plaintext value, so hashing the
+// stored passwords (via a migration) is a drop-in upgrade that does not change
+// login behaviour for rows that are still plaintext.
+function looksHashed(value: string): boolean {
+  return typeof value === 'string' && /^\$2[aby]\$/.test(value)
+}
+
+async function developerPasswordMatches(plain: string, stored: string): Promise<boolean> {
+  if (!stored) return false
+  if (looksHashed(stored)) {
+    try {
+      return await bcrypt.compare(plain, stored)
+    } catch {
+      return false
+    }
+  }
+  return stored === plain
+}
 
 type DbDeveloper = {
   id: number
@@ -88,7 +109,7 @@ export async function findDeveloperByCredentials(email: string, password: string
     select: developerBaseSelect,
   })
   const row = await addAvatarIfColumnExists(prisma, baseRow as unknown as DbDeveloper | null)
-  if (row && row.password === normalizedPassword) {
+  if (row && (await developerPasswordMatches(normalizedPassword, row.password))) {
     return normalizeDbDeveloper(row as unknown as DbDeveloper)
   }
   return undefined

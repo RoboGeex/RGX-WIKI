@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma-multi";
+import { isDebugAuthorized } from "@/lib/debug-guard";
 
 // This is a special test route to diagnose database connection issues.
 // Access it at /api/db-test after deploying.
@@ -35,6 +36,9 @@ function getDbEnvDebug(wiki?: string) {
 }
 
 export async function GET(req: Request) {
+  if (!isDebugAuthorized(req)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const wiki = new URL(req.url).searchParams.get("wiki")?.trim() || undefined;
   const dbEnv = getDbEnvDebug(wiki);
 

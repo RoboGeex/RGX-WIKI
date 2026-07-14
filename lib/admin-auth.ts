@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers'
 import { getCurrentUser, AuthError } from '@/lib/auth'
 import { findDeveloperById } from '@/lib/developers'
+import { getVerifiedDeveloperId } from '@/lib/dev-session'
 
 // Accepts either the new rgx_session cookie (User with role=admin)
 // or the existing rgx_dev_id cookie (Developer) so the existing
@@ -14,8 +14,8 @@ export async function requireAdminAccess() {
     // fall through
   }
 
-  // Fall back to developer cookie
-  const devId = cookies().get('rgx_dev_id')?.value
+  // Fall back to the signed developer cookie
+  const devId = getVerifiedDeveloperId()
   if (devId) {
     try {
       const dev = await findDeveloperById(devId)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma-multi'
 import { findDeveloperById } from '@/lib/developers'
+import { resolveDeveloperId } from '@/lib/dev-session'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -32,14 +33,7 @@ async function ensureCategoryTable(): Promise<void> {
 }
 
 function getActorId(req: Request): string | undefined {
-  const h = (req as any)?.headers as Headers | undefined
-  if (!h) return undefined
-  const raw =
-    h.get('x-user-id') ||
-    h.get('x-actor-id') ||
-    h.get('x-developer-id') ||
-    h.get('x-dev-id')
-  return raw ? raw.trim() || undefined : undefined
+  return resolveDeveloperId(req)
 }
 
 function normalizeCategoryName(value: unknown): string {

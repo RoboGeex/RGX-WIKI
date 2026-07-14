@@ -1,8 +1,8 @@
-import { cookies } from 'next/headers'
 import { getWikis } from '@/lib/data'
 import { getWikisFromDb } from '@/lib/server-data'
 import { findDeveloperById } from '@/lib/developers'
 import { canManageWiki } from '@/lib/assignments'
+import { getVerifiedDeveloperId } from '@/lib/dev-session'
 
 export type SidebarWiki = { slug: string; displayName: string }
 
@@ -27,7 +27,7 @@ export async function getEditorSidebarData(): Promise<{
   })
   const allWikis = Array.from(bySlug.values())
 
-  const devId = cookies().get('rgx_dev_id')?.value
+  const devId = getVerifiedDeveloperId()
   const developer = devId ? await findDeveloperById(devId) : null
 
   const accessible = developer

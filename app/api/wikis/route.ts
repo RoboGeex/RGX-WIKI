@@ -4,6 +4,7 @@ import path from 'path'
 import { promises as fs } from 'fs'
 import { getPrisma } from '@/lib/prisma-multi'
 import { findDeveloperById } from '@/lib/developers'
+import { resolveDeveloperId } from '@/lib/dev-session'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -485,14 +486,7 @@ async function tryWriteFile(action: () => Promise<void>, label: string): Promise
 }
 
 function getActorId(req: Request): string | undefined {
-  const headers = (req as any)?.headers as Headers | undefined
-  if (!headers) return undefined
-  const raw =
-    headers.get('x-user-id') ||
-    headers.get('x-actor-id') ||
-    headers.get('x-developer-id') ||
-    headers.get('x-dev-id')
-  return raw ? raw.trim() || undefined : undefined
+  return resolveDeveloperId(req)
 }
 
 export async function POST(req: Request) {

@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
     const dbWiki = (await getWikisFromDb()).find((w) => w.slug === rawKitSlug)
     if (dbWiki) wiki = dbWiki
   }
-  console.log(`[Unlock Debug] Attempting unlock. Input Kit: "${rawKitSlug}", Input Code: "${rawCode}", Found Wiki Slug: "${wiki?.slug}"`)
+  // Note: never log the raw access code — it is a credential.
+  console.log(`[Unlock] Attempting unlock. Input Kit: "${rawKitSlug}", Found Wiki Slug: "${wiki?.slug}"`)
 
   if (!wiki) {
     return NextResponse.json({ error: 'No wiki found for this slug' }, { status: 400 })

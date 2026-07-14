@@ -72,18 +72,10 @@ async function readAllRows(prisma: any, wikiSlug: string): Promise<{ rows: Repai
   }
 }
 
-// Developer login sets an httpOnly `rgx_dev_id` cookie for every developer
-// role, but only mirrors it into localStorage (`rgx.devId`, read by the
-// x-developer-id header) for the `editor` role. A superadmin therefore has
-// the cookie but no header, so resolve the actor from either source — the
-// cookie is sent automatically with a same-origin fetch, no manual header
-// needed.
+// Identity comes from the signed `rgx_dev_id` cookie, which is sent
+// automatically with a same-origin fetch (getActorIdFromRequest verifies it).
 function getActorId(req: Request): string | undefined {
-  const fromHeader = getActorIdFromRequest(req)
-  if (fromHeader) return fromHeader
-  const cookieHeader = (req.headers.get('cookie') || '')
-  const match = cookieHeader.match(/(?:^|;\s*)rgx_dev_id=([^;]+)/)
-  return match ? decodeURIComponent(match[1]).trim() || undefined : undefined
+  return getActorIdFromRequest(req)
 }
 
 async function requireSuperadmin(req: Request) {

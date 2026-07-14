@@ -6,6 +6,7 @@ import { loadLessonsForKit } from "@/lib/lesson-loader"
 import { findDeveloperById } from '@/lib/developers'
 import { canManageWiki } from '@/lib/assignments'
 import { getPrisma } from "@/lib/prisma-multi"
+import { resolveDeveloperId } from "@/lib/dev-session"
 
 export const dynamic = "force-dynamic"
 
@@ -16,13 +17,7 @@ type ReorderPayload = {
 }
 
 function getActorIdFromRequest(req: Request): string | undefined {
-  const h = req.headers
-  const raw =
-    h.get('x-user-id') ||
-    h.get('x-actor-id') ||
-    h.get('x-developer-id') ||
-    h.get('x-dev-id')
-  return raw ? raw.trim() || undefined : undefined
+  return resolveDeveloperId(req)
 }
 
 export async function POST(req: Request) {

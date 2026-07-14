@@ -1,0 +1,69 @@
+/*
+ * One-time migration: hash any plaintext Developer passwords with bcrypt.
+ *
+ * Developer passwords were historically stored in plaintext and compared with
+ * `===`. `lib/developers.ts` now accepts BOTH a bcrypt hash and a legacy
+ * plaintext value, so hashing the stored rows is a safe, behaviour-preserving
+ * upgrade: after this runs, logins keep working but the database no longer
+ * holds plaintext credentials.
+ *
+ * Usage (from the RGX-WIKI directory):
+ *   node scripts/hash-developer-passwords.cjs            # dry run (no writes)
+ *   node scripts/hash-developer-passwords.cjs --apply    # actually hash + save
+ *
+ * Uses DATABASE_URL_DEVELOPERS (falls back to DATABASE_URL). Idempotent —
+ * already-hashed rows are skipped, so it is safe to re-run.
+ */
+const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
+
+const APPLY = process.argv.includes('--apply')
+const url = process.env.DATABASE_URL_DEVELOPERS || process.env.DATABASE_URL
+
+function looksHashed(v) {
+  return typeof v === 'string' && /^\$2[aby]\$/.test(v)
+}
+
+async function main() {
+  if (!url) {
+    console.error('No DATABASE_URL_DEVELOPERS / DATABASE_URL set. Aborting.')
+    process.exit(1)
+  }
+
+  const prisma = new PrismaClient({ datasources: { db: { url } } })
+  try {
+    const devs = await prisma.developer.findMany({ select: { id: true, email: true, password: true } })
+    let toHash = 0
+    let hashed = 0
+
+    for (const d of devs) {
+      if (looksHashed(d.password)) continue
+      toHash++
+      if (!d.password) {
+        console.warn(`SKIP  ${d.email} (id ${d.id}) — empty password`)
+        continue
+      }
+      if (APPLY) {
+        const hash = await bcrypt.hash(d.password, 10)
+        await prisma.developer.update({ where: { id: d.id }, data: { password: hash } })
+        hashed++
+        console.log(`HASHED ${d.email} (id ${d.id})`)
+      } else {
+        console.log(`WOULD HASH ${d.email} (id ${d.id})`)
+      }
+    }
+
+    console.log('')
+    console.log(`Developers: ${devs.length} | plaintext found: ${toHash} | hashed this run: ${hashed}`)
+    if (!APPLY && toHash > 0) {
+      console.log('Dry run only. Re-run with --apply to write the hashes.')
+    }
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

@@ -23,14 +23,23 @@ export type AdminStudentSummary = {
 //   includeFormer=true  → also students whose enrollments were revoked (link
 //                         disabled) or removed, so their data stays findable.
 export async function getAdminStudentsList(includeFormer: boolean): Promise<AdminStudentSummary[]> {
-  const allEnrollments = await prisma.enrollment.findMany({
-    where: includeFormer ? {} : { status: 'active' },
-    orderBy: { joinedAt: 'desc' },
-    include: {
-      student: { select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true } },
-      teacher: { select: { id: true, email: true, name: true } },
-    },
-  })
+  const [allEnrollments, trackAssignments] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: includeFormer ? {} : { status: 'active' },
+      orderBy: { joinedAt: 'desc' },
+      include: {
+        student: { select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true } },
+        teacher: { select: { id: true, email: true, name: true } },
+      },
+    }),
+    prisma.trackAssignment.findMany({
+      orderBy: { assignedAt: 'desc' },
+      include: {
+        student: { select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true } },
+        track: { include: { wikis: true } },
+      },
+    }),
+  ])
 
   // One row per (student, wiki): prefer the active enrollment; otherwise the
   // most recent inactive one (rejoining via a new link leaves old rows behind).
@@ -63,28 +72,43 @@ export async function getAdminStudentsList(includeFormer: boolean): Promise<Admi
     })
   }
 
+  // Track assignments are also active wiki access. Add track-only students and
+  // track-only wikis without duplicating a direct enrollment for the same wiki.
+  for (const assignment of trackAssignments) {
+    if (!studentMap.has(assignment.studentId)) {
+      studentMap.set(assignment.studentId, { student: assignment.student, wikis: [] })
+    }
+    const entry = studentMap.get(assignment.studentId)!
+    for (const wiki of assignment.track.wikis) {
+      if (entry.wikis.some((item) => item.wikiSlug === wiki.wikiSlug)) continue
+      entry.wikis.push({
+        wikiSlug: wiki.wikiSlug,
+        teacherName: `Track: ${assignment.track.name}`,
+        teacherEmail: assignment.track.createdByEmail || 'Track assignment',
+        joinedAt: assignment.assignedAt,
+        status: 'active',
+      })
+    }
+  }
+
   const studentIds = Array.from(studentMap.keys())
+  const wikiSlugs = [...new Set(Array.from(studentMap.values()).flatMap(entry => entry.wikis.map(wiki => wiki.wikiSlug)))]
+  const publishedLessons = wikiSlugs.length
+    ? await prisma.lesson.findMany({ where: { wikiSlug: { in: wikiSlugs }, status: 'published' }, select: { id: true, wikiSlug: true } })
+    : []
 
   // Progress summary per student per wiki
-  const progressRows = studentIds.length
+  const progressRows = studentIds.length && publishedLessons.length
     ? await prisma.lessonProgress.groupBy({
         by: ['studentId', 'wikiSlug', 'status'],
-        where: { studentId: { in: studentIds } },
+        where: { studentId: { in: studentIds }, lessonId: { in: publishedLessons.map(lesson => lesson.id) } },
         _count: true,
       })
     : []
 
   // Total published lessons per wiki (for % calculation)
-  const wikiSlugs = [...new Set(enrollments.map(e => e.wikiSlug))]
-  const lessonCounts = wikiSlugs.length
-    ? await prisma.lesson.groupBy({
-        by: ['wikiSlug'],
-        where: { wikiSlug: { in: wikiSlugs }, status: 'published' },
-        _count: true,
-      })
-    : []
   const totalLessonsMap: Record<string, number> = {}
-  for (const lc of lessonCounts) totalLessonsMap[lc.wikiSlug] = lc._count
+  for (const lesson of publishedLessons) totalLessonsMap[lesson.wikiSlug] = (totalLessonsMap[lesson.wikiSlug] || 0) + 1
 
   // Build progress map: studentId → wikiSlug → { completed, in_progress, total }
   const progMap: Record<string, Record<string, { completed: number; in_progress: number; total: number }>> = {}

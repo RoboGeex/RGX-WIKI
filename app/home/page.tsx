@@ -4,42 +4,60 @@ import { prisma } from '@/lib/prisma'
 import HomeClient from './HomeClient'
 
 async function getStudentData(userId: string) {
-  const enrollments = await prisma.enrollment.findMany({
-    where: { studentId: userId, status: 'active' },
-    select: { wikiSlug: true },
-  })
-  const slugs = enrollments.map((e) => e.wikiSlug)
-  if (slugs.length === 0) return { wikis: [], progress: {} }
+  const [enrollments, assignments] = await Promise.all([
+    prisma.enrollment.findMany({ where: { studentId: userId, status: 'active' }, select: { wikiSlug: true } }),
+    prisma.trackAssignment.findMany({
+      where: { studentId: userId },
+      orderBy: { assignedAt: 'desc' },
+      include: { track: { include: { wikis: { orderBy: { position: 'asc' } } } } },
+    }),
+  ])
+  const directSlugs = [...new Set(enrollments.map((enrollment) => enrollment.wikiSlug))]
+  const trackSlugs = assignments.flatMap((assignment) => assignment.track.wikis.map((wiki) => wiki.wikiSlug))
+  const slugs = [...new Set([...directSlugs, ...trackSlugs])]
+  if (slugs.length === 0) return { wikis: [], progress: {}, tracks: [] }
 
   const wikis = await prisma.wiki.findMany({
     where: { slug: { in: slugs } },
     orderBy: { displayName: 'asc' },
   })
 
-  // Total lessons per wiki
-  const lessonCounts = await prisma.lesson.groupBy({
-    by: ['wikiSlug'],
+  const publishedLessons = await prisma.lesson.findMany({
     where: { wikiSlug: { in: slugs }, status: 'published' },
-    _count: true,
+    select: { id: true, wikiSlug: true },
   })
-
-  // Completed lessons per wiki
-  const completed = await prisma.lessonProgress.groupBy({
-    by: ['wikiSlug'],
-    where: { studentId: userId, wikiSlug: { in: slugs }, status: 'completed' },
-    _count: true,
-  })
+  const completed = publishedLessons.length ? await prisma.lessonProgress.findMany({
+    where: { studentId: userId, lessonId: { in: publishedLessons.map((lesson) => lesson.id) }, status: 'completed' },
+    select: { lessonId: true, wikiSlug: true },
+  }) : []
 
   const progress: Record<string, { total: number; completed: number }> = {}
-  for (const lc of lessonCounts) {
-    progress[lc.wikiSlug] = { total: lc._count, completed: 0 }
-  }
+  for (const slug of slugs) progress[slug] = { total: 0, completed: 0 }
+  for (const lesson of publishedLessons) progress[lesson.wikiSlug].total += 1
   for (const c of completed) {
-    if (progress[c.wikiSlug]) progress[c.wikiSlug].completed = c._count
-    else progress[c.wikiSlug] = { total: 0, completed: c._count }
+    if (progress[c.wikiSlug]) progress[c.wikiSlug].completed += 1
   }
 
-  return { wikis, progress }
+  const wikiMap = new Map(wikis.map((wiki) => [wiki.slug, wiki]))
+  const tracks = assignments.map((assignment) => {
+    const trackWikis = assignment.track.wikis
+      .map((item) => wikiMap.get(item.wikiSlug))
+      .filter((wiki): wiki is NonNullable<typeof wiki> => Boolean(wiki))
+    const total = trackWikis.reduce((sum, wiki) => sum + (progress[wiki.slug]?.total || 0), 0)
+    const completedCount = trackWikis.reduce((sum, wiki) => sum + (progress[wiki.slug]?.completed || 0), 0)
+    return {
+      id: assignment.track.id,
+      name: assignment.track.name,
+      description: assignment.track.description,
+      assignedAt: assignment.assignedAt,
+      wikis: trackWikis.map((wiki) => ({ ...wiki, progress: progress[wiki.slug] || { total: 0, completed: 0 } })),
+      progress: { total, completed: completedCount },
+    }
+  })
+
+  // Direct class enrollments remain visible as individual courses. Track-only
+  // wikis are presented inside their track instead of being flattened.
+  return { wikis: wikis.filter((wiki) => directSlugs.includes(wiki.slug)), progress, tracks }
 }
 
 async function getTeacherData(userId: string) {

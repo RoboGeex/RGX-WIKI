@@ -22,7 +22,7 @@ export default async function StudentProfilePage({ params }: { params: { id: str
   })
   if (!student || student.role !== 'student') notFound()
 
-  const [enrollments, progressRows] = await Promise.all([
+  const [enrollments, progressRows, trackAssignments] = await Promise.all([
     prisma.enrollment.findMany({
       where: { studentId: student.id },
       orderBy: { joinedAt: 'desc' },
@@ -35,9 +35,18 @@ export default async function StudentProfilePage({ params }: { params: { id: str
       where: { studentId: student.id },
       select: { lessonId: true, wikiSlug: true, status: true, completedAt: true, lastViewedAt: true },
     }),
+    prisma.trackAssignment.findMany({
+      where: { studentId: student.id },
+      orderBy: { assignedAt: 'desc' },
+      include: { track: { include: { wikis: { orderBy: { position: 'asc' } } } } },
+    }),
   ])
 
-  const wikiSlugs = [...new Set([...enrollments.map(e => e.wikiSlug), ...progressRows.map(p => p.wikiSlug)])]
+  const wikiSlugs = [...new Set([
+    ...enrollments.map(e => e.wikiSlug),
+    ...progressRows.map(p => p.wikiSlug),
+    ...trackAssignments.flatMap(assignment => assignment.track.wikis.map(wiki => wiki.wikiSlug)),
+  ])]
   const [wikis, lessons] = await Promise.all([
     wikiSlugs.length
       ? prisma.wiki.findMany({ where: { slug: { in: wikiSlugs } }, select: { slug: true, displayName: true } })
@@ -85,9 +94,32 @@ export default async function StudentProfilePage({ params }: { params: { id: str
     }
   })
 
+  const tracks = trackAssignments.map(assignment => {
+    const trackWikiSlugs = assignment.track.wikis.map(wiki => wiki.wikiSlug)
+    const trackLessons = lessons.filter(lesson => trackWikiSlugs.includes(lesson.wikiSlug))
+    const completed = trackLessons.filter(lesson => progressByLesson.get(lesson.id)?.status === 'completed').length
+    const inProgress = trackLessons.filter(lesson => progressByLesson.get(lesson.id)?.status === 'in_progress').length
+    return {
+      id: assignment.track.id,
+      name: assignment.track.name,
+      description: assignment.track.description,
+      assignedAt: assignment.assignedAt,
+      wikis: assignment.track.wikis.map(wiki => ({ slug: wiki.wikiSlug, displayName: wikiNames.get(wiki.wikiSlug) ?? wiki.wikiSlug })),
+      completed,
+      inProgress,
+      total: trackLessons.length,
+    }
+  })
+
   const profile = JSON.parse(JSON.stringify({
     student,
     history,
+    tracks,
+    overallProgress: {
+      completed: lessons.filter(lesson => progressByLesson.get(lesson.id)?.status === 'completed').length,
+      total: lessons.length,
+      wikiCount: wikiSlugs.length,
+    },
     wikiOptions: wikiSlugs.map(slug => ({ slug, displayName: wikiNames.get(slug) ?? slug })).sort((a, b) => a.displayName.localeCompare(b.displayName)),
   })) as StudentProfileData
 

@@ -126,6 +126,7 @@ model User {
   teacherEnrollments Enrollment[]    @relation("TeacherEnrollments")
   studentEnrollments Enrollment[]    @relation("StudentEnrollments")
   progress          LessonProgress[]
+  trackAssignments  TrackAssignment[]
 
   @@index([role])
 }
@@ -196,4 +197,49 @@ model LessonProgress {
   @@unique([studentId, lessonId])
   @@index([studentId, wikiSlug])
   @@index([lessonId])
+}
+
+model Track {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?  @db.Text
+  createdByUserId  String?
+  createdByType    String   // "teacher" | "admin" | "developer"
+  createdByName    String?
+  createdByEmail   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  wikis       TrackWiki[]
+  assignments TrackAssignment[]
+
+  @@index([createdByUserId])
+  @@index([createdByType])
+}
+
+model TrackWiki {
+  id       String @id @default(cuid())
+  trackId  String
+  wikiSlug String
+  position Int    @default(0)
+
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, wikiSlug])
+  @@index([trackId, position])
+  @@index([wikiSlug])
+}
+
+model TrackAssignment {
+  id               String   @id @default(cuid())
+  trackId          String
+  studentId        String
+  assignedByUserId String?
+  assignedAt       DateTime @default(now())
+
+  track   Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, studentId])
+  @@index([studentId])
 }

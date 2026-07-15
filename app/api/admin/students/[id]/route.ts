@@ -139,6 +139,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         where: { studentId: params.id, wikiSlug, status: 'active' },
         data: { status: 'removed', removedAt: new Date() },
       })
+      // A track is also an access grant. Removing wiki access must remove any
+      // whole-track assignments that contain that wiki, otherwise the student
+      // would still be able to record progress there.
+      await prisma.trackAssignment.deleteMany({
+        where: { studentId: params.id, track: { wikis: { some: { wikiSlug } } } },
+      })
       return NextResponse.json({ ok: true })
     }
 
@@ -147,6 +153,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         where: { studentId: params.id, status: 'active' },
         data: { status: 'removed', removedAt: new Date() },
       })
+      await prisma.trackAssignment.deleteMany({ where: { studentId: params.id } })
       return NextResponse.json({ ok: true })
     }
 
@@ -177,6 +184,7 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
 
     await prisma.session.deleteMany({ where: { userId: params.id } })
     await prisma.lessonProgress.deleteMany({ where: { studentId: params.id } })
+    await prisma.trackAssignment.deleteMany({ where: { studentId: params.id } })
     await prisma.enrollment.deleteMany({ where: { studentId: params.id } })
     await prisma.user.delete({ where: { id: params.id } })
 

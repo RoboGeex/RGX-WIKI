@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Cairo } from 'next/font/google'
-import { Home, Layout, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Clock, Circle, X, Download } from 'lucide-react'
+import { Home, Layout, ChevronLeft, Link2, Copy, Check, Power, RefreshCw, Users, Trash2, Clock, Circle, X, Download, Route } from 'lucide-react'
 import SignOutButton from '@/components/sign-out-button'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
@@ -349,6 +349,7 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
         <nav className="mt-2 space-y-1">
           <Link href="/home" className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-semibold text-white/60 transition hover:bg-white/[0.07] hover:text-white"><Home size={18} /> Home</Link>
           <Link href="/teacher" className="flex items-center gap-3 rounded-xl bg-[#F0523F] px-3.5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_28px_-16px_rgba(240,82,63,.9)]"><Layout size={18} /> My classes</Link>
+          <Link href="/teacher/tracks" className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-semibold text-white/60 transition hover:bg-white/[0.07] hover:text-white"><Route size={18} /> Tracks</Link>
         </nav>
         <p className="mt-7 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">Assigned classes</p>
         <div className="mt-2 flex-1 space-y-1 overflow-y-auto">
@@ -364,9 +365,10 @@ export default function TeacherDashboardClient({ wikis, user }: Props) {
         </div>
       </aside>
 
-      <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-3 rounded-2xl border border-black/10 bg-[#1A1110]/95 p-1.5 shadow-2xl backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border border-black/10 bg-[#1A1110]/95 p-1.5 shadow-2xl backdrop-blur lg:hidden">
         <Link href="/home" className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold text-white/55"><Home size={17} />Home</Link>
         <Link href="/teacher" className="flex flex-col items-center gap-1 rounded-xl bg-[#F0523F] py-2 text-[10px] font-bold text-white"><Layout size={17} />Classes</Link>
+        <Link href="/teacher/tracks" className="flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold text-white/55"><Route size={17} />Tracks</Link>
         <SignOutButton iconSize={17} className="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[10px] font-bold text-white/55">Sign out</SignOutButton>
       </nav>
 

@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, Clock, RotateCcw, Save, ShieldOff, Trash2, UserRound } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, Clock, RotateCcw, Route, Save, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import PrettySelect from '@/components/ui/PrettySelect'
 import { formatUtcDate } from '@/lib/format-date'
 
@@ -28,6 +28,8 @@ type StudentHistory = {
 export type StudentProfileData = {
   student: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string; updatedAt: string; disabledAt: string | null }
   history: StudentHistory[]
+  tracks: { id: string; name: string; description: string | null; assignedAt: string; wikis: { slug: string; displayName: string }[]; completed: number; inProgress: number; total: number }[]
+  overallProgress: { completed: number; total: number; wikiCount: number }
   wikiOptions: { slug: string; displayName: string }[]
 }
 
@@ -97,12 +99,9 @@ export default function StudentProfileClient({ profile }: { profile: StudentProf
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
 
   const totals = useMemo(() => {
-    const uniqueWikis = new Set(profile.history.map(h => h.wikiSlug)).size
-    const completed = profile.history.reduce((sum, h) => sum + h.completed, 0)
-    const total = profile.history.reduce((sum, h) => sum + h.total, 0)
     const active = profile.history.filter(h => h.status === 'active').length
-    return { uniqueWikis, completed, total, active }
-  }, [profile.history])
+    return { uniqueWikis: profile.overallProgress.wikiCount, completed: profile.overallProgress.completed, total: profile.overallProgress.total, active }
+  }, [profile.history, profile.overallProgress])
 
   async function patch(body: Record<string, unknown>, success: string) {
     setBusy(true)
@@ -167,6 +166,7 @@ export default function StudentProfileClient({ profile }: { profile: StudentProf
               <p className="mt-1 truncate text-base font-semibold text-[#64748B]">{profile.student.email}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="rounded-full bg-[#FDF3F1] px-3 py-1 text-sm font-bold text-[#E23B2E]">{totals.active} active enrollments</span>
+                <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-bold text-indigo-700">{profile.tracks.length} tracks</span>
                 <span className="rounded-full bg-[#F1F5F9] px-3 py-1 text-sm font-bold text-[#475569]">{pct(totals.completed, totals.total)}% complete</span>
               </div>
             </div>
@@ -222,7 +222,7 @@ export default function StudentProfileClient({ profile }: { profile: StudentProf
                 disabled={!selectedWiki || busy}
                 onClick={() => setConfirm({
                   title: 'Revoke wiki access?',
-                  body: `This removes ${profile.student.email} from ${selectedWikiName}. Their old history remains visible here.`,
+                  body: `This removes ${profile.student.email} from ${selectedWikiName} and unassigns any track that grants it. Their lesson history remains visible.`,
                   confirmLabel: 'Revoke access',
                   tone: 'warning',
                   onConfirm: () => patch({ action: 'removeFromWiki', wikiSlug: selectedWiki }, 'Wiki access revoked.'),
@@ -235,7 +235,7 @@ export default function StudentProfileClient({ profile }: { profile: StudentProf
                 disabled={busy}
                 onClick={() => setConfirm({
                   title: 'Revoke all wiki access?',
-                  body: `This removes ${profile.student.email} from every active wiki. This does not delete their account or history.`,
+                  body: `This removes ${profile.student.email} from every active wiki and track. This does not delete their account or lesson history.`,
                   confirmLabel: 'Revoke all access',
                   tone: 'warning',
                   onConfirm: () => patch({ action: 'removeFromAllWikis' }, 'All active wiki access revoked.'),
@@ -283,6 +283,10 @@ export default function StudentProfileClient({ profile }: { profile: StudentProf
         </div>
 
         <section className="rounded-3xl border border-[#EAECF1] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          {profile.tracks.length > 0 && <>
+            <div className="border-b border-[#EAECF1] p-5"><div className="flex items-center gap-2"><Route size={19} className="text-indigo-600" /><h2 className="text-xl font-extrabold">Assigned tracks</h2></div><p className="mt-1 text-sm font-semibold text-[#64748B]">Track progress uses the same lesson completions shown in wiki history.</p></div>
+            <div className="divide-y divide-[#EAECF1] border-b border-[#EAECF1]">{profile.tracks.map(track => <article key={track.id} className="p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-extrabold text-[#0F172A]">{track.name}</h3><p className="mt-1 text-sm font-semibold text-[#64748B]">{track.wikis.map(wiki => wiki.displayName).join(' → ')}</p></div><span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-extrabold text-indigo-700">{pct(track.completed, track.total)}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E9EEF5]"><div className="h-full rounded-full bg-indigo-600" style={{ width: `${pct(track.completed, track.total)}%` }} /></div><p className="mt-2 text-xs font-bold text-[#64748B]">{track.completed} of {track.total} lessons completed · {track.inProgress} in progress</p></article>)}</div>
+          </>}
           <div className="border-b border-[#EAECF1] p-5">
             <div className="flex items-center gap-2">
               <BookOpen size={19} className="text-[#E23B2E]" />

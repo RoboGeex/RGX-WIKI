@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Cairo } from 'next/font/google'
-import { Home, Layout, GraduationCap, ArrowRight, Check, Pencil, Camera, Loader2, Trash2 } from 'lucide-react'
+import { Home, Layout, GraduationCap, ArrowRight, Check, Pencil, Camera, Loader2, Trash2, Route } from 'lucide-react'
 import SignOutButton from '@/components/sign-out-button'
 
 const display = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-cairo' })
@@ -16,9 +16,18 @@ type Wiki = {
   picture: string | null
 }
 
+type StudentTrack = {
+  id: string
+  name: string
+  description: string | null
+  assignedAt: string | Date
+  wikis: (Wiki & { progress: { total: number; completed: number } })[]
+  progress: { total: number; completed: number }
+}
+
 type Props = {
   user: { id: string; name: string | null; email: string; role: string; avatarUrl: string | null }
-  studentData: { wikis: Wiki[]; progress: Record<string, { total: number; completed: number }> } | null
+  studentData: { wikis: Wiki[]; progress: Record<string, { total: number; completed: number }>; tracks: StudentTrack[] } | null
   teacherData: { wikis: Wiki[]; studentCounts: Record<string, number> } | null
 }
 
@@ -296,6 +305,48 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
         </div>
 
         {/* Courses */}
+        {!isTeacher && (studentData?.tracks?.length || 0) > 0 && (
+          <section>
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-[#E23B2E]"><Route size={17} /> Learning tracks</div>
+                <h2 className="text-2xl font-extrabold tracking-tight text-[#1A1110] sm:text-3xl">Your guided paths</h2>
+              </div>
+              <span className="pb-1 text-xs font-bold uppercase tracking-[0.2em] text-[#B08981]">{studentData!.tracks.length} total</span>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {studentData!.tracks.map((track) => {
+                const done = track.progress.total > 0 && track.progress.completed >= track.progress.total
+                return (
+                  <article key={track.id} className="overflow-hidden rounded-[1.7rem] border border-[#F2E1DD] bg-white shadow-[0_24px_50px_-40px_rgba(226,59,46,0.5)]">
+                    <div className="bg-gradient-to-br from-[#1A1110] to-[#3B2522] p-6 text-white">
+                      <div className="flex items-start justify-between gap-4">
+                        <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">Track</p><h3 className="mt-1 text-2xl font-extrabold">{track.name}</h3></div>
+                        {done && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-xs font-bold"><Check size={13} /> Complete</span>}
+                      </div>
+                      {track.description && <p className="mt-2 text-sm leading-6 text-white/65">{track.description}</p>}
+                      <div className="mt-5">
+                        <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/65"><span>{track.progress.completed} / {track.progress.total} lessons</span><span>{track.progress.total ? Math.round(track.progress.completed / track.progress.total * 100) : 0}%</span></div>
+                        <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full ${done ? 'bg-emerald-400' : 'bg-[#F0523F]'}`} style={{ width: `${track.progress.total ? Math.round(track.progress.completed / track.progress.total * 100) : 0}%` }} /></div>
+                      </div>
+                    </div>
+                    <div className="divide-y divide-[#F2E1DD]">
+                      {track.wikis.map((wiki, index) => (
+                        <Link key={wiki.slug} href={`/${wiki.slug}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-[#FDF6F4]">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FDEDEA] text-sm font-extrabold text-[#E23B2E]">{index + 1}</span>
+                          <div className="min-w-0 flex-1"><p className="truncate font-bold text-[#1A1110]">{wiki.displayName}</p><p className="mt-0.5 text-xs font-semibold text-[#8B6B65]">{wiki.progress.completed} of {wiki.progress.total} lessons</p></div>
+                          <ArrowRight size={17} className="text-[#B08981] transition group-hover:translate-x-1 group-hover:text-[#E23B2E]" />
+                        </Link>
+                      ))}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Courses */}
         <div>
           <div className="flex items-end justify-between gap-4 mb-6">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1A1110]">
@@ -306,7 +357,7 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
             </span>
           </div>
 
-          {wikis.length === 0 ? (
+          {wikis.length === 0 && (isTeacher || (studentData?.tracks?.length || 0) === 0) ? (
             <div className="rounded-[2rem] border border-[#F2E1DD] bg-white/80 p-14 text-center">
               <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[#FDEDEA] flex items-center justify-center text-[#E23B2E]">
                 <GraduationCap size={30} />
@@ -318,7 +369,7 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
                   : 'Ask your teacher for an invite link to join a course.'}
               </p>
             </div>
-          ) : (
+          ) : wikis.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {wikis.map((wiki) => {
                 const prog = studentData?.progress[wiki.slug]
@@ -377,7 +428,7 @@ export default function HomeClient({ user, studentData, teacherData }: Props) {
                 )
               })}
             </div>
-          )}
+          ) : null}
         </div>
 
         </div>

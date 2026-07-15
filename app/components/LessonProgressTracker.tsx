@@ -23,11 +23,12 @@ export default function LessonProgressTracker({ lessonId, wikiSlug, initialStatu
   async function markComplete() {
     setStatus('saving')
     try {
-      await fetch('/api/progress', {
+      const response = await fetch('/api/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lessonId, wikiSlug, status: 'completed' }),
       })
+      if (!response.ok) throw new Error('Progress could not be saved')
       setStatus('completed')
     } catch {
       setStatus('idle')

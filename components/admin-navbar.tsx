@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import { Search, GraduationCap, Users, BookOpen, Loader2, LayoutDashboard, PanelLeft } from 'lucide-react'
+import { Search, GraduationCap, Users, BookOpen, Loader2, LayoutDashboard, PanelLeft, Route } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { AdminSearchResult } from '@/app/api/admin/search/route'
 import SignOutButton from '@/components/sign-out-button'
@@ -29,6 +29,7 @@ interface AdminNavbarProps {
 const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: string) => boolean }[] = [
   { label: 'Dashboard', href: '/dashboard', tab: 'overview', match: (p: string) => p === '/dashboard' },
   { label: 'Wikis',     href: '/editor', tab: null, match: (p: string) => p.startsWith('/editor') },
+  { label: 'Tracks',    href: '/dashboard/tracks', tab: null, match: (p: string) => p.startsWith('/dashboard/tracks') },
   { label: 'Students',  href: '/dashboard/students', tab: 'students', match: (p: string) => p.startsWith('/dashboard/students') },
   { label: 'Teachers',  href: '/dashboard/teachers', tab: 'teachers', match: (p: string) => p.startsWith('/dashboard/teachers') },
 ]
@@ -36,6 +37,7 @@ const NAV: { label: string; href: string; tab: DashboardTab | null; match: (p: s
 const NAV_ICONS = {
   Dashboard: LayoutDashboard,
   Wikis: BookOpen,
+  Tracks: Route,
   Students: GraduationCap,
   Teachers: Users,
 }

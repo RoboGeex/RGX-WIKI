@@ -119,10 +119,20 @@ export default async function KitLayout(
               : []
             if (assigned.includes(wiki.slug)) isValid = true
           } else if (user.role === 'student') {
-            const enrollment = await prisma.enrollment.findFirst({
-              where: { studentId: user.id, wikiSlug: wiki.slug, status: 'active' },
-            })
-            if (enrollment) isValid = true
+            const [enrollment, trackAssignment] = await Promise.all([
+              prisma.enrollment.findFirst({
+                where: { studentId: user.id, wikiSlug: wiki.slug, status: 'active' },
+                select: { id: true },
+              }),
+              prisma.trackAssignment.findFirst({
+                where: {
+                  studentId: user.id,
+                  track: { wikis: { some: { wikiSlug: wiki.slug } } },
+                },
+                select: { id: true },
+              }),
+            ])
+            if (enrollment || trackAssignment) isValid = true
           }
         }
       } catch {

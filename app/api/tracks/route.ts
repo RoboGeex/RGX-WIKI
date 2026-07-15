@@ -12,9 +12,8 @@ function strings(value: unknown): string[] {
 export async function GET() {
   try {
     const actor = await requireTrackActor()
-    const [tracks, wikis, students] = await Promise.all([
+    const [tracks, allWikis, students] = await Promise.all([
       prisma.track.findMany({
-        where: actor.isAdmin ? undefined : { createdByUserId: actor.id },
         orderBy: { updatedAt: 'desc' },
         include: {
           wikis: { orderBy: { position: 'asc' } },
@@ -22,7 +21,7 @@ export async function GET() {
         },
       }),
       prisma.wiki.findMany({
-        where: { isPublished: true, ...(actor.isAdmin ? {} : { slug: { in: actor.wikiSlugs } }) },
+        where: { isPublished: true },
         orderBy: { displayName: 'asc' },
         select: { slug: true, displayName: true, picture: true },
       }),
@@ -35,7 +34,9 @@ export async function GET() {
           }),
     ])
 
-    const wikiMap = new Map(wikis.map((wiki) => [wiki.slug, wiki]))
+    const wikis = actor.isAdmin ? allWikis : allWikis.filter((wiki) => actor.wikiSlugs.includes(wiki.slug))
+    const wikiMap = new Map(allWikis.map((wiki) => [wiki.slug, wiki]))
+    const eligibleStudentIds = new Set(students.map((student) => student.id))
     const allWikiSlugs = [...new Set(tracks.flatMap((track) => track.wikis.map((wiki) => wiki.wikiSlug)))]
     const allStudentIds = [...new Set(tracks.flatMap((track) => track.assignments.map((assignment) => assignment.studentId)))]
     const [lessons, completed] = await Promise.all([
@@ -51,10 +52,13 @@ export async function GET() {
     const payload = tracks.map((track) => {
       const slugs = new Set(track.wikis.map((wiki) => wiki.wikiSlug))
       const lessonIds = lessons.filter((lesson) => slugs.has(lesson.wikiSlug)).map((lesson) => lesson.id)
+      const visibleAssignments = actor.isAdmin ? track.assignments : track.assignments.filter((assignment) => eligibleStudentIds.has(assignment.studentId))
       return {
         ...track,
+        canEditStructure: actor.isAdmin || track.createdByUserId === actor.id,
+        canAssign: actor.isAdmin || track.wikis.every((wiki) => actor.wikiSlugs.includes(wiki.wikiSlug)),
         wikis: track.wikis.map((item) => ({ ...item, wiki: wikiMap.get(item.wikiSlug) ?? { slug: item.wikiSlug, displayName: item.wikiSlug, picture: null } })),
-        assignments: track.assignments.map((assignment) => {
+        assignments: visibleAssignments.map((assignment) => {
           const completedCount = lessonIds.filter((id) => completedByStudent.get(assignment.studentId)?.has(id)).length
           return { ...assignment, progress: { completed: completedCount, total: lessonIds.length, percent: lessonIds.length ? Math.round(completedCount / lessonIds.length * 100) : 0 } }
         }),

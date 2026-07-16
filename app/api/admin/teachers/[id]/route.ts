@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { AuthError } from '@/lib/auth'
-import { requireAdminAccess } from '@/lib/admin-auth'
+import { AuthError, hashPassword } from '@/lib/auth'
+import { requireAdminAccess, requireSuperadminAccess } from '@/lib/admin-auth'
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -15,6 +15,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const data: Record<string, any> = {}
     const action = typeof body?.action === 'string' ? body.action : 'updateTeacher'
+
+    if (action === 'resetPassword') {
+      await requireSuperadminAccess()
+      const newPassword = typeof body?.newPassword === 'string' ? body.newPassword : ''
+      if (newPassword.length < 8) return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 })
+      const passwordHash = await hashPassword(newPassword)
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: teacher.id }, data: { passwordHash } }),
+        prisma.session.deleteMany({ where: { userId: teacher.id } }),
+      ])
+      return NextResponse.json({ ok: true })
+    }
 
     if (typeof body?.disabled === 'boolean') {
       data.disabledAt = body.disabled ? new Date() : null

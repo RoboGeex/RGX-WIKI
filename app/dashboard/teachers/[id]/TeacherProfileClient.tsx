@@ -50,6 +50,7 @@ export type TeacherProfileData = {
   links: TeacherLink[]
   enrollmentHistory: TeacherEnrollmentHistory[]
   lastLoginAt: string | null
+  canResetPassword: boolean
 }
 
 type ConfirmState = {
@@ -117,6 +118,8 @@ export default function TeacherProfileClient({ profile }: { profile: TeacherProf
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   const totals = useMemo(() => {
     const students = new Set(profile.enrollmentHistory.map(h => h.student.id)).size
@@ -130,7 +133,7 @@ export default function TeacherProfileClient({ profile }: { profile: TeacherProf
     setAssigned(current => current.includes(slug) ? current.filter(item => item !== slug) : [...current, slug])
   }
 
-  async function patch(body: Record<string, unknown>, success: string) {
+  async function patch(body: Record<string, unknown>, success: string, onSuccess?: () => void) {
     setBusy(true)
     setError(null)
     setStatus(null)
@@ -143,6 +146,7 @@ export default function TeacherProfileClient({ profile }: { profile: TeacherProf
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error || 'Action failed')
       setStatus(success)
+      onSuccess?.()
       setConfirm(null)
       router.refresh()
     } catch (e: any) {
@@ -155,6 +159,18 @@ export default function TeacherProfileClient({ profile }: { profile: TeacherProf
   async function saveProfile(e: FormEvent) {
     e.preventDefault()
     await patch({ action: 'updateTeacher', name, email, assignedWikiSlugs: assigned }, 'Teacher profile updated.')
+  }
+
+  async function resetTeacherPassword(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (newPassword.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (newPassword !== confirmPassword) { setError('The password confirmation does not match.'); return }
+    await patch(
+      { action: 'resetPassword', newPassword },
+      'Teacher password reset. Existing sessions were signed out.',
+      () => { setNewPassword(''); setConfirmPassword('') },
+    )
   }
 
   async function deleteAccount() {
@@ -261,6 +277,15 @@ export default function TeacherProfileClient({ profile }: { profile: TeacherProf
             >
               <KeyRound size={17} /> {profile.teacher.disabledAt ? 'Enable account' : 'Disable account'}
             </button>
+            {profile.canResetPassword && (
+              <form onSubmit={resetTeacherPassword} className="mt-5 border-t border-[#EAECF1] pt-5">
+                <h3 className="text-base font-extrabold text-[#0F172A]">Reset teacher password</h3>
+                <p className="mt-1 text-sm font-semibold text-[#64748B]">Superadmin only. The teacher will be signed out everywhere.</p>
+                <label className="mt-4 block text-sm font-bold text-[#64748B]">New password<input type="password" minLength={8} required autoComplete="new-password" value={newPassword} onChange={event => setNewPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-[#E2E6EC] px-3 py-2.5 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10" /></label>
+                <label className="mt-3 block text-sm font-bold text-[#64748B]">Confirm new password<input type="password" minLength={8} required autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-[#E2E6EC] px-3 py-2.5 text-base text-[#0F172A] outline-none transition focus:border-[#E23B2E] focus:ring-4 focus:ring-[#E23B2E]/10" /></label>
+                <button disabled={busy || !newPassword || !confirmPassword} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] px-4 py-2.5 text-base font-extrabold text-white disabled:opacity-50"><KeyRound size={17} /> Reset password</button>
+              </form>
+            )}
             <div className="mt-5 space-y-3 border-t border-[#EAECF1] pt-5">
               <PrettySelect
                 value={selectedWiki}

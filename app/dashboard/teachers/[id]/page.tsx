@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { Cairo } from 'next/font/google'
-import { requireAdminAccess } from '@/lib/admin-auth'
+import { hasSuperadminAccess, requireAdminAccess } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import TeacherProfileClient, { type TeacherProfileData } from './TeacherProfileClient'
 
@@ -33,6 +33,7 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
     },
   })
   if (!teacher || teacher.role !== 'teacher') notFound()
+  const canResetPassword = await hasSuperadminAccess()
 
   const assignedWikiSlugs = Array.isArray(teacher.assignedWikiSlugs)
     ? teacher.assignedWikiSlugs.filter((slug): slug is string => typeof slug === 'string')
@@ -105,6 +106,7 @@ export default async function TeacherProfilePage({ params }: { params: { id: str
     })),
     enrollmentHistory,
     lastLoginAt: lastSession?.createdAt ?? null,
+    canResetPassword,
   })) as TeacherProfileData
 
   return (

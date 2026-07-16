@@ -27,3 +27,18 @@ export async function requireAdminAccess() {
 
   throw new AuthError('Admin access required', 403)
 }
+
+export async function hasSuperadminAccess(): Promise<boolean> {
+  const devId = getVerifiedDeveloperId()
+  if (!devId) return false
+  try {
+    const developer = await findDeveloperById(devId)
+    return developer?.role === 'superadmin'
+  } catch {
+    return false
+  }
+}
+
+export async function requireSuperadminAccess() {
+  if (!(await hasSuperadminAccess())) throw new AuthError('Superadmin access required', 403)
+}

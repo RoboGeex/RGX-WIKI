@@ -9,10 +9,6 @@ export async function POST(_request: Request, { params }: { params: { id: string
     const actor = await requireTrackActor()
     const track = await prisma.track.findUnique({ where: { id: params.id }, include: { wikis: true } })
     if (!track) throw new AuthError('Track not found', 404)
-    if (!actor.isAdmin && track.wikis.some((wiki) => !actor.wikiSlugs.includes(wiki.wikiSlug))) {
-      throw new AuthError('You need access to every wiki in this track before generating a link', 403)
-    }
-
     // Replacing a link stops new joins through the old URL. Existing students
     // keep their assignment, matching the normal wiki-link behavior.
     await prisma.trackInviteLink.updateMany({

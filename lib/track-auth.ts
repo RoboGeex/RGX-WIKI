@@ -43,7 +43,12 @@ export async function requireTrackActor(): Promise<TrackActor> {
   }
 }
 
-export async function assertTrackScope(actor: TrackActor, wikiSlugs: string[], studentIds: string[]) {
+export async function assertTrackScope(
+  actor: TrackActor,
+  wikiSlugs: string[],
+  studentIds: string[],
+  options: { allowSharedTrack?: boolean } = {},
+) {
   const uniqueWikis = [...new Set(wikiSlugs)]
   const uniqueStudents = [...new Set(studentIds)]
 
@@ -51,7 +56,7 @@ export async function assertTrackScope(actor: TrackActor, wikiSlugs: string[], s
   if (published !== uniqueWikis.length) throw new AuthError('One or more selected wikis are unavailable', 400)
 
   if (!actor.isAdmin) {
-    if (uniqueWikis.some((slug) => !actor.wikiSlugs.includes(slug))) {
+    if (!options.allowSharedTrack && uniqueWikis.some((slug) => !actor.wikiSlugs.includes(slug))) {
       throw new AuthError('Teachers can only add wikis assigned to them', 403)
     }
     if (uniqueStudents.length) {

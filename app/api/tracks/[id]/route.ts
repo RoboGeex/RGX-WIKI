@@ -26,7 +26,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const effectiveWikis = canEditStructure ? wikiSlugs : track.wikis.sort((a, b) => a.position - b.position).map((wiki) => wiki.wikiSlug)
     if (canEditStructure && !name) throw new AuthError('Track name is required', 400)
     if (!effectiveWikis.length) throw new AuthError('Select at least one wiki', 400)
-    await assertTrackScope(actor, effectiveWikis, studentIds)
+    await assertTrackScope(actor, effectiveWikis, studentIds, { allowSharedTrack: !canEditStructure })
 
     const eligibleStudentIds = actor.isAdmin ? [] : (await prisma.user.findMany({
       where: {

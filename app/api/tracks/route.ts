@@ -68,7 +68,7 @@ export async function GET() {
       return {
         ...track,
         canEditStructure: actor.isAdmin || track.createdByUserId === actor.id,
-        canAssign: actor.isAdmin || track.wikis.every((wiki) => actor.wikiSlugs.includes(wiki.wikiSlug)),
+        canAssign: true,
         inviteLinks: track.inviteLinks.map((link) => ({ ...link, isOwnedByActor: link.createdByActorId === actor.id })),
         wikis: track.wikis.map((item) => ({ ...item, wiki: wikiMap.get(item.wikiSlug) ?? { slug: item.wikiSlug, displayName: item.wikiSlug, picture: null } })),
         assignments: visibleAssignments.map((assignment) => {

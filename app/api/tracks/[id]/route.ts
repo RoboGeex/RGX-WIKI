@@ -28,11 +28,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (!effectiveWikis.length) throw new AuthError('Select at least one wiki', 400)
     await assertTrackScope(actor, effectiveWikis, studentIds)
 
-    const eligibleStudentIds = actor.isAdmin ? [] : (await prisma.enrollment.findMany({
-      where: { teacherId: actor.userId!, status: 'active' },
-      distinct: ['studentId'],
-      select: { studentId: true },
-    })).map((enrollment) => enrollment.studentId)
+    const eligibleStudentIds = actor.isAdmin ? [] : (await prisma.user.findMany({
+      where: {
+        role: 'student',
+        OR: [
+          { studentEnrollments: { some: { teacherId: actor.userId!, status: 'active' } } },
+          { trackAssignments: { some: { assignedByUserId: actor.userId! } } },
+        ],
+      },
+      select: { id: true },
+    })).map((student) => student.id)
 
     await prisma.$transaction(async (tx) => {
       if (canEditStructure) {
@@ -40,8 +45,20 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         await tx.trackWiki.deleteMany({ where: { trackId: params.id } })
         await tx.trackWiki.createMany({ data: effectiveWikis.map((wikiSlug, position) => ({ trackId: params.id, wikiSlug, position })) })
       }
-      await tx.trackAssignment.deleteMany({ where: { trackId: params.id, ...(actor.isAdmin ? {} : { studentId: { in: eligibleStudentIds } }) } })
-      if (studentIds.length) await tx.trackAssignment.createMany({ data: studentIds.map((studentId) => ({ trackId: params.id, studentId, assignedByUserId: actor.userId })) })
+      await tx.trackAssignment.deleteMany({
+        where: {
+          trackId: params.id,
+          studentId: actor.isAdmin
+            ? { notIn: studentIds }
+            : { in: eligibleStudentIds, notIn: studentIds },
+        },
+      })
+      if (studentIds.length) {
+        await tx.trackAssignment.createMany({
+          data: studentIds.map((studentId) => ({ trackId: params.id, studentId, assignedByUserId: actor.userId })),
+          skipDuplicates: true,
+        })
+      }
     })
     return NextResponse.json({ ok: true })
   } catch (error: any) {

@@ -18,6 +18,11 @@ export async function GET() {
         include: {
           wikis: { orderBy: { position: 'asc' } },
           assignments: { include: { student: { select: { id: true, name: true, email: true, avatarUrl: true } } }, orderBy: { assignedAt: 'desc' } },
+          inviteLinks: {
+            where: actor.isAdmin ? undefined : { createdByActorId: actor.id },
+            orderBy: { createdAt: 'desc' },
+            include: { _count: { select: { assignments: true } } },
+          },
         },
       }),
       prisma.wiki.findMany({
@@ -28,7 +33,14 @@ export async function GET() {
       actor.isAdmin
         ? prisma.user.findMany({ where: { role: 'student', disabledAt: null }, orderBy: [{ name: 'asc' }, { email: 'asc' }], select: { id: true, name: true, email: true, avatarUrl: true } })
         : prisma.user.findMany({
-            where: { role: 'student', studentEnrollments: { some: { teacherId: actor.userId!, status: 'active' } }, disabledAt: null },
+            where: {
+              role: 'student',
+              disabledAt: null,
+              OR: [
+                { studentEnrollments: { some: { teacherId: actor.userId!, status: 'active' } } },
+                { trackAssignments: { some: { assignedByUserId: actor.userId! } } },
+              ],
+            },
             orderBy: [{ name: 'asc' }, { email: 'asc' }],
             select: { id: true, name: true, email: true, avatarUrl: true },
           }),
@@ -57,6 +69,7 @@ export async function GET() {
         ...track,
         canEditStructure: actor.isAdmin || track.createdByUserId === actor.id,
         canAssign: actor.isAdmin || track.wikis.every((wiki) => actor.wikiSlugs.includes(wiki.wikiSlug)),
+        inviteLinks: track.inviteLinks.map((link) => ({ ...link, isOwnedByActor: link.createdByActorId === actor.id })),
         wikis: track.wikis.map((item) => ({ ...item, wiki: wikiMap.get(item.wikiSlug) ?? { slug: item.wikiSlug, displayName: item.wikiSlug, picture: null } })),
         assignments: visibleAssignments.map((assignment) => {
           const completedCount = lessonIds.filter((id) => completedByStudent.get(assignment.studentId)?.has(id)).length

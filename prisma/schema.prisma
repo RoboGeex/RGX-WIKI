@@ -212,6 +212,7 @@ model Track {
 
   wikis       TrackWiki[]
   assignments TrackAssignment[]
+  inviteLinks TrackInviteLink[]
 
   @@index([createdByUserId])
   @@index([createdByType])
@@ -235,11 +236,33 @@ model TrackAssignment {
   trackId          String
   studentId        String
   assignedByUserId String?
+  linkId           String?
   assignedAt       DateTime @default(now())
 
   track   Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
   student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  link    TrackInviteLink? @relation(fields: [linkId], references: [id], onDelete: SetNull)
 
   @@unique([trackId, studentId])
   @@index([studentId])
+  @@index([linkId])
+}
+
+model TrackInviteLink {
+  id              String    @id @default(cuid())
+  token           String    @unique
+  trackId         String
+  createdByActorId String
+  createdByUserId String?
+  createdByName   String?
+  createdByEmail  String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  disabledAt      DateTime?
+
+  track       Track             @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  assignments TrackAssignment[]
+
+  @@index([trackId, createdByActorId])
+  @@index([token])
 }

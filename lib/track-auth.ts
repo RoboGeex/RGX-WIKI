@@ -55,10 +55,17 @@ export async function assertTrackScope(actor: TrackActor, wikiSlugs: string[], s
       throw new AuthError('Teachers can only add wikis assigned to them', 403)
     }
     if (uniqueStudents.length) {
-      const eligible = await prisma.enrollment.findMany({
-        where: { teacherId: actor.userId!, studentId: { in: uniqueStudents }, status: 'active' },
-        distinct: ['studentId'],
-        select: { studentId: true },
+      const eligible = await prisma.user.findMany({
+        where: {
+          id: { in: uniqueStudents },
+          role: 'student',
+          disabledAt: null,
+          OR: [
+            { studentEnrollments: { some: { teacherId: actor.userId!, status: 'active' } } },
+            { trackAssignments: { some: { assignedByUserId: actor.userId! } } },
+          ],
+        },
+        select: { id: true },
       })
       if (eligible.length !== uniqueStudents.length) {
         throw new AuthError('Teachers can only assign their active students', 403)

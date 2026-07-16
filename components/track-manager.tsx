@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Edit3, Loader2, Plus, Route, Trash2, Users, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Copy, Edit3, Link2, Loader2, Plus, Power, Route, Trash2, Users, X } from 'lucide-react'
 
 type Wiki = { slug: string; displayName: string; picture: string | null }
 type Student = { id: string; name: string | null; email: string; avatarUrl: string | null }
@@ -16,6 +16,7 @@ type Track = {
   canAssign: boolean
   wikis: { id: string; wikiSlug: string; position: number; wiki: Wiki }[]
   assignments: { id: string; studentId: string; student: Student; progress: { completed: number; total: number; percent: number } }[]
+  inviteLinks: { id: string; token: string; isActive: boolean; isOwnedByActor: boolean; _count: { assignments: number } }[]
 }
 
 type FormState = { name: string; description: string; wikiSlugs: string[]; studentIds: string[] }
@@ -39,6 +40,8 @@ export default function TrackManager({ audience }: { audience: 'teacher' | 'admi
   const [saving, setSaving] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [studentQuery, setStudentQuery] = useState('')
+  const [linkBusy, setLinkBusy] = useState<string | null>(null)
+  const [copiedLink, setCopiedLink] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -126,6 +129,46 @@ export default function TrackManager({ audience }: { audience: 'teacher' | 'admi
     await load()
   }
 
+  async function generateLink(track: Track) {
+    const current = track.inviteLinks.find((link) => link.isActive && link.isOwnedByActor)
+    if (current && !window.confirm('Replace your current track link? Existing students keep access, but the old URL will stop accepting new joins.')) return
+    setLinkBusy(track.id)
+    setError(null)
+    try {
+      const response = await fetch(`/api/tracks/${track.id}/links`, { method: 'POST' })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Could not generate link')
+      await load()
+    } catch (err: any) {
+      setError(err.message || 'Could not generate link')
+    } finally {
+      setLinkBusy(null)
+    }
+  }
+
+  async function copyInvite(token: string) {
+    const url = `${window.location.origin}/join/track/${token}`
+    await navigator.clipboard.writeText(url)
+    setCopiedLink(token)
+    window.setTimeout(() => setCopiedLink((current) => current === token ? null : current), 1800)
+  }
+
+  async function disableLink(track: Track, linkId: string) {
+    if (!window.confirm('Turn off this link? Students who joined through this exact link will lose track access; their lesson progress is kept.')) return
+    setLinkBusy(track.id)
+    setError(null)
+    try {
+      const response = await fetch(`/api/tracks/links/${linkId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: false }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Could not disable link')
+      await load()
+    } catch (err: any) {
+      setError(err.message || 'Could not disable link')
+    } finally {
+      setLinkBusy(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -138,17 +181,22 @@ export default function TrackManager({ audience }: { audience: 'teacher' | 'admi
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><Route className="mx-auto text-slate-300" size={42} /><h2 className="mt-4 text-lg font-bold text-slate-900">No tracks yet</h2><p className="mt-1 text-sm text-slate-500">Create the first guided set of wikis for your students.</p></div>
       ) : (
         <div className="grid gap-5 xl:grid-cols-2">
-          {tracks.map((track) => (
+          {tracks.map((track) => {
+            const activeInvite = track.inviteLinks.find((link) => link.isActive && link.isOwnedByActor)
+            return (
             <article key={track.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 p-5">
                 <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-2"><Route size={18} className="text-[#E94335]" /><h2 className="truncate text-xl font-extrabold text-slate-950">{track.name}</h2></div>{track.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{track.description}</p>}</div><div className="flex shrink-0 gap-1">{(track.canEditStructure || track.canAssign) && <button onClick={() => openEdit(track)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800" aria-label={`${track.canEditStructure ? 'Edit' : 'Assign students to'} ${track.name}`}>{track.canEditStructure ? <Edit3 size={16} /> : <Users size={16} />}</button>}{track.canEditStructure && <button onClick={() => remove(track)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${track.name}`}><Trash2 size={16} /></button>}</div></div>
                 <p className="mt-3 text-xs font-semibold text-slate-400">Created by {track.createdByName || track.createdByEmail || track.createdByType}{!track.canAssign && audience === 'teacher' ? ' · Your account does not include every wiki in this track' : ''}</p>
               </div>
               <div className="p-5"><p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">{track.wikis.length} wikis in order</p><div className="flex flex-wrap gap-2">{track.wikis.map((item, index) => <span key={item.id} className="inline-flex items-center gap-2 rounded-full bg-slate-100 py-1.5 pl-2 pr-3 text-xs font-bold text-slate-700"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] text-[#E94335]">{index + 1}</span>{item.wiki.displayName}</span>)}</div></div>
+              <div className="border-t border-slate-100 px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="flex items-center gap-2 text-sm font-extrabold text-slate-800"><Link2 size={16} className="text-[#E94335]" /> Student invite link</p><p className="mt-1 text-xs font-semibold text-slate-400">{activeInvite ? `${activeInvite._count.assignments} joined through this link` : track.canAssign ? 'Generate a link students can use to join the whole track.' : 'You need access to every wiki before inviting students.'}</p></div>{activeInvite ? <div className="flex gap-2"><button type="button" onClick={() => void copyInvite(activeInvite.token)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">{copiedLink === activeInvite.token ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}{copiedLink === activeInvite.token ? 'Copied' : 'Copy'}</button><button type="button" onClick={() => void disableLink(track, activeInvite.id)} disabled={linkBusy === track.id} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"><Power size={14} /> Turn off</button><button type="button" onClick={() => void generateLink(track)} disabled={linkBusy === track.id} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Replace</button></div> : <button type="button" onClick={() => void generateLink(track)} disabled={!track.canAssign || linkBusy === track.id} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{linkBusy === track.id ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />} Generate link</button>}</div>
+              </div>
               <button onClick={() => setExpanded(expanded === track.id ? null : track.id)} className="flex w-full items-center justify-between border-t border-slate-100 px-5 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50"><span className="inline-flex items-center gap-2"><Users size={16} /> {track.assignments.length} assigned students</span>{expanded === track.id ? <ChevronUp size={17} /> : <ChevronDown size={17} />}</button>
               {expanded === track.id && <div className="divide-y divide-slate-100 border-t border-slate-100">{track.assignments.length === 0 ? <p className="px-5 py-5 text-sm text-slate-500">No students assigned yet.</p> : track.assignments.map((assignment) => <div key={assignment.id} className="flex items-center gap-3 px-5 py-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">{initials(assignment.student)}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{assignment.student.name || assignment.student.email}</p><p className="truncate text-xs text-slate-400">{assignment.student.email}</p></div><div className="w-28"><div className="flex justify-between text-[11px] font-bold text-slate-500"><span>{assignment.progress.completed}/{assignment.progress.total}</span><span>{assignment.progress.percent}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${assignment.progress.percent}%` }} /></div></div></div>)}</div>}
             </article>
-          ))}
+          )})}
         </div>
       )}
 

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { getPublishedLessonsByWiki } from '@/lib/wiki-lessons'
 
 // Shape returned to the admin Students directory. Dates are real Date objects
 // here; the API route serializes them to ISO strings via NextResponse.json,
@@ -27,19 +28,35 @@ export async function getAdminStudentsList(includeFormer: boolean): Promise<Admi
     prisma.enrollment.findMany({
       where: includeFormer ? {} : { status: 'active' },
       orderBy: { joinedAt: 'desc' },
-      include: {
-        student: { select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true } },
-        teacher: { select: { id: true, email: true, name: true } },
-      },
     }),
     prisma.trackAssignment.findMany({
       orderBy: { assignedAt: 'desc' },
-      include: {
-        student: { select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true } },
-        track: { include: { wikis: true } },
-      },
     }),
   ])
+
+  // relationMode="prisma" enforces no foreign keys, so a row may reference a
+  // user/track that was since deleted (an orphan). Resolve related records
+  // separately and skip dangling references, instead of using required-relation
+  // includes — those throw "Field X is required to return data, got null" the
+  // moment a single orphan exists, taking down the whole page.
+  const relatedUserIds = new Set<string>()
+  for (const e of allEnrollments) { relatedUserIds.add(e.studentId); relatedUserIds.add(e.teacherId) }
+  for (const a of trackAssignments) relatedUserIds.add(a.studentId)
+  const relatedTrackIds = [...new Set(trackAssignments.map((a) => a.trackId))]
+
+  const [relatedUsers, relatedTracks] = await Promise.all([
+    relatedUserIds.size
+      ? prisma.user.findMany({
+          where: { id: { in: [...relatedUserIds] } },
+          select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true },
+        })
+      : [],
+    relatedTrackIds.length
+      ? prisma.track.findMany({ where: { id: { in: relatedTrackIds } }, include: { wikis: true } })
+      : [],
+  ])
+  const userById = new Map(relatedUsers.map((u) => [u.id, u]))
+  const trackById = new Map(relatedTracks.map((t) => [t.id, t]))
 
   // One row per (student, wiki): prefer the active enrollment; otherwise the
   // most recent inactive one (rejoining via a new link leaves old rows behind).
@@ -60,13 +77,16 @@ export async function getAdminStudentsList(includeFormer: boolean): Promise<Admi
   }>()
 
   for (const e of enrollments) {
+    const student = userById.get(e.studentId)
+    if (!student) continue // orphaned enrollment — student no longer exists
     if (!studentMap.has(e.studentId)) {
-      studentMap.set(e.studentId, { student: e.student, wikis: [] })
+      studentMap.set(e.studentId, { student, wikis: [] })
     }
+    const teacher = userById.get(e.teacherId)
     studentMap.get(e.studentId)!.wikis.push({
       wikiSlug: e.wikiSlug,
-      teacherName: e.teacher.name,
-      teacherEmail: e.teacher.email,
+      teacherName: teacher?.name ?? null,
+      teacherEmail: teacher?.email ?? 'Unknown teacher',
       joinedAt: e.joinedAt,
       status: e.status,
     })
@@ -75,16 +95,19 @@ export async function getAdminStudentsList(includeFormer: boolean): Promise<Admi
   // Track assignments are also active wiki access. Add track-only students and
   // track-only wikis without duplicating a direct enrollment for the same wiki.
   for (const assignment of trackAssignments) {
+    const student = userById.get(assignment.studentId)
+    const track = trackById.get(assignment.trackId)
+    if (!student || !track) continue // orphaned assignment — skip
     if (!studentMap.has(assignment.studentId)) {
-      studentMap.set(assignment.studentId, { student: assignment.student, wikis: [] })
+      studentMap.set(assignment.studentId, { student, wikis: [] })
     }
     const entry = studentMap.get(assignment.studentId)!
-    for (const wiki of assignment.track.wikis) {
+    for (const wiki of track.wikis) {
       if (entry.wikis.some((item) => item.wikiSlug === wiki.wikiSlug)) continue
       entry.wikis.push({
         wikiSlug: wiki.wikiSlug,
-        teacherName: `Track: ${assignment.track.name}`,
-        teacherEmail: assignment.track.createdByEmail || 'Track assignment',
+        teacherName: `Track: ${track.name}`,
+        teacherEmail: track.createdByEmail || 'Track assignment',
         joinedAt: assignment.assignedAt,
         status: 'active',
       })
@@ -93,9 +116,13 @@ export async function getAdminStudentsList(includeFormer: boolean): Promise<Admi
 
   const studentIds = Array.from(studentMap.keys())
   const wikiSlugs = [...new Set(Array.from(studentMap.values()).flatMap(entry => entry.wikis.map(wiki => wiki.wikiSlug)))]
-  const publishedLessons = wikiSlugs.length
-    ? await prisma.lesson.findMany({ where: { wikiSlug: { in: wikiSlugs }, status: 'published' }, select: { id: true, wikiSlug: true } })
-    : []
+  // Lessons live in each wiki's own database — the default client would
+  // return 0 rows for per-wiki-DB wikis. Progress rows (default DB) are
+  // joined to these lessons below by lesson id.
+  const lessonsByWiki = await getPublishedLessonsByWiki(wikiSlugs)
+  const publishedLessons = wikiSlugs.flatMap(slug =>
+    (lessonsByWiki.get(slug) ?? []).map(lesson => ({ id: lesson.id, wikiSlug: slug }))
+  )
 
   // Progress summary per student per wiki
   const progressRows = studentIds.length && publishedLessons.length

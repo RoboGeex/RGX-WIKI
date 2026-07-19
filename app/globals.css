@@ -82,6 +82,21 @@ h1, h2, h3, .font-bold, strong {
   font-feature-settings: normal !important;
 }
 
+/* Public marketing landing (hub root). Same trick as .rgx-dash: the landing
+   root sets --land-display/--land-body per locale (Lexend/Manrope for EN,
+   Cairo for AR) and this scoped rule beats the global Inter !important. */
+.rgx-landing,
+.rgx-landing h1, .rgx-landing h2, .rgx-landing h3, .rgx-landing h4, .rgx-landing h5, .rgx-landing h6,
+.rgx-landing p, .rgx-landing span, .rgx-landing a, .rgx-landing li, .rgx-landing button,
+.rgx-landing input, .rgx-landing div, .rgx-landing strong, .rgx-landing dt, .rgx-landing dd {
+  font-family: var(--land-body), var(--font-land-cairo), sans-serif !important;
+  font-feature-settings: normal !important;
+}
+.rgx-landing .land-display,
+.rgx-landing .land-display span {
+  font-family: var(--land-display), var(--font-land-cairo), sans-serif !important;
+}
+
 /* Dashboard content only: keep admin/editor/wiki shared chrome untouched. */
 .dashboard-text-scale {
   font-size: 1.0625rem;

@@ -149,15 +149,21 @@ model EnrollmentLink {
   token       String    @unique
   teacherId   String
   wikiSlug    String
+  name        String?   // teacher-chosen class name; null → UI shows "Class N"
   isActive    Boolean   @default(true)
+  // Optional schedule. Access is computed from these on read (no cron job):
+  // the class is open when isActive AND now is within [startsAt, endsAt].
+  // endsAt is stored at end-of-day so the class runs through that date.
+  startsAt    DateTime?
+  endsAt      DateTime?
   createdAt   DateTime  @default(now())
   disabledAt  DateTime?
 
   teacher     User         @relation("TeacherLinks", fields: [teacherId], references: [id])
   enrollments Enrollment[]
 
-  // Only one active link per (teacher, wiki) — enforced in app code,
-  // since "active" is a boolean and partial unique indexes aren't portable.
+  // Each link is a "class". A teacher may run several active classes per wiki,
+  // so there is no longer a one-active-link-per-(teacher, wiki) constraint.
   @@index([teacherId, wikiSlug])
   @@index([token])
 }
@@ -189,6 +195,9 @@ model LessonProgress {
   wikiSlug     String
   lessonId     String
   status       String    @default("in_progress") // "in_progress" | "completed"
+  // Active time on the lesson, in seconds. Only counted while the tab is
+  // visible, focused and not idle — see app/components/LessonProgressTracker.
+  timeSpentSec Int       @default(0)
   lastViewedAt DateTime  @default(now())
   completedAt  DateTime?
 

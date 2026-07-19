@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { AuthError } from '@/lib/auth'
 import { requireAdminAccess } from '@/lib/admin-auth'
+import { getPublishedLessonsByWiki } from '@/lib/wiki-lessons'
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
@@ -34,14 +35,18 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
     const wikiSlugs = enrollments.map(e => e.wikiSlug)
 
-    // All published lessons for these wikis
-    const lessons = wikiSlugs.length
-      ? await prisma.lesson.findMany({
-          where: { wikiSlug: { in: wikiSlugs }, status: 'published' },
-          orderBy: [{ wikiSlug: 'asc' }, { order: 'asc' }],
-          select: { id: true, wikiSlug: true, title_en: true, order: true, duration_min: true },
-        })
-      : []
+    // All published lessons for these wikis — loaded from each wiki's own
+    // database; the student's progress rows (default DB) are joined by id.
+    const lessonsByWiki = await getPublishedLessonsByWiki(wikiSlugs)
+    const lessons = wikiSlugs.flatMap(slug =>
+      (lessonsByWiki.get(slug) ?? []).map(lesson => ({
+        id: lesson.id,
+        wikiSlug: slug,
+        title_en: lesson.title_en,
+        order: lesson.order,
+        duration_min: lesson.duration_min,
+      }))
+    )
 
     // Student's progress on each lesson
     const progress = await prisma.lessonProgress.findMany({

@@ -784,15 +784,19 @@ export default async function LessonPage(
   // complete" control reflects it on reload (the client component can't read
   // the httpOnly session, and starting at 'idle' loses previously-saved state).
   let initialProgressStatus: 'idle' | 'completed' = 'idle'
+  let initialTimeSpentSec = 0
+  let trackTime = false
   if (lesson.id) {
     try {
       const currentUser = await getCurrentUser()
       if (currentUser?.role === 'student') {
+        trackTime = true
         const savedProgress = await prisma.lessonProgress.findUnique({
           where: { studentId_lessonId: { studentId: currentUser.id, lessonId: lesson.id } },
-          select: { status: true },
+          select: { status: true, timeSpentSec: true },
         })
         if (savedProgress?.status === 'completed') initialProgressStatus = 'completed'
+        initialTimeSpentSec = savedProgress?.timeSpentSec ?? 0
       }
     } catch {
       // progress lookup must never break lesson rendering
@@ -916,7 +920,14 @@ export default async function LessonPage(
                   </article>
                 )}
 
-                <LessonProgressTracker key={lesson.id} lessonId={lesson.id} wikiSlug={kitData.wikiSlug} initialStatus={initialProgressStatus} />
+                <LessonProgressTracker
+                  key={lesson.id}
+                  lessonId={lesson.id}
+                  wikiSlug={kitData.wikiSlug}
+                  initialStatus={initialProgressStatus}
+                  initialTimeSpentSec={initialTimeSpentSec}
+                  trackTime={trackTime}
+                />
 
                 <PrevNextNav
                   prevLesson={prevLesson}

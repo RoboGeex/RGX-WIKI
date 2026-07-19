@@ -134,7 +134,7 @@ export default function DashboardHome({ initialStats = null, initialPeople = nul
   const rankedWikis = useMemo(() => [...wikiHealth].sort((a, b) => b.avgCompletion - a.avgCompletion), [wikiHealth])
   const totalEnrollments = wikiHealth.reduce((sum, wiki) => sum + wiki.enrolled, 0)
   const totalLessons = wikiHealth.reduce((sum, wiki) => sum + wiki.totalLessons, 0)
-  const learningNow = wikiHealth.reduce((sum, wiki) => sum + wiki.totalInProgress, 0)
+  const learningNow = wikiHealth.reduce((sum, wiki) => sum + (wiki.totalInProgress ?? 0), 0)
   const averageCompletion = wikiHealth.length ? Math.round(wikiHealth.reduce((sum, wiki) => sum + wiki.avgCompletion, 0) / wikiHealth.length) : 0
   const lowEngagement = wikiHealth.filter((wiki) => wiki.avgCompletion < 25).length
   const dateLabel = refreshedAt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -172,7 +172,7 @@ export default function DashboardHome({ initialStats = null, initialPeople = nul
                       <td className="px-5 py-3 font-semibold text-slate-800">{wiki.name}</td>
                       <td className="px-4 py-3 tabular-nums text-slate-600">{wiki.totalLessons}</td>
                       <td className="px-4 py-3 tabular-nums text-slate-600">{wiki.enrolled}</td>
-                      <td className="px-4 py-3 tabular-nums text-slate-600">{wiki.totalInProgress}</td>
+                      <td className="px-4 py-3 tabular-nums text-slate-600">{wiki.totalInProgress ?? 0}</td>
                       <td className="px-5 py-3"><div className="flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-700" style={{ width: `${Math.max(wiki.avgCompletion, 2)}%` }} /></div><span className="w-9 text-right text-xs font-semibold tabular-nums text-slate-600">{wiki.avgCompletion}%</span></div></td>
                     </tr>
                   ))}

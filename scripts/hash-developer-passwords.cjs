@@ -14,8 +14,26 @@
  * Uses DATABASE_URL_DEVELOPERS (falls back to DATABASE_URL). Idempotent —
  * already-hashed rows are skipped, so it is safe to re-run.
  */
+const fs = require('fs')
+const path = require('path')
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
+
+// Plain Node doesn't auto-load .env like Next.js does. Pull the DB URL from
+// .env (the production connection string lives there) if it isn't already in
+// the environment. Values already set in the shell take precedence.
+function loadEnvFile(file) {
+  const full = path.join(process.cwd(), file)
+  if (!fs.existsSync(full)) return
+  for (const line of fs.readFileSync(full, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
+    if (!m) continue
+    const key = m[1]
+    let val = m[2].replace(/^["']|["']$/g, '')
+    if (process.env[key] === undefined) process.env[key] = val
+  }
+}
+loadEnvFile('.env')
 
 const APPLY = process.argv.includes('--apply')
 const url = process.env.DATABASE_URL_DEVELOPERS || process.env.DATABASE_URL
@@ -45,7 +63,10 @@ async function main() {
       }
       if (APPLY) {
         const hash = await bcrypt.hash(d.password, 10)
-        await prisma.developer.update({ where: { id: d.id }, data: { password: hash } })
+        // updateMany returns a count and does not read the row back, so it
+        // avoids selecting columns (e.g. avatarUrl) that may not exist in the
+        // developers database.
+        await prisma.developer.updateMany({ where: { id: d.id }, data: { password: hash } })
         hashed++
         console.log(`HASHED ${d.email} (id ${d.id})`)
       } else {

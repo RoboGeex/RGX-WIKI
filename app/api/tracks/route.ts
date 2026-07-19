@@ -17,7 +17,7 @@ export async function GET() {
         orderBy: { updatedAt: 'desc' },
         include: {
           wikis: { orderBy: { position: 'asc' } },
-          assignments: { include: { student: { select: { id: true, name: true, email: true, avatarUrl: true } } }, orderBy: { assignedAt: 'desc' } },
+          assignments: { orderBy: { assignedAt: 'desc' } },
           inviteLinks: {
             where: actor.isAdmin ? undefined : { createdByActorId: actor.id },
             orderBy: { createdAt: 'desc' },
@@ -51,10 +51,15 @@ export async function GET() {
     const eligibleStudentIds = new Set(students.map((student) => student.id))
     const allWikiSlugs = [...new Set(tracks.flatMap((track) => track.wikis.map((wiki) => wiki.wikiSlug)))]
     const allStudentIds = [...new Set(tracks.flatMap((track) => track.assignments.map((assignment) => assignment.studentId)))]
-    const [lessons, completed] = await Promise.all([
+    // Resolve assigned students separately (relationMode="prisma" has no FKs, so
+    // an assignment may point at a deleted student). A required-relation include
+    // would throw on such an orphan; instead we look them up and drop danglers.
+    const [lessons, completed, assignedStudents] = await Promise.all([
       allWikiSlugs.length ? prisma.lesson.findMany({ where: { wikiSlug: { in: allWikiSlugs }, status: 'published' }, select: { id: true, wikiSlug: true } }) : [],
       allStudentIds.length ? prisma.lessonProgress.findMany({ where: { studentId: { in: allStudentIds }, wikiSlug: { in: allWikiSlugs }, status: 'completed' }, select: { studentId: true, lessonId: true } }) : [],
+      allStudentIds.length ? prisma.user.findMany({ where: { id: { in: allStudentIds } }, select: { id: true, name: true, email: true, avatarUrl: true } }) : [],
     ])
+    const studentById = new Map(assignedStudents.map((s) => [s.id, s]))
     const completedByStudent = new Map<string, Set<string>>()
     for (const item of completed) {
       if (!completedByStudent.has(item.studentId)) completedByStudent.set(item.studentId, new Set())
@@ -71,10 +76,12 @@ export async function GET() {
         canAssign: true,
         inviteLinks: track.inviteLinks.map((link) => ({ ...link, isOwnedByActor: link.createdByActorId === actor.id })),
         wikis: track.wikis.map((item) => ({ ...item, wiki: wikiMap.get(item.wikiSlug) ?? { slug: item.wikiSlug, displayName: item.wikiSlug, picture: null } })),
-        assignments: visibleAssignments.map((assignment) => {
-          const completedCount = lessonIds.filter((id) => completedByStudent.get(assignment.studentId)?.has(id)).length
-          return { ...assignment, progress: { completed: completedCount, total: lessonIds.length, percent: lessonIds.length ? Math.round(completedCount / lessonIds.length * 100) : 0 } }
-        }),
+        assignments: visibleAssignments
+          .filter((assignment) => studentById.has(assignment.studentId)) // drop orphaned assignments (student deleted)
+          .map((assignment) => {
+            const completedCount = lessonIds.filter((id) => completedByStudent.get(assignment.studentId)?.has(id)).length
+            return { ...assignment, student: studentById.get(assignment.studentId), progress: { completed: completedCount, total: lessonIds.length, percent: lessonIds.length ? Math.round(completedCount / lessonIds.length * 100) : 0 } }
+          }),
       }
     })
 

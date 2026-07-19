@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { AuthError, requireUser } from '@/lib/auth'
+import { classStatus, closedReason } from '@/lib/class-window'
 
 const STUDENT_CAP = 35
 
@@ -15,9 +16,13 @@ export async function POST(_: Request, { params }: { params: { token: string } }
 
     const link = await prisma.enrollmentLink.findUnique({ where: { token: params.token } })
     if (!link) return NextResponse.json({ error: 'Invalid link' }, { status: 404 })
-    if (!link.isActive) return NextResponse.json({ error: 'This link has been closed' }, { status: 403 })
+    const status = classStatus(link)
+    if (status !== 'active') {
+      return NextResponse.json({ error: closedReason(status) }, { status: 403 })
+    }
 
-    // Check if already enrolled
+    // A student can be in at most one class per wiki. If they already have an
+    // active enrollment in this wiki (through any class), keep them there.
     const existing = await prisma.enrollment.findFirst({
       where: { studentId: user.id, wikiSlug: link.wikiSlug, status: 'active' },
     })
@@ -25,9 +30,9 @@ export async function POST(_: Request, { params }: { params: { token: string } }
       return NextResponse.json({ ok: true, wikiSlug: link.wikiSlug, alreadyEnrolled: true })
     }
 
-    // Check 35-student cap across all active enrollments for this teacher
+    // Cap is per class: up to 35 active students in this specific class (link).
     const activeCount = await prisma.enrollment.count({
-      where: { teacherId: link.teacherId, status: 'active' },
+      where: { linkId: link.id, status: 'active' },
     })
     if (activeCount >= STUDENT_CAP) {
       return NextResponse.json(
@@ -49,27 +54,40 @@ export async function POST(_: Request, { params }: { params: { token: string } }
       },
     })
 
-    if (previous) {
-      await prisma.enrollment.update({
-        where: { id: previous.id },
-        data: { status: 'active', removedAt: null, joinedAt: new Date() },
-      })
-    } else {
-      await prisma.enrollment.create({
-        data: {
-          studentId: user.id,
-          teacherId: link.teacherId,
-          linkId: link.id,
-          wikiSlug: link.wikiSlug,
-          status: 'active',
-        },
-      })
+    try {
+      if (previous) {
+        await prisma.enrollment.update({
+          where: { id: previous.id },
+          data: { status: 'active', removedAt: null, joinedAt: new Date() },
+        })
+      } else {
+        await prisma.enrollment.create({
+          data: {
+            studentId: user.id,
+            teacherId: link.teacherId,
+            linkId: link.id,
+            wikiSlug: link.wikiSlug,
+            status: 'active',
+          },
+        })
+      }
+    } catch (e: any) {
+      // Concurrent requests (double-click, effect re-run, retry) can both pass
+      // the findFirst check above; the loser hits the unique constraint. That
+      // just means the student is enrolled — treat it as success.
+      if (e?.code === 'P2002') {
+        return NextResponse.json({ ok: true, wikiSlug: link.wikiSlug, alreadyEnrolled: true })
+      }
+      throw e
     }
 
     return NextResponse.json({ ok: true, wikiSlug: link.wikiSlug })
   } catch (e: any) {
-    const status = e instanceof AuthError ? e.status : 500
-    return NextResponse.json({ error: e?.message || 'Failed' }, { status })
+    if (e instanceof AuthError) {
+      return NextResponse.json({ error: e.message }, { status: e.status })
+    }
+    console.error('join failed:', e)
+    return NextResponse.json({ error: 'Failed to join' }, { status: 500 })
   }
 }
 
@@ -82,17 +100,43 @@ export async function GET(_: Request, { params }: { params: { token: string } })
     })
     if (!link) return NextResponse.json({ error: 'Invalid link' }, { status: 404 })
 
-    const activeCount = await prisma.enrollment.count({
-      where: { teacherId: link.teacherId, status: 'active' },
+    // A scheduled/ended class behaves like a closed one for students.
+    const status = classStatus(link)
+    const open = status === 'active'
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { linkId: link.id, status: 'active' },
+      select: { studentId: true },
     })
+    const activeCount = enrollments.length
+
+    // Roster for the "pick your name" shortcut, for students a teacher already
+    // added to this class. Deliberately NAMES ONLY — this page is public to
+    // anyone holding the link, so no emails are exposed. Signing in uses the
+    // opaque student id via /api/join/[token]/login.
+    const studentIds = open ? enrollments.map((e) => e.studentId) : []
+    const students = studentIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: studentIds }, disabledAt: null, role: 'student' },
+          select: { id: true, name: true, avatarUrl: true },
+        })
+      : []
+    students.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 
     return NextResponse.json({
       wikiSlug: link.wikiSlug,
+      className: link.name || null,
       teacher: link.teacher,
-      isActive: link.isActive,
+      isActive: open,
+      status,
+      closedMessage: open ? null : closedReason(status),
+      startsAt: link.startsAt,
+      endsAt: link.endsAt,
       spotsLeft: Math.max(0, STUDENT_CAP - activeCount),
+      students,
     })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed' }, { status: 500 })
+    console.error('join link lookup failed:', e)
+    return NextResponse.json({ error: 'Failed to load link info' }, { status: 500 })
   }
 }

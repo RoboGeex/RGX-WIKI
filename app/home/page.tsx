@@ -10,6 +10,12 @@ async function getStudentData(userId: string) {
       where: { studentId: userId },
       orderBy: { assignedAt: 'desc' },
       include: { track: { include: { wikis: { orderBy: { position: 'asc' } } } } },
+    }).catch((error) => {
+      // P2021: Track tables missing from this DB (schema drift — see
+      // scripts/create-track-tables.cjs). Show the student their direct
+      // enrollments with no tracks rather than crashing /home.
+      if (error?.code === 'P2021') return []
+      throw error
     }),
   ])
   const directSlugs = [...new Set(enrollments.map((enrollment) => enrollment.wikiSlug))]

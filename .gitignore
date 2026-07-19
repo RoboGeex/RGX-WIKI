@@ -49,3 +49,9 @@ public/uploads
 scratch.js
 check-clicky.js
 scratch/
+
+# Playwright E2E
+/playwright-report/
+/test-results/
+/tests/e2e/.e2e-state.json
+.env.development.local

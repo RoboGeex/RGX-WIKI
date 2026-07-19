@@ -10,6 +10,7 @@ import { isHubHost, normalizeHost } from '@/lib/domains'
 import { getPrisma } from '@/lib/prisma-multi'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { openClassWhere } from '@/lib/class-window'
 import accessCodesData from '@/data/access-codes.json'
 import { markDbFailure, markDbSuccess, shouldBypassDb, withDbTimeout } from '@/lib/db-fallback'
 
@@ -121,7 +122,14 @@ export default async function KitLayout(
           } else if (user.role === 'student') {
             const [enrollment, trackAssignment] = await Promise.all([
               prisma.enrollment.findFirst({
-                where: { studentId: user.id, wikiSlug: wiki.slug, status: 'active' },
+                // `link: openClassWhere()` means a class that has ended (or has
+                // not started) no longer grants access, without touching rows.
+                where: {
+                  studentId: user.id,
+                  wikiSlug: wiki.slug,
+                  status: 'active',
+                  link: openClassWhere(),
+                },
                 select: { id: true },
               }),
               prisma.trackAssignment.findFirst({

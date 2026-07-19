@@ -21,6 +21,12 @@
       "port": 3000
     },
     {
+      "name": "Next.js Dev (port 3100)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "-p", "3100"],
+      "port": 3100
+    },
+    {
       "name": "Next.js Dev (Turbo)",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["next", "dev", "--turbo"],

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma-multi'
 import { AuthError, getCurrentUser } from '@/lib/auth'
+import { openClassWhere } from '@/lib/class-window'
 
 // POST /api/progress  { lessonId, wikiSlug, status: "in_progress" | "completed" }
 export async function POST(request: Request) {
@@ -18,7 +20,10 @@ export async function POST(request: Request) {
 
     // Direct enrollment and track assignment are both valid learning paths.
     const [enrollment, trackAssignment] = await Promise.all([
-      prisma.enrollment.findFirst({ where: { studentId: user.id, wikiSlug, status: 'active' }, select: { id: true } }),
+      prisma.enrollment.findFirst({
+        where: { studentId: user.id, wikiSlug, status: 'active', link: openClassWhere() },
+        select: { id: true },
+      }),
       prisma.trackAssignment.findFirst({
         where: { studentId: user.id, track: { wikis: { some: { wikiSlug } } } },
         select: { id: true },
@@ -27,7 +32,9 @@ export async function POST(request: Request) {
     if (!enrollment && !trackAssignment) return NextResponse.json({ ok: true })
 
     // Reject mismatched lesson/wiki pairs so aggregate track progress is exact.
-    const lesson = await prisma.lesson.findFirst({
+    // Lessons live in the wiki's own database, not the default one where the
+    // progress row is written.
+    const lesson = await getPrisma(wikiSlug).lesson.findFirst({
       where: { id: lessonId, wikiSlug, status: 'published' },
       select: { id: true },
     })

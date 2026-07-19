@@ -78,6 +78,29 @@ const legacyLessonListSelect = {
   lockedUntil: true,
 } as const
 
+const legacyLessonFullSelect = {
+  ...legacyLessonListSelect,
+  body: true,
+} as const
+
+// findUnique without an explicit `select` still SELECTs every model column —
+// including lessonKey — so on a legacy DB even the rescue path crashes. Any
+// full-row fetch by id on a legacy DB must go through this instead.
+async function findLegacyLessonById(prisma: any, id: string): Promise<Lesson | undefined> {
+  const row = await prisma.lesson.findUnique({ where: { id }, select: legacyLessonFullSelect })
+  return row ? mapLegacyLessonRow(row) : undefined
+}
+
+async function findLessonById(prisma: any, id: string): Promise<Lesson | undefined> {
+  try {
+    const row = await prisma.lesson.findUnique({ where: { id } })
+    return (row as Lesson) || undefined
+  } catch (error: any) {
+    if (!isLessonKeyUnsupportedError(error)) throw error
+    return findLegacyLessonById(prisma, id)
+  }
+}
+
 function enrichLessonsWithPublishState(rows: Lesson[], collapsed: Lesson[], publishedOnly?: boolean): Lesson[] {
   if (publishedOnly) return collapsed
 
@@ -203,7 +226,7 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
     }
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
-    const exact = await prisma.lesson.findUnique({ where: { id: slug } })
+    const exact = await findLegacyLessonById(prisma, slug)
     if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
       matched = exact
     } else {
@@ -243,8 +266,7 @@ export async function getLessonBySlug(slug: string, wikiSlug?: string): Promise<
     })
     const publishedMeta = sortVersionRowsDesc(publishedRows)[0]
     if (!publishedMeta?.id) return undefined
-    const published = await prisma.lesson.findUnique({ where: { id: publishedMeta.id } })
-    return published as Lesson | undefined
+    return findLegacyLessonById(prisma, publishedMeta.id)
   }
 }
 
@@ -258,9 +280,9 @@ export async function getPreviewLesson(idOrSlug: string, wikiSlug?: string): Pro
   if (!key) return undefined
 
   const prisma: any = getPrisma(wikiSlug)
-  const exact = await prisma.lesson.findUnique({ where: { id: key } })
+  const exact = await findLessonById(prisma, key)
   if (exact && (!wikiSlug || exact.wikiSlug === wikiSlug)) {
-    return exact as Lesson
+    return exact
   }
 
   try {
@@ -273,8 +295,7 @@ export async function getPreviewLesson(idOrSlug: string, wikiSlug?: string): Pro
     })
     const matched = sortVersionRowsDesc(matches)[0]
     if (!matched?.id) return undefined
-    const full = await prisma.lesson.findUnique({ where: { id: matched.id } })
-    return (full as Lesson) || undefined
+    return findLessonById(prisma, matched.id)
   } catch (error: any) {
     if (!isLessonKeyUnsupportedError(error)) throw error
     const matches = await prisma.lesson.findMany({
@@ -286,8 +307,7 @@ export async function getPreviewLesson(idOrSlug: string, wikiSlug?: string): Pro
     })
     const matched = sortVersionRowsDesc(matches)[0]
     if (!matched?.id) return undefined
-    const full = await prisma.lesson.findUnique({ where: { id: matched.id } })
-    return (full as Lesson) || undefined
+    return findLegacyLessonById(prisma, matched.id)
   }
 }
 

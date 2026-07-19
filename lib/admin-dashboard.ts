@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getDevelopersPrisma } from '@/lib/prisma-developers'
+import { getPrisma } from '@/lib/prisma-multi'
+import { getPublishedLessonsByWiki } from '@/lib/wiki-lessons'
 
 // Real-path (database) data loaders for the admin Dashboard home. These are
 // shared by the API routes (which keep their dev-mode stubs) and the server
@@ -132,6 +134,7 @@ export type WikiHealth = {
   enrolled: number
   totalLessons: number
   avgCompletion: number
+  totalInProgress: number
 }
 
 export type FlaggedLesson = {
@@ -156,45 +159,75 @@ export async function getWikiHealth(): Promise<{ wikis: WikiHealth[]; lessons: F
     return { wikis: [], lessons: [] }
   }
 
-  const [enrollmentGroups, lessonCounts, completedGroups, flaggedLessons] = await Promise.all([
+  // Lessons live in each wiki's own database; enrollments and lessonProgress
+  // live in the default DB. Load lessons per wiki, then join progress rows to
+  // them by lesson id.
+  const lessonsByWiki = await getPublishedLessonsByWiki(wikiSlugs)
+  const publishedLessonIds = wikiSlugs.flatMap((slug) =>
+    (lessonsByWiki.get(slug) ?? []).map((lesson) => lesson.id)
+  )
+
+  const [enrollmentGroups, progressGroups, flaggedPerWiki] = await Promise.all([
     prisma.enrollment.groupBy({
       by: ['wikiSlug'],
       where: { status: 'active', wikiSlug: { in: wikiSlugs } },
       _count: true,
     }),
-    prisma.lesson.groupBy({
-      by: ['wikiSlug'],
-      where: { wikiSlug: { in: wikiSlugs }, status: 'published' },
-      _count: true,
-    }),
-    prisma.lessonProgress.groupBy({
-      by: ['wikiSlug'],
-      where: { wikiSlug: { in: wikiSlugs }, status: 'completed' },
-      _count: true,
-    }),
-    // Lessons needing attention: draft (changed), published, archived (unpublished)
-    prisma.lesson.findMany({
-      where: {
-        wikiSlug: { in: wikiSlugs },
-        status: { in: ['draft', 'published', 'archived'] },
-      },
-      select: {
-        id: true, title_en: true, wikiSlug: true, status: true,
-        updatedAt: true, publishedAt: true,
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 30,
-    }),
+    publishedLessonIds.length
+      ? prisma.lessonProgress.groupBy({
+          by: ['wikiSlug', 'studentId', 'status'],
+          where: {
+            wikiSlug: { in: wikiSlugs },
+            lessonId: { in: publishedLessonIds },
+            status: { in: ['completed', 'in_progress'] },
+          },
+          _count: true,
+        })
+      : Promise.resolve([] as { wikiSlug: string; studentId: string; status: string; _count: number }[]),
+    // Lessons needing attention: draft (changed), published, archived
+    // (unpublished) — queried per wiki DB with a legacy-safe column set.
+    Promise.all(
+      wikiSlugs.map(async (slug) => {
+        try {
+          return await getPrisma(slug).lesson.findMany({
+            where: { wikiSlug: slug, status: { in: ['draft', 'published', 'archived'] } },
+            select: {
+              id: true, title_en: true, wikiSlug: true, status: true,
+              updatedAt: true, publishedAt: true,
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 30,
+          })
+        } catch (error) {
+          console.warn(`[admin-dashboard] Failed to load flagged lessons for wiki "${slug}".`, error)
+          return []
+        }
+      })
+    ),
   ])
+
+  const flaggedLessons = flaggedPerWiki
+    .flat()
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 30)
 
   const enrolledMap: Record<string, number> = {}
   for (const g of enrollmentGroups) enrolledMap[g.wikiSlug] = g._count
 
   const lessonMap: Record<string, number> = {}
-  for (const lc of lessonCounts) lessonMap[lc.wikiSlug] = lc._count
+  for (const slug of wikiSlugs) lessonMap[slug] = (lessonsByWiki.get(slug) ?? []).length
 
+  // completed = total completed (student, lesson) pairs per wiki;
+  // in progress = distinct students with at least one in-progress lesson.
   const completedMap: Record<string, number> = {}
-  for (const cg of completedGroups) completedMap[cg.wikiSlug] = cg._count
+  const inProgressMap: Record<string, number> = {}
+  for (const pg of progressGroups) {
+    if (pg.status === 'completed') {
+      completedMap[pg.wikiSlug] = (completedMap[pg.wikiSlug] ?? 0) + pg._count
+    } else if (pg.status === 'in_progress') {
+      inProgressMap[pg.wikiSlug] = (inProgressMap[pg.wikiSlug] ?? 0) + 1
+    }
+  }
 
   const wikiNameMap: Record<string, string> = {}
   for (const w of wikis) wikiNameMap[w.slug] = w.displayName
@@ -203,9 +236,10 @@ export async function getWikiHealth(): Promise<{ wikis: WikiHealth[]; lessons: F
     const enrolled = enrolledMap[w.slug] ?? 0
     const totalLessons = lessonMap[w.slug] ?? 0
     const totalCompleted = completedMap[w.slug] ?? 0
+    const totalInProgress = inProgressMap[w.slug] ?? 0
     const maxPossible = enrolled * totalLessons
     const avgCompletion = maxPossible > 0 ? Math.round((totalCompleted / maxPossible) * 100) : 0
-    return { slug: w.slug, name: w.displayName, enrolled, totalLessons, avgCompletion }
+    return { slug: w.slug, name: w.displayName, enrolled, totalLessons, avgCompletion, totalInProgress }
   })
 
   const lessons: FlaggedLesson[] = flaggedLessons.map(l => ({

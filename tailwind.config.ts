@@ -43,14 +43,41 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // --- Catalog design tokens (ported from robogeex_courses) ---
+        // Additive only: neither `brand` nor `ink` existed before, so these
+        // cannot change how any existing page renders.
+        brand: {
+          DEFAULT: '#f05d4e',
+          50: '#fef1ef',
+          100: '#fdddd8',
+          200: '#fbb8af',
+          300: '#f89486',
+          400: '#f4715d',
+          500: '#f05d4e',
+          600: '#d44537',
+          700: '#a8362c',
+          800: '#7b2820',
+          900: '#4f1914',
+        },
+        ink: {
+          DEFAULT: '#1f1f1f',
+          soft: '#343434',
+          muted: '#6b7280',
+        },
       },
       borderRadius: {
         lg: `var(--radius)`,
         md: `calc(var(--radius) - 2px)`,
         sm: `calc(var(--radius) - 4px)`,
+        // Catalog cards. Safe: no `card` key exists in borderRadius.
+        card: '1rem',
       },
       boxShadow: {
         'custom': '0 4px 30px rgba(0, 0, 0, 0.1)',
+        // NOTE: deliberately named `course`, NOT `card`. `colors.card` already
+        // exists above (shadcn token), and in Tailwind a `boxShadow.card` key
+        // would make `shadow-card` ambiguous/inert. Use `shadow-course`.
+        course: '0 6px 24px -8px rgba(31,31,31,0.12)',
       },
       spacing: {
         '88': '22rem',

@@ -97,6 +97,40 @@ h1, h2, h3, .font-bold, strong {
   font-family: var(--land-display), var(--font-land-cairo), sans-serif !important;
 }
 
+/* Wiki catalog (/wikis). Same trick as .rgx-dash / .rgx-landing: the global
+   Inter !important rules above would otherwise silently override whatever
+   font the page sets via next/font's className. The catalog root sets
+   --cat-body / --cat-display; .cat-display marks headings. */
+.rgx-catalog,
+.rgx-catalog h1, .rgx-catalog h2, .rgx-catalog h3, .rgx-catalog h4, .rgx-catalog h5, .rgx-catalog h6,
+.rgx-catalog p, .rgx-catalog span, .rgx-catalog a, .rgx-catalog li, .rgx-catalog button,
+.rgx-catalog input, .rgx-catalog label, .rgx-catalog div, .rgx-catalog strong {
+  font-family: var(--cat-body), var(--font-cat-cairo), sans-serif !important;
+  font-feature-settings: normal !important;
+}
+.rgx-catalog .cat-display,
+.rgx-catalog .cat-display span {
+  font-family: var(--cat-display), var(--font-cat-cairo), sans-serif !important;
+}
+
+/* Catalog component classes, ported from robogeex_courses' @layer components.
+   Scoped under .rgx-catalog so they cannot leak into the editor or lessons. */
+.rgx-catalog .cat-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+}
+.rgx-catalog .cat-card {
+  background: #fff;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 6px 24px -8px rgba(31, 31, 31, 0.12);
+}
+
 /* Dashboard content only: keep admin/editor/wiki shared chrome untouched. */
 .dashboard-text-scale {
   font-size: 1.0625rem;

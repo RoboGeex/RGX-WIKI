@@ -16,7 +16,9 @@
     "migrate:assets:gcs": "node scripts/migrate-assets-to-gcs.cjs",
     "clear:asset-blobs": "node scripts/clear-asset-blobs.cjs",
     "seed:dev": "node scripts/dev-seed.cjs",
-    "reset:dev": "node scripts/dev-reset.cjs"
+    "reset:dev": "node scripts/dev-reset.cjs",
+    "catalog:meta": "node scripts/set-catalog-metadata.cjs",
+    "catalog:meta:apply": "node scripts/set-catalog-metadata.cjs --apply"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

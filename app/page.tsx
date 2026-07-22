@@ -2,23 +2,35 @@ import { redirect } from 'next/navigation'
 import { getWikiByDomain, getKits } from '@/lib/data'
 import { headers } from 'next/headers'
 import { isHubHost, normalizeHost } from '@/lib/domains'
-import MarketingLanding from './components/marketing-landing'
+import CatalogPage from '@/components/catalog/CatalogPage'
+
+export const dynamic = 'force-dynamic'
 
 // This is the root page of the application.
 // It checks for a custom domain and displays the corresponding wiki.
-// If no custom domain is found, it shows a default landing page.
+// If no custom domain is found, it shows the wiki catalog.
 export default async function RootPage({
   searchParams,
 }: {
-  searchParams?: { lang?: string }
+  searchParams?: { q?: string; lang?: string }
 }) {
   const host = headers().get('host')
   const normalizedHost = normalizeHost(host)
 
-  // The hub root is the public marketing landing page; the browsable
-  // wiki index stays at /wikis. ?lang=ar switches the landing to Arabic.
+  // The hub root IS the catalog (same page as /wikis). ?lang=ar switches to
+  // Arabic. The previous marketing landing lives on in
+  // app/components/marketing-landing.tsx if it is ever wanted back.
+  //
+  // Everything below this branch is untouched: a dedicated wiki domain must
+  // still redirect into that wiki rather than render the catalog.
   if (isHubHost(normalizedHost)) {
-    return <MarketingLanding lang={searchParams?.lang === 'ar' ? 'ar' : 'en'} />
+    return (
+      <CatalogPage
+        locale={searchParams?.lang === 'ar' ? 'ar' : 'en'}
+        initialQuery={(searchParams?.q || '').trim()}
+        basePath="/"
+      />
+    )
   }
 
   const wiki = getWikiByDomain(host)

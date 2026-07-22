@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import type { CatalogEntry } from '@/lib/catalog'
+import { getCatalogMessages } from '@/lib/catalog-i18n'
 
 /**
  * Ported from robogeex_courses' CourseFilters, reduced to the two facets the
@@ -71,10 +72,11 @@ export function CatalogFilters({
   locale?: 'en' | 'ar'
 }) {
   const [tab, setTab] = useState<Group>('categories')
+  const t = getCatalogMessages(locale)
 
   const ALL_TABS: { key: Group; label: string }[] = [
-    { key: 'categories', label: locale === 'ar' ? 'الفئة' : 'Category' },
-    { key: 'levels', label: locale === 'ar' ? 'المستوى' : 'Level' },
+    { key: 'categories', label: t.filters.category },
+    { key: 'levels', label: t.filters.level },
   ]
 
   // Only offer a facet that can actually partition the results. Today every
@@ -149,16 +151,14 @@ export function CatalogFilters({
             onClick={() => onChange(EMPTY_FILTERS)}
             className="ms-auto text-sm font-semibold text-brand-600 hover:text-brand-700"
           >
-            {locale === 'ar' ? `مسح ${activeCount} من عوامل التصفية` : `Clear ${activeCount} filter${activeCount > 1 ? 's' : ''}`}
+            {activeCount === 1 ? t.filters.clearOne : t.filters.clearMany(activeCount)}
           </button>
         )}
       </div>
 
       <div className="flex flex-wrap gap-2">
         {options.length === 0 ? (
-          <p className="text-sm text-ink-muted">
-            {locale === 'ar' ? 'لا توجد خيارات.' : 'No options available.'}
-          </p>
+          <p className="text-sm text-ink-muted">{t.filters.noOptions}</p>
         ) : (
           options.map(([option, count]) => (
             <Chip

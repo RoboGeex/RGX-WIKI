@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import type { CatalogEntry } from '@/lib/catalog'
+import { getCatalogMessages } from '@/lib/catalog-i18n'
 
 /**
  * Ported from robogeex_courses' CourseCard: 16:9 cover, level badge overlay,
@@ -59,7 +60,7 @@ export function CatalogCard({ entry, locale = 'en' }: { entry: CatalogEntry; loc
         <p className="mb-5 line-clamp-3 text-sm text-ink-muted">{description}</p>
 
         <span className="mt-auto inline-flex items-center gap-2 text-sm font-bold text-brand-600">
-          {locale === 'ar' ? 'افتح الويكي' : 'Explore wiki'}
+          {getCatalogMessages(locale).card.goto}
           <ArrowRight size={15} className="transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180" />
         </span>
       </div>
